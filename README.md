@@ -61,7 +61,7 @@ echo 'ODPT_API_KEY=your_api_key_here' > .env
   "mcpServers": {
     "tokyo-transit": {
       "command": "node",
-      "args": ["path/to/tokyo-transit-mcp/src/index.mjs"],
+      "args": ["C:\\Users\\your_username\\tokyo-transit-mcp\\src\\index.mjs"],
       "env": {
         "ODPT_API_KEY": "your_api_key_here"
       }
