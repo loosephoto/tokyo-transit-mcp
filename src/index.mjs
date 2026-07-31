@@ -383,60 +383,60 @@ function detectLanguage(text) {
 const MULTILINGUAL_ADVICE = {
   // 基本天候
   fair: {
-    ja: "☀ 【AIからのインテリジェントアドバイス】\n晴れの良好なお天気です！快適な移動をお楽しみください。",
-    en: "☀ [AI Intelligent Transit Advice]\nFair and clear weather! Enjoy your comfortable journey.",
-    zh: "☀ 【AI智能出行建议】\n天气晴朗良好！祝您旅途愉快顺畅。"
+    ja: "🤖 【AIからのインテリジェントアドバイス】\n☀ 晴れの良好なお天気です！快適な移動をお楽しみください。",
+    en: "🤖 [AI Intelligent Transit Advice]\n☀ Fair and clear weather! Enjoy your comfortable journey.",
+    zh: "🤖 【AI智能出行建议】\n☀ 天气晴朗良好！祝您旅途愉快顺畅。"
   },
   rainy: {
-    ja: "☔ 【AIからのインテリジェントアドバイス (雨天時)】\n雨が降っているため駅構内や階段が非常に滑りやすくなっています。足元に十分ご注意ください。最寄りの地下鉄出口直結の路線バスの利用がおすすめです。",
-    en: "☔ [AI Intelligent Transit Advice (Rainy)]\nRain is expected. Station floors, stairs, and transfer walkways may be slippery.",
-    zh: "☔ 【AI智能出行建议 (雨天)】\n预计有大雨，车站大厅、阶梯和换乘通道地面较为湿滑，请小心行走。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (雨天時)】\n☔ 雨が降っているため駅構内や階段が非常に滑りやすくなっています。足元に十分ご注意ください。最寄りの地下鉄出口直結の路線バスの利用がおすすめです。",
+    en: "🤖 [AI Intelligent Transit Advice (Rainy)]\n☔ Rain is expected. Station floors, stairs, and transfer walkways may be slippery. Please watch your step.",
+    zh: "🤖 【AI智能出行建议 (雨天)】\n☔ 预计有大雨，车站大厅、阶梯和换乘通道地面较为湿滑，请小心行走。"
   },
   hot: {
-    ja: "☀【熱中症警戒】本日は気温が著しく上昇しています。駅構内や車内でもこまめな水分補給を心がけ、熱中症に十分ご注意ください。",
-    en: "☀[Heat Alert] Extreme heat expected. Stay hydrated even inside stations and trains.",
-    zh: "☀【高温预警】今天气温显著上升，请在站内也注意补充水分，小心中暑。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (熱中症警戒)】\n☀ 本日は気温が著しく上昇しています。駅構内や車内でもこまめな水分補給を心がけ、熱中症に十分ご注意ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Heat Alert)]\n☀ Extreme heat expected today. Stay hydrated even inside stations and trains.",
+    zh: "🤖 【AI智能出行建议 (高温预警)】\n☀ 今天气温显著上升，请在站内也注意补充水分，小心中暑。"
   },
   // 障害種別連動アドバイス
   typhoon: {
-    ja: "🌀【台風接近】大雨・強風により列車の運転見合わせや遅延が発生する可能性が高いです。外出は可能であれば控え、やむを得ない場合は最新の運行情報をご確認ください。駅周辺の看板や木の倒壊にも注意。",
-    en: "🌀[Typhoon] Heavy rain and strong winds may cause train suspensions. Check latest info before going out.",
-    zh: "🌀【台风接近】强风暴雨可能导致列车停运，请确认最新运行信息后再出行。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (台風接近)】\n🌀 大雨・強風により列車の運転見合わせや遅延が発生する可能性が高いです。外出は可能であれば控え、やむを得ない場合は最新の運行情報をご確認ください。駅周辺の看板や木の倒壊にも注意。",
+    en: "🤖 [AI Intelligent Transit Advice (Typhoon Alert)]\n🌀 Heavy rain and strong winds may cause train suspensions. Check latest info before going out.",
+    zh: "🤖 【AI智能出行建议 (台风接近)】\n🌀 强风暴雨可能导致列车停运，请确认最新运行信息后再出行。"
   },
   flood: {
-    ja: "⚠【浸水注意】周辺道路や駅構内が冠水している可能性があります。長靴や雨具をご準備ください。地下街やアンダーパスへの立ち入りは危険です。やむを得ない外出以外はお控えください。",
-    en: "⚠[Flood] Surrounding roads and station areas may be flooded. Avoid underpasses and underground areas.",
-    zh: "⚠【浸水注意】周边道路和车站内可能积水。请远离地下通道和地下商场。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (浸水注意)】\n⚠ 周辺道路や駅構内が冠水している可能性があります。長靴や雨具をご準備ください。地下街やアンダーパスへの立ち入りは危険です。やむを得ない外出以外はお控えください。",
+    en: "🤖 [AI Intelligent Transit Advice (Flood Alert)]\n⚠ Surrounding roads and station areas may be flooded. Avoid underpasses and underground areas.",
+    zh: "🤖 【AI智能出行建议 (浸水注意)】\n⚠ 周边道路和车站内可能积水。请远离地下通道和地下商场。"
   },
   earthquake: {
-    ja: "🔴【地震発生】鉄道は安全確認のため一時運転見合わせ中です。揺れが収まるまで駅構内では落下物に注意し、係員の指示に従ってください。急な動きは控え、落ち着いて行動。",
-    en: "🔴[Earthquake] Train operations suspended for safety checks. Follow station staff instructions and watch for falling objects.",
-    zh: "🔴【地震】为确保安全列车暂停运行。请遵照车站工作人员指示，注意高空坠物。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (地震発生)】\n🔴 鉄道は安全確認のため一時運転見合わせ中です。揺れが収まるまで駅構内では落下物に注意し、係員の指示に従ってください。急な動きは控え、落ち着いて行動。",
+    en: "🤖 [AI Intelligent Transit Advice (Earthquake Alert)]\n🔴 Train operations suspended for safety checks. Follow station staff instructions and watch for falling objects.",
+    zh: "🤖 【AI智能出行建议 (地震)】\n🔴 为确保安全列车暂停运行。请遵照车站工作人员指示，注意高空坠物。"
   },
   snow: {
-    ja: "❄【降雪注意】積雪により列車に遅延が発生しています。駅構内やホームは大変滑りやすくなっています。滑りにくい靴でのご出行をおすすめし、階段・ホーム端では特に足元にご注意ください。",
-    en: "❄[Snow] Train delays due to snowfall. Platforms and stairs are extremely slippery. Wear non-slip shoes.",
-    zh: "❄【降雪】积雪导致列车延误。站台和楼梯非常湿滑，请穿防滑鞋并注意脚下。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (降雪注意)】\n❄ 積雪により列車に遅延が発生しています。駅構内やホームは大変滑りやすくなっています。滑りにくい靴でのご出行をおすすめし、階段・ホーム端では特に足元にご注意ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Snow Advisory)]\n❄ Train delays due to snowfall. Platforms and stairs are extremely slippery. Wear non-slip shoes.",
+    zh: "🤖 【AI智能出行建议 (降雪)】\n❄ 积雪导致列车延误。站台和楼梯非常湿滑，请穿防滑鞋并注意脚下。"
   },
   accident: {
-    ja: "⚠【人身事故・運転見合わせ】人身事故の影響で一部列車が運転を見合わせています。振替輸送が実施されている場合は駅係員の案内に従ってください。お急ぎの方は代替ルート（他社線・バス）をご検討ください。",
-    en: "⚠[Accident] Train suspended due to a human accident. Follow staff for substitute transport or consider alternative routes.",
-    zh: "⚠【人身事故】因人身事故部分列车停运。请听从工作人员安排换乘，或考虑其他路线。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (人身事故・運転見合わせ)】\n⚠ 人身事故の影響で一部列車が運転を見合わせています。振替輸送が実施されている場合は駅係員の案内に従ってください。お急ぎの方は代替ルート（他社線・バス）をご検討ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Accident Alert)]\n⚠ Train suspended due to a human accident. Follow staff for substitute transport or consider alternative routes.",
+    zh: "🤖 【AI智能出行建议 (人身事故)】\n⚠ 因人身事故部分列车停运。请听从工作人员安排换乘，或考虑其他路线。"
   },
   fire: {
-    ja: "🔥【火災発生】列車火災または駅周辺での火災が報告されています。駅員の指示に従い落ち着いて避難してください。煙を吸い込まないようハンカチ等で口元を覆って低い姿勢で移動。",
-    en: "🔥[Fire] Fire reported near the station. Follow evacuation instructions from station staff.",
-    zh: "🔥【火灾】车站附近发生火灾，请遵照工作人员指示有序疏散。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (火災発生)】\n🔥 列車火災または駅周辺での火災が報告されています。駅員の指示に従い落ち着いて避難してください。煙を吸い込まないようハンカチ等で口元を覆って低い姿勢で移動。",
+    en: "🤖 [AI Intelligent Transit Advice (Fire Alert)]\n🔥 Fire reported near the station. Follow evacuation instructions from station staff.",
+    zh: "🤖 【AI智能出行建议 (火灾)】\n🔥 车站附近发生火灾，请遵照工作人员指示有序疏散。"
   },
   infrastructure: {
-    ja: "⚡【設備障害】信号故障・停電など設備に障害が発生しています。復旧まで時間を要する場合があります。駅係員の案内に従い、可能であれば別ルートをご利用ください。",
-    en: "⚡[Infrastructure Failure] Signal/power failure affecting train operations. Consider alternative routes.",
-    zh: "⚡【设备故障】信号或供电故障影响列车运行，请考虑其他路线。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (設備障害)】\n⚡ 信号故障・停電など設備に障害が発生しています。復旧まで時間を要する場合があります。駅係員の案内に従い、可能であれば別ルートをご利用ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Infrastructure Failure)]\n⚡ Signal/power failure affecting train operations. Consider alternative routes.",
+    zh: "🤖 【AI智能出行建议 (设备故障)】\n⚡ 信号或供电故障影响列车运行，请考虑其他路线。"
   },
   emergency: {
-    ja: "🚨【緊急アラート】重大な災害または交通機関の運行不能を検知しました。身の安全を最優先とし、以下のリンクから最寄りの指定緊急避難場所を確認してください。",
-    en: "🚨[Emergency] Major disaster or transit suspension detected. Check the link for nearest evacuation shelters.",
-    zh: "🚨【紧急避难】检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (緊急アラート)】\n🚨 重大な災害または交通機関の運行不能を検知しました。身の安全を最優先とし、以下のリンクから最寄りの指定緊急避難場所を確認してください。",
+    en: "🤖 [AI Intelligent Transit Advice (Emergency Alert)]\n🚨 Major disaster or transit suspension detected. Check the link for nearest evacuation shelters.",
+    zh: "🤖 【AI智能出行建议 (紧急避难)】\n🚨 检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
   }
 };
 
@@ -798,41 +798,65 @@ async function searchRoute(args) {
     from: fromName, to: toName, mode: simulatedFailure ? "TEST_MODE" : "LIVE",
     detected_user_language: userLang,
     degraded_mode: apiDegraded ? true : undefined,
-    weather_text: `東京地方: ${weatherText}`,
+    weather_text: userLang === 'en' ? `Tokyo Area: ${weatherText}` : userLang === 'zh' ? `东京地区: ${weatherText}` : `東京地方: ${weatherText}`,
     // Yahoo!路線情報はフォールバックとして維持（完全依存はしない）
     direct_search_url: (isRainy || isEmergencyActive) ? `${webSearchUrl}&useLocalBus=true&walkSpeed=slow` : webSearchUrl,
     ai_transit_advice: aiAdvice,
     // Yahooに依存しない運賃情報をsearch_fareツールで取得可能
     fare_available: true,
-    fare_note: "search_fareツールで駅間運賃を検索できます。",
-    gov_facility_search_support: { note: "🏛️ 【現在地周辺の公的機関の検索】", link: GOV_FACILITY_SEARCH_URL }
+    fare_note: userLang === 'en' ? "Use search_fare tool to find station-to-station fares." :
+               userLang === 'zh' ? "使用 search_fare 工具查询车站间票价。" :
+               "search_fareツールで駅間運賃を検索できます。",
+    gov_facility_search_support: {
+      note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
+            userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
+            "🏛️ 【現在地周辺の公的機関の検索】",
+      link: GOV_FACILITY_SEARCH_URL
+    }
   };
 
   if (isTrainSuspended && !isSevereWeather && bikeShareInfo) {
     resultPayload.cycling_alternative = {
-      note: "🚲 【運転見合わせ - シェアサイクル案内】",
-      recommendation: "🚲 出発駅最寄りのシェアサイクルポート：",
+      note: userLang === 'en' ? "🚲 [Transit Suspension - Bike Share Guidance]" :
+            userLang === 'zh' ? "🚲 【暂停运营 - 共享单车指南】" :
+            "🚲 【運転見合わせ - シェアサイクル案内】",
+      recommendation: userLang === 'en' ? "🚲 Nearest bike share ports from origin station:" :
+                      userLang === 'zh' ? "🚲 出发站附近的共享单车停靠点：" :
+                      "🚲 出発駅最寄りのシェアサイクルポート：",
       stations: bikeShareInfo, total_nearby: bikeShareInfo.length, data_source: "docomo-cycle-tokyo GBFS"
     };
   }
 
   // フェリー代替
   if (FERRY_PORT_MAP[fromName] || FERRY_PORT_MAP[toName]) {
-    resultPayload.ferry_alternative = { note: "🚢 【フェリー航路のご案内】", suggestion: "search_ferryツールで詳細を検索できます。" };
+    resultPayload.ferry_alternative = {
+      note: userLang === 'en' ? "🚢 [Ferry Service Guidance]" :
+            userLang === 'zh' ? "🚢 【轮渡航线指南】" :
+            "🚢 【フェリー航路のご案内】",
+      suggestion: userLang === 'en' ? "Use search_ferry tool for details." :
+                  userLang === 'zh' ? "使用 search_ferry 工具查看详情。" :
+                  "search_ferryツールで詳細を検索できます。"
+    };
   }
 
   // 非鉄道系
   resultPayload.non_rail_transit_support = {
-    note: "🚃 非鉄道系交通機関も利用可能",
+    note: userLang === 'en' ? "🚃 Non-rail transit also available" :
+          userLang === 'zh' ? "🚃 非铁路交通工具亦可使用" :
+          "🚃 非鉄道系交通機関も利用可能",
     operators: Object.values(NON_RAIL_OPERATORS).map(op => op.label).join('、'),
-    suggestion: "詳細は list_transit_operators ツールを"
+    suggestion: userLang === 'en' ? "Check list_transit_operators tool for details" :
+                userLang === 'zh' ? "详情请使用 list_transit_operators 工具" :
+                "詳細は list_transit_operators ツールを"
   };
 
   // 🚉 駅周辺バス停・出口案内（短いリンクで提供）
   if (fromName) {
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fromName + '駅 バス停')}`;
     resultPayload.station_bus_stops = {
-      note: "🚉 【駅周辺バス停のご案内】",
+      note: userLang === 'en' ? "🚉 [Bus Stops Near Station]" :
+            userLang === 'zh' ? "🚉 【车站周边巴士站指南】" :
+            "🚉 【駅周辺バス停のご案内】",
       link: mapUrl,
       hint: userLang === 'en' ? `Check exits (East/West/South/North) near ${fromName} Station for bus stops.` :
             userLang === 'zh' ? `在${fromName}站的东西南北出口附近寻找巴士站。` :
@@ -845,14 +869,24 @@ async function searchRoute(args) {
 
   // 振替輸送
   if (busTransferDetected && busTransferDetail) {
-    resultPayload.bus_transfer_alternative = { note: "🚌 【振替輸送のご案内】", detail: busTransferDetail, suggestion: "駅係員にお問い合わせください。" };
+    resultPayload.bus_transfer_alternative = {
+      note: userLang === 'en' ? "🚌 [Substitutive Bus Transport]" :
+            userLang === 'zh' ? "🚌 【接驳换乘巴士指南】" :
+            "🚌 【振替輸送のご案内】",
+      detail: busTransferDetail,
+      suggestion: userLang === 'en' ? "Please inquire with station staff." :
+                  userLang === 'zh' ? "请咨询车站工作人员。" :
+                  "駅係員にお問い合わせください。"
+    };
   }
 
   // 🚨 非常時アラート（人身事故・災害時のみ）
   if (isEmergencyActive) {
     resultPayload.emergency_alert = {
       status: "ALERT_ACTIVE",
-      reason: isTrainSuspended ? "鉄道路線の運行不能を検知" : "特別警報級の重大災害を検知",
+      reason: userLang === 'en' ? (isTrainSuspended ? "Train line suspension detected" : "Emergency disaster warning detected") :
+              userLang === 'zh' ? (isTrainSuspended ? "检测到铁路线路暂停运营" : "检测到特别预警级重大灾害") :
+              (isTrainSuspended ? "鉄道路線の運行不能を検知" : "特別警報級の重大災害を検知"),
       detail: delayMessage,
       note: MULTILINGUAL_ADVICE.emergency[userLang] || MULTILINGUAL_ADVICE.emergency.ja,
       link: EMERGENCY_EVACUATION_SEARCH_URL
