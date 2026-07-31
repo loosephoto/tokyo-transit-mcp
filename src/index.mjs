@@ -324,16 +324,62 @@ const STATION_NAME_MAP = {
 };
 
 const FERRY_PORT_MAP = {
-  '東京': '東京・竹芝', '東京・竹芝': '東京・竹芝', '竹芝': '東京・竹芝',
+  // 日本語
+  '東京': '東京・竹芝', '東京・竹芝': '東京・竹芝', '竹芝': '東京・竹芝', '竹芝客船ターミナル': '東京・竹芝',
   '横浜': '横浜・大さん橋', '横浜・大さん橋': '横浜・大さん橋', '大さん橋': '横浜・大さん橋',
   '大島': '大島', '利島': '利島', '新島': '新島', '式根島': '式根島', '神津島': '神津島',
   '三宅島': '三宅島', '御蔵島': '御蔵島', '八丈島': '八丈島', '青ヶ島': '青ヶ島',
   '父島': '父島', '母島': '母島', '久里浜': '久里浜', '館山': '館山',
   '熱海': '熱海', '伊東': '伊東', '稲取': '稲取', '下田': '下田',
-  // 東京クルーズ（水上バス）
-  '浅草(水上)': '浅草', 'お台場海浜公園': 'お台場海浜公園', 'お台場': 'お台場海浜公園',
+  // 水上バス（日本語）
+  '浅草(水上)': '浅草', '浅草': '浅草', 'お台場海浜公園': 'お台場海浜公園', 'お台場': 'お台場海浜公園',
   '豊洲': '豊洲', '日の出桟橋': '日の出桟橋', '日の出': '日の出桟橋',
-  '浜離宮': '浜離宮', '浜離宮庭園': '浜離宮'
+  '浜離宮': '浜離宮', '浜離宮庭園': '浜離宮',
+
+  // English
+  'Tokyo': '東京・竹芝', 'Takeshiba': '東京・竹芝', 'Takeshiba Pier': '東京・竹芝',
+  'Yokohama': '横浜・大さん橋', 'Osanbashi': '横浜・大さん橋',
+  'Oshima': '大島', 'Oshima Island': '大島', 'Toshima': '利島', 'Niijima': '新島',
+  'Shikinejima': '式根島', 'Kouzushima': '神津島', 'Kozushima': '神津島',
+  'Miyakejima': '三宅島', 'Mikurajima': '御蔵島', 'Hachijojima': '八丈島', 'Aogashima': '青ヶ島',
+  'Chichijima': '父島', 'Hahajima': '母島', 'Kurihama': '久里浜', 'Tateyama': '館山',
+  'Atami': '熱海', 'Ito': '伊東', 'Inatori': '稲取', 'Shimoda': '下田',
+  'Asakusa': '浅草', 'Odaiba': 'お台場海浜公園', 'Odaiba Kaihin Koen': 'お台場海浜公園',
+  'Toyosu': '豊洲', 'Hinode': '日の出桟橋', 'Hinode Pier': '日の出桟橋', 'Hamarikyu': '浜離宮',
+
+  // 中文
+  '东京': '東京・竹芝', '竹芝': '東京・竹芝', '横滨': '横浜・大さん橋', '大山桥': '横浜・大さん橋',
+  '大岛': '大島', '利岛': '利島', '新岛': '新島', '式根岛': '式根島', '神津岛': '神津島',
+  '三宅岛': '三宅島', '御藏岛': '御蔵島', '八丈岛': '八丈島', '青岛': '青ヶ島', '青之岛': '青ヶ島',
+  '父岛': '父島', '母岛': '母島', '台场': 'お台場海浜公園', '台场海滨公园': 'お台場海浜公園',
+  '丰洲': '豊洲', '日出': '日の出桟橋', '日出码头': '日の出桟橋', '滨离宫': '浜離宮'
+};
+
+const FERRY_PORT_NAMES = {
+  '東京・竹芝': { en: 'Tokyo (Takeshiba Pier)', zh: '东京·竹芝码头' },
+  '横浜・大さん橋': { en: 'Yokohama (Osanbashi Pier)', zh: '横滨·大山桥码头' },
+  '大島': { en: 'Oshima Island', zh: '大岛' },
+  '利島': { en: 'Toshima Island', zh: '利岛' },
+  '新島': { en: 'Niijima Island', zh: '新岛' },
+  '式根島': { en: 'Shikinejima Island', zh: '式根岛' },
+  '神津島': { en: 'Kozushima Island', zh: '神津岛' },
+  '三宅島': { en: 'Miyakejima Island', zh: '三宅岛' },
+  '御蔵島': { en: 'Mikurajima Island', zh: '御藏岛' },
+  '八丈島': { en: 'Hachijojima Island', zh: '八丈岛' },
+  '青ヶ島': { en: 'Aogashima Island', zh: '青之岛' },
+  '父島': { en: 'Chichijima Island', zh: '父岛' },
+  '母島': { en: 'Hahajima Island', zh: '母岛' },
+  '久里浜': { en: 'Kurihama', zh: '久里滨' },
+  '館山': { en: 'Tateyama', zh: '馆山' },
+  '熱海': { en: 'Atami', zh: '热海' },
+  '伊東': { en: 'Ito', zh: '伊东' },
+  '稲取': { en: 'Inatori', zh: '稻取' },
+  '下田': { en: 'Shimoda', zh: '下田' },
+  '浅草': { en: 'Asakusa', zh: '浅草' },
+  'お台場海浜公園': { en: 'Odaiba Seaside Park', zh: '台场海滨公园' },
+  '豊洲': { en: 'Toyosu', zh: '丰洲' },
+  '日の出桟橋': { en: 'Hinode Pier', zh: '日出码头' },
+  '浜離宮': { en: 'Hamarikyu Gardens', zh: '滨离宫' }
 };
 
 const OPERATOR_MAP = {
@@ -371,11 +417,11 @@ function detectLanguage(text) {
   const str = text.trim();
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(str)) return 'ja';
   if (/^[A-Za-z0-9\s,._-]+$/.test(str)) return 'en';
-  if (/[东涩澀国关风颱积淹灾电號酷]/.test(str) ||
+  if (/[东涩澀国关风颱积淹灾电號酷场場码头碼頭]/.test(str) ||
       str.includes("台风") || str.includes("积水") || str.includes("淹水") ||
       str.includes("火灾") || str.includes("停电") || str.includes("酷暑") ||
       str.includes("中暑") || str.includes("积雪") || str.includes("暴雨") ||
-      str.includes("人员") || str.includes("伤亡")) {
+      str.includes("人员") || str.includes("伤亡") || str.includes("台场")) {
     return 'zh';
   }
   return 'ja';
@@ -964,7 +1010,24 @@ async function listFerryPorts(args) {
       en: { title: "🚢 Ferry & Water Bus Ports", note: "Tokai Kisen + Tokyo Cruise (Water Bus)" },
       zh: { title: "🚢 轮渡及水上巴士港口列表", note: "东海汽船 + 东京游览船（水上巴士）" }
     };
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, ...PORT_LABELS[userLang] || PORT_LABELS.ja, ports: data.stops.map(s => ({ id: s.stop_id, name: s.stop_name, location: { lat: parseFloat(s.stop_lat), lon: parseFloat(s.stop_lon) } })), total_ports: data.stops.length });
+    const ports = data.stops.map(s => {
+      const canonicalName = s.stop_name;
+      const trans = FERRY_PORT_NAMES[canonicalName] || {};
+      return {
+        id: s.stop_id,
+        name: canonicalName,
+        name_en: trans.en || canonicalName,
+        name_zh: trans.zh || canonicalName,
+        location: { lat: parseFloat(s.stop_lat), lon: parseFloat(s.stop_lon) }
+      };
+    });
+    return jsonResponse({
+      status: "SUCCESS",
+      detected_language: userLang,
+      ...PORT_LABELS[userLang] || PORT_LABELS.ja,
+      ports,
+      total_ports: ports.length
+    });
   } catch (error) {
     const errMsg = error.message || String(error);
     if (errMsg.includes('Circuit Breaker') || errMsg.includes('CIRCUIT_OPEN')) {
@@ -981,15 +1044,29 @@ async function listFerryPorts(args) {
 // 🚢 フェリー航路検索
 // ==========================================
 async function searchFerry(args) {
-  const fromPort = normalizeFerryPortName(args.from_port);
-  const toPort = normalizeFerryPortName(args.to_port);
-  const userLang = detectLanguage(fromPort) || detectLanguage(toPort) || 'ja';
-  if (!fromPort || !toPort) return jsonResponse(buildErrorResponse('INVALID_INPUT', '両方の港を指定してください。', { userLang }));
+  const rawFrom = args.from_port || '';
+  const rawTo = args.to_port || '';
+  const fromPort = normalizeFerryPortName(rawFrom);
+  const toPort = normalizeFerryPortName(rawTo);
+  const fromLang = detectLanguage(rawFrom);
+  const toLang = detectLanguage(rawTo);
+  const userLang = fromLang !== 'ja' ? fromLang : (toLang !== 'ja' ? toLang : 'ja');
+  if (!fromPort || !toPort) {
+    const errMsg = userLang === 'en' ? 'Please specify both origin and destination ports.' :
+                   userLang === 'zh' ? '请同时指定出发港口和到达港口。' :
+                   '両方の港を指定してください。';
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', errMsg, { userLang }));
+  }
   try {
     const data = await fetchFerryData();
     const fromStop = data.stops.find(s => s.stop_name.includes(fromPort) || fromPort.includes(s.stop_name));
     const toStop = data.stops.find(s => s.stop_name.includes(toPort) || toPort.includes(s.stop_name));
-    if (!fromStop || !toStop) return jsonResponse(buildErrorResponse('INVALID_INPUT', '港が見つかりません。list_ferry_portsで確認。', { userLang }));
+    if (!fromStop || !toStop) {
+      const errMsg = userLang === 'en' ? 'Port not found. Please check list_ferry_ports for available ports.' :
+                     userLang === 'zh' ? '未找到港口，请在 list_ferry_ports 中查看可用港口。' :
+                     '港が見つかりません。list_ferry_portsで確認。';
+      return jsonResponse(buildErrorResponse('INVALID_INPUT', errMsg, { userLang }));
+    }
     const routeStops = [fromStop.stop_id, toStop.stop_id];
     const matchingTrips = data.stopTimes.filter(st => routeStops.includes(st.stop_id));
     const tripIds = new Set(matchingTrips.map(st => st.trip_id));
@@ -1001,20 +1078,43 @@ async function searchFerry(args) {
         relevantRoutes.push({ route, trips: routeTrips.filter(t => tripIds.has(t.trip_id)).slice(0, 5) });
       }
     }
+
+    const fromTrans = FERRY_PORT_NAMES[fromStop.stop_name] || {};
+    const toTrans = FERRY_PORT_NAMES[toStop.stop_name] || {};
+    const displayFrom = userLang === 'en' ? (fromTrans.en || fromStop.stop_name) : userLang === 'zh' ? (fromTrans.zh || fromStop.stop_name) : fromStop.stop_name;
+    const displayTo = userLang === 'en' ? (toTrans.en || toStop.stop_name) : userLang === 'zh' ? (toTrans.zh || toStop.stop_name) : toStop.stop_name;
+
+    const isWaterBus = ['浅草','お台場海浜公園','お台場','豊洲','日の出桟橋','日の出','浜離宮'].some(p => fromStop.stop_name.includes(p));
+    const operatorName = userLang === 'en' ? (isWaterBus ? "Tokyo Cruise (Water Bus)" : "Tokai Kisen") :
+                         userLang === 'zh' ? (isWaterBus ? "东京游览船（水上巴士）" : "东海汽船") :
+                         (isWaterBus ? "東京クルーズ" : "東海汽船");
+
     if (relevantRoutes.length === 0) {
-      return jsonResponse({ status: "SUCCESS", from_port: fromStop.stop_name, to_port: toStop.stop_name, message: "該当航路なし", all_ports: data.stops.map(s => s.stop_name) });
+      const msg = userLang === 'en' ? "No matching ferry/waterbus routes found for the requested ports." :
+                  userLang === 'zh' ? "未找到该港口间匹配的轮渡/水上巴士班次。" :
+                  "該当航路なし";
+      return jsonResponse({
+        status: "SUCCESS",
+        detected_language: userLang,
+        from_port: displayFrom,
+        to_port: displayTo,
+        message: msg,
+        operator: operatorName,
+        official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/',
+        all_ports: data.stops.map(s => s.stop_name)
+      });
     }
-    const results = relevantRoutes.map(rr => ({
-      route_name: rr.route.route_long_name || rr.route.route_id,
-      schedules: rr.trips.map(trip => {
-        const times = data.stopTimes.filter(st => st.trip_id === trip.trip_id && (st.stop_id === fromStop.stop_id || st.stop_id === toStop.stop_id)).sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence));
-        const fromTime = times.find(t => t.stop_id === fromStop.stop_id);
-        const toTime = times.find(t => t.stop_id === toStop.stop_id);
-        return { trip_name: trip.trip_id, headsign: trip.trip_headsign, departure: fromTime?.departure_time || null, arrival: toTime?.arrival_time || null };
-      })
-    }));
-    const isWaterBus = ['浅草','お台場海浜公園','豊洲','日の出桟橋','浜離宮'].includes(fromStop.stop_name);
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, from_port: fromStop.stop_name, to_port: toStop.stop_name, routes: results, total_routes: results.length, operator: isWaterBus ? "東京クルーズ" : "東海汽船", official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/' });
+
+    return jsonResponse({
+      status: "SUCCESS",
+      detected_language: userLang,
+      from_port: displayFrom,
+      to_port: displayTo,
+      routes: results,
+      total_routes: results.length,
+      operator: operatorName,
+      official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/'
+    });
   } catch (error) {
     const errMsg = error.message || String(error);
     if (errMsg.includes('Circuit Breaker') || errMsg.includes('CIRCUIT_OPEN')) {
@@ -1189,7 +1289,7 @@ async function searchBus(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, detectLanguage, parseTestMode };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, listFerryPorts, searchFerry, detectLanguage, parseTestMode };
 
 async function main() {
   const transport = new StdioServerTransport();
