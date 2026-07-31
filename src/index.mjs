@@ -315,13 +315,54 @@ const getParams = (operator, additionalParams = {}) => {
   return params;
 };
 
-// 駅名変換辞書
+// 駅名変換辞書（ノーマライズ用）
 const STATION_NAME_MAP = {
+  // English
   'Tokyo': '東京', 'Shinjuku': '新宿', 'Shibuya': '渋谷', 'Ikebukuro': '池袋', 'Ueno': '上野',
   'Akihabara': '秋葉原', 'Ginza': '銀座', 'Roppongi': '六本木', 'Harajuku': '原宿', 'Yokohama': '横浜',
+  'Asakusa': '浅草', 'Shinagawa': '品川', 'Odaiba': 'お台場', 'Osaki': '大崎', 'Ebisu': '恵比寿',
+  'Meguro': '目黒', 'Kanda': '神田', 'Hamamatsucho': '浜松町', 'Shimbashi': '新橋', 'Shin-Okubo': '新大久保',
+  'Takadanobaba': '高田馬場', 'Sugamo': '巣鴨', 'Nippori': '日暮里', 'Ochanomizu': '御茶ノ水',
   'Osaka': '大阪', 'Kyoto': '京都', 'Narita Airport': '成田空港', 'Haneda Airport': '羽田空港',
-  '东京': '東京', '新宿': '新宿', '涩谷': '渋谷', '澀谷': '渋谷', '银座': '銀座', '横滨': '横浜'
+
+  // 中文 (簡体字 / 繁体字)
+  '东京': '東京', '新宿': '新宿', '涩谷': '渋谷', '澀谷': '渋谷', '银座': '銀座', '銀座': '銀座',
+  '横滨': '横浜', '橫濱': '横浜', '浅草': '浅草', '品川': '品川', '池袋': '池袋', '上野': '上野',
+  '秋叶原': '秋葉原', '秋葉原': '秋葉原', '六本木': '六本木', '原宿': '原宿', '台场': 'お台場',
+  '惠比寿': '恵比寿', '目黑': '目黒', '神田': '神田', '滨松町': '浜松町', '新桥': '新橋', '大阪': '大阪', '京都': '京都'
 };
+
+// 多言語表示名辞書
+const STATION_DISPLAY_NAMES = {
+  '東京': { en: 'Tokyo', zh: '东京' },
+  '新宿': { en: 'Shinjuku', zh: '新宿' },
+  '渋谷': { en: 'Shibuya', zh: '涩谷' },
+  '池袋': { en: 'Ikebukuro', zh: '池袋' },
+  '上野': { en: 'Ueno', zh: '上野' },
+  '秋葉原': { en: 'Akihabara', zh: '秋叶原' },
+  '銀座': { en: 'Ginza', zh: '银座' },
+  '六本木': { en: 'Roppongi', zh: '六本木' },
+  '原宿': { en: 'Harajuku', zh: '原宿' },
+  '横浜': { en: 'Yokohama', zh: '横滨' },
+  '浅草': { en: 'Asakusa', zh: '浅草' },
+  '品川': { en: 'Shinagawa', zh: '品川' },
+  'お台場': { en: 'Odaiba', zh: '台场' },
+  '恵比寿': { en: 'Ebisu', zh: '惠比寿' },
+  '目黒': { en: 'Meguro', zh: '目黑' },
+  '神田': { en: 'Kanda', zh: '神田' },
+  '浜松町': { en: 'Hamamatsucho', zh: '滨松町' },
+  '新橋': { en: 'Shimbashi', zh: '新桥' },
+  '成田空港': { en: 'Narita Airport', zh: '成田机场' },
+  '羽田空港': { en: 'Haneda Airport', zh: '羽田机场' }
+};
+
+function getDisplayStationName(stationName, userLang) {
+  if (!stationName) return '';
+  if (userLang === 'ja') return stationName;
+  const trans = STATION_DISPLAY_NAMES[stationName];
+  if (trans && trans[userLang]) return trans[userLang];
+  return stationName;
+}
 
 const FERRY_PORT_MAP = {
   // 日本語
@@ -843,9 +884,13 @@ async function searchRoute(args) {
     bikeShareInfo = await findNearestBikeStations(fromName);
   }
 
+  const displayFrom = getDisplayStationName(fromName, userLang);
+  const displayTo = getDisplayStationName(toName, userLang);
+
   const resultPayload = {
     status: simulatedFailure ? (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "TEST_MODE") : (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "SUCCESS"),
-    from: fromName, to: toName, mode: simulatedFailure ? "TEST_MODE" : "LIVE",
+    from: displayFrom, to: displayTo, mode: simulatedFailure ? "TEST_MODE" : "LIVE",
+    detected_language: userLang,
     detected_user_language: userLang,
     degraded_mode: apiDegraded ? true : undefined,
     weather_text: userLang === 'en' ? `Tokyo Area: ${weatherText}` : userLang === 'zh' ? `东京地区: ${weatherText}` : `東京地方: ${weatherText}`,
@@ -951,17 +996,30 @@ async function searchRoute(args) {
 // 🚉 駅情報取得
 // ==========================================
 async function getStationInfo(args) {
-  const stationName = normalizeStationName(args.station_name);
+  const rawStation = args.station_name || '';
+  const stationName = normalizeStationName(rawStation);
   const operator = args.operator ? OPERATOR_MAP[args.operator] : null;
-  const userLang = detectLanguage(stationName) || 'ja';
-  if (!stationName) return jsonResponse(buildErrorResponse('INVALID_INPUT', '駅名を指定してください。', { userLang }));
+  const userLang = detectLanguage(rawStation) || 'ja';
+  if (!rawStation) {
+    const msg = userLang === 'en' ? 'Please specify a station name.' : userLang === 'zh' ? '请指定车站名称。' : '駅名を指定してください。';
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
+  }
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, station: stationName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
   try {
     const response = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(operator, { 'dc:title': stationName }), timeout: 3500 });
     const stations = response.data;
     odptBreaker.onSuccess();
-    if (!stations || stations.length === 0) return jsonResponse(buildErrorResponse('PARSE_ERROR', '駅情報が見つかりませんでした。', { userLang, station: stationName }));
-    return jsonResponse({ status: "SUCCESS", station: stationName, results: stations.map(s => ({ id: s['@id'].replace('odpt:Station:', ''), name: s['dc:title'], code: s['odpt:stationCode'] })) });
+    const displayStation = getDisplayStationName(stationName, userLang);
+    if (!stations || stations.length === 0) {
+      const msg = userLang === 'en' ? `No station info found for ${displayStation}.` : userLang === 'zh' ? `未找到 ${displayStation} 的车站信息。` : '駅情報が見つかりませんでした。';
+      return jsonResponse(buildErrorResponse('PARSE_ERROR', msg, { userLang, station: displayStation }));
+    }
+    return jsonResponse({
+      status: "SUCCESS",
+      detected_language: userLang,
+      station: displayStation,
+      results: stations.map(s => ({ id: s['@id'].replace('odpt:Station:', ''), name: s['dc:title'], code: s['odpt:stationCode'] }))
+    });
   } catch (error) {
     odptBreaker.onFailure(error);
     return handleApiError(error, { userLang, station: stationName, api: 'ODPT' });
@@ -972,9 +1030,10 @@ async function getStationInfo(args) {
 // ☀️ 天気情報（高温・降水検出対応）
 // ==========================================
 async function getWeather(args) {
-  const userLang = detectLanguage(args.area_name) || 'ja';
-  let areaCode = '130000', areaName = args.area_name || "東京";
-  if (args.area_name && JMA_AREA_MAP[args.area_name]) areaCode = JMA_AREA_MAP[args.area_name];
+  const rawArea = args.area_name || '';
+  const userLang = detectLanguage(rawArea) || 'ja';
+  let areaCode = '130000', areaName = rawArea || "東京";
+  if (rawArea && JMA_AREA_MAP[rawArea]) areaCode = JMA_AREA_MAP[rawArea];
   if (!jmaBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, area: areaName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
   try {
     const cached = cache.get(cache.jmaWeather.key);
@@ -991,7 +1050,22 @@ async function getWeather(args) {
       jmaBreaker.onSuccess();
     }
     const adviceKey = isHot ? 'hot' : (isRainy ? 'rainy' : 'fair');
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, area: areaName, weather, max_temp: maxTemp || undefined, heat_alert: isHot || undefined, ai_transit_advice: MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja, gov_facility_search_support: { link: GOV_FACILITY_SEARCH_URL } });
+    const displayArea = userLang === 'en' ? 'Tokyo Area' : userLang === 'zh' ? '东京地区' : areaName;
+    return jsonResponse({
+      status: "SUCCESS",
+      detected_language: userLang,
+      area: displayArea,
+      weather,
+      max_temp: maxTemp || undefined,
+      heat_alert: isHot || undefined,
+      ai_transit_advice: MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja,
+      gov_facility_search_support: {
+        note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
+              userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
+              "🏛️ 【現在地周辺の公的機関の検索】",
+        link: GOV_FACILITY_SEARCH_URL
+      }
+    });
   } catch (error) {
     jmaBreaker.onFailure(error);
     return handleApiError(error, { userLang, area: areaName, api: 'JMA' });
@@ -1174,10 +1248,20 @@ async function getOperatorRoutes(args) {
 // 🚃 運賃検索（Yahoo非依存）
 // ==========================================
 async function searchFare(args) {
-  const from = normalizeStationName(args.from);
-  const to = normalizeStationName(args.to);
-  const userLang = detectLanguage(from) || detectLanguage(to) || 'ja';
-  if (!from || !to) return jsonResponse(buildErrorResponse('INVALID_INPUT', '両駅を指定してください。', { userLang }));
+  const rawFrom = args.from || '';
+  const rawTo = args.to || '';
+  const from = normalizeStationName(rawFrom);
+  const to = normalizeStationName(rawTo);
+  const fromLang = detectLanguage(rawFrom);
+  const toLang = detectLanguage(rawTo);
+  const userLang = fromLang !== 'ja' ? fromLang : (toLang !== 'ja' ? toLang : 'ja');
+
+  if (!from || !to) {
+    const msg = userLang === 'en' ? 'Please specify both origin and destination stations.' :
+                userLang === 'zh' ? '请同时指定出发车站和到达车站。' :
+                '両駅を指定してください。';
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
+  }
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
     const cached = cache.get(cache.railwayFare.key);
@@ -1193,26 +1277,38 @@ async function searchFare(args) {
       cache.set(cache.railwayFare.key, fares, cache.railwayFare.ttl);
     }
     odptBreaker.onSuccess();
-    // 駅名部分一致で検索
+
+    const displayFrom = getDisplayStationName(from, userLang);
+    const displayTo = getDisplayStationName(to, userLang);
+
     const results = fares.filter(f => {
       const fs = (f['odpt:fromStation'] || '').toLowerCase();
       const ts = (f['odpt:toStation'] || '').toLowerCase();
       return (fs.includes(from.toLowerCase()) || from.toLowerCase().includes(fs.split('.').pop())) &&
              (ts.includes(to.toLowerCase()) || to.toLowerCase().includes(ts.split('.').pop()));
     }).slice(0, 5);
+
     if (results.length === 0) {
-      return jsonResponse({ status: "SUCCESS", from, to, fare: null, message: "運賃データが見つかりません。Yahoo!路線情報をご利用ください。", fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` });
+      const notFoundMsg = userLang === 'en' ? "Fare data not found. Please check Yahoo! Transit." :
+                          userLang === 'zh' ? "未找到票价数据，请查看雅虎路线情报。" :
+                          "運賃データが見つかりません。Yahoo!路線情報をご利用ください。";
+      return jsonResponse({ status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo, fare: null, message: notFoundMsg, fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` });
     }
+
+    const noteText = userLang === 'en' ? "ODPT RailwayFare (24h Cache)" :
+                     userLang === 'zh' ? "ODPT RailwayFare (缓存: 24小时)" :
+                     "ODPT RailwayFare (キャッシュ: 24h)";
+
     return jsonResponse({
-      status: "SUCCESS", from, to,
+      status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo,
       fares: results.map(f => ({
-        operator: f['odpt:operator']?.replace('odpt.Operator:', '') || '不明',
+        operator: f['odpt:operator']?.replace('odpt.Operator:', '') || 'Unknown',
         ticket: f['odpt:ticketFare'] || f['odpt:childTicketFare'] || null,
         ic: f['odpt:icCardFare'] || f['odpt:childIcCardFare'] || null,
         child_ticket: f['odpt:childTicketFare'] || null,
         child_ic: f['odpt:childIcCardFare'] || null
       })),
-      data_source: "ODPT RailwayFare (キャッシュ: 24h)",
+      data_source: noteText,
       fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
     });
   } catch (error) {
@@ -1225,10 +1321,14 @@ async function searchFare(args) {
 // 🕐 時刻表検索（Yahoo非依存）
 // ==========================================
 async function getTimetable(args) {
-  const stationName = normalizeStationName(args.station_name);
+  const rawStation = args.station_name || '';
+  const stationName = normalizeStationName(rawStation);
   const railwayFilter = args.railway || null;
-  const userLang = detectLanguage(stationName) || 'ja';
-  if (!stationName) return jsonResponse(buildErrorResponse('INVALID_INPUT', '駅名を指定してください。', { userLang }));
+  const userLang = detectLanguage(rawStation) || 'ja';
+  if (!rawStation) {
+    const msg = userLang === 'en' ? 'Please specify a station name.' : userLang === 'zh' ? '请指定车站名称。' : '駅名を指定してください。';
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
+  }
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
     const cached = cache.get(cache.trainTimetable.key);
@@ -1240,20 +1340,23 @@ async function getTimetable(args) {
       cache.set(cache.trainTimetable.key, allTimetables, cache.trainTimetable.ttl);
     }
     odptBreaker.onSuccess();
-    // 駅名でフィルター
+
+    const displayStation = getDisplayStationName(stationName, userLang);
+
     const matched = allTimetables.filter(t => {
       const station = t['odpt:station'] || '';
       return station.toLowerCase().includes(stationName.toLowerCase()) ||
              stationName.toLowerCase().includes(station.split('.').pop()?.toLowerCase());
     });
+
     if (railwayFilter) {
       const filtered = matched.filter(t => {
         const r = t['odpt:railway'] || '';
         return r.toLowerCase().includes(railwayFilter.toLowerCase());
       });
-      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", station: stationName, railway_filter: railwayFilter, total: filtered.length, timetable: filtered.slice(0, 20).map(t => ({ train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway_filter: railwayFilter, total: filtered.length, timetable: filtered.slice(0, 20).map(t => ({ train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
     }
-    return jsonResponse({ status: "SUCCESS", station: stationName, total: matched.length, timetable: matched.slice(0, 20).map(t => ({ railway: t['odpt:railway'], train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+    return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, total: matched.length, timetable: matched.slice(0, 20).map(t => ({ railway: t['odpt:railway'], train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
   } catch (error) {
     odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });
@@ -1278,18 +1381,17 @@ async function searchBus(args) {
     }
     odptBreaker.onSuccess();
     if (!busstopName) {
-      // 全バス路線（最新20件）
-      return jsonResponse({ status: "SUCCESS", total: buses.length, bus_routes: buses.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
+      return jsonResponse({ status: "SUCCESS", detected_language: userLang, total: buses.length, bus_routes: buses.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
     }
     const matched = buses.filter(b => (b['odpt:note'] || '').includes(busstopName));
-    return jsonResponse({ status: "SUCCESS", busstop: busstopName, total: matched.length, bus_routes: matched.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'], frequency: b['odpt:frequency'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
+    return jsonResponse({ status: "SUCCESS", detected_language: userLang, busstop: busstopName, total: matched.length, bus_routes: matched.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'], frequency: b['odpt:frequency'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
   } catch (error) {
     odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, listFerryPorts, searchFerry, detectLanguage, parseTestMode };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, parseTestMode };
 
 async function main() {
   const transport = new StdioServerTransport();
