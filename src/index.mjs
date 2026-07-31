@@ -207,11 +207,12 @@ function detectFailureType(failureText, userLang = 'ja') {
       for (const kw of kwList) {
         const lowerKw = kw.toLowerCase();
         if (rawKey === lowerKw || rawKey.includes(lowerKw) || lowerKw.includes(rawKey)) {
+          const effectiveLang = (userLang && userLang !== 'ja') ? userLang : lang;
           const weatherText = typeof config.weatherText === 'object'
-            ? (config.weatherText[userLang] || config.weatherText.ja)
+            ? (config.weatherText[effectiveLang] || config.weatherText.ja)
             : config.weatherText;
           const delayMessage = typeof config.delayMessage === 'object'
-            ? (config.delayMessage[userLang] || config.delayMessage.ja)
+            ? (config.delayMessage[effectiveLang] || config.delayMessage.ja)
             : config.delayMessage;
           return {
             ...config,
@@ -700,6 +701,9 @@ async function searchRoute(args) {
   // -test シミュレーション
   if (simulatedFailure) {
     const fc = detectFailureType(simulatedFailure, userLang);
+    if (fc && fc.matchedLang && userLang === 'ja') {
+      userLang = fc.matchedLang;
+    }
     isRainy = fc.isRainy || false; isSevereWeather = fc.isSevereWeather || false;
     isHot = fc.isHot || false; isTrainSuspended = fc.isTrainSuspended || false;
     weatherText = fc.weatherText || (userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知");
@@ -1185,7 +1189,7 @@ async function searchBus(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, detectLanguage, parseTestMode };
 
 async function main() {
   const transport = new StdioServerTransport();
