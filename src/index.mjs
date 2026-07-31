@@ -121,40 +121,120 @@ function parseTestMode(args) {
 }
 
 // ==========================================
-// 🚨 障害種別マップ
+// 🚨 障害種別マップ（多言語対応）
 // ==========================================
-const FAILURE_TYPE_MAP = {
-  '台風': { type: 'weather', adviceKey: 'typhoon', isRainy: true, isSevereWeather: true, isTrainSuspended: true, weatherText: "台風接近に伴う大雨・暴風特別警報", delayMessage: "JR山手線・埼京線: 台風による運転見合わせ中" },
-  '地震': { type: 'disaster', adviceKey: 'earthquake', isTrainSuspended: true, delayMessage: "地震による一時運行停止" },
-  '津波': { type: 'disaster', adviceKey: 'emergency', isTrainSuspended: true, delayMessage: "津波による運行停止" },
-  '火災': { type: 'disaster', adviceKey: 'fire', isTrainSuspended: true, delayMessage: "火災による運行停止" },
-  '人身事故': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "人身事故により一部列車が運転見合わせ中" },
-  '列車衝突事故': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "列車衝突事故による運行停止" },
-  '列車脱線事故': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "列車脱線事故による運行停止" },
-  '列車火災事故': { type: 'disaster', adviceKey: 'fire', isTrainSuspended: true, delayMessage: "列車火災事故による運行停止" },
-  '踏切障害事故': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "踏切障害事故による一部列車の運転見合わせ" },
-  '道路障害事故': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "道路障害事故による一部列車の運行遅延" },
-  '鉄道人身事故': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "鉄道人身事故による運行停止" },
-  '鉄道物損事故': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "鉄道物損事故による運行停止" },
-  '浸水': { type: 'flood', adviceKey: 'flood', isRainy: true, isSevereWeather: true, isTrainSuspended: true, weatherText: "浸水による運行停止", delayMessage: "駅周辺で浸水事故発生。一部列車が運転見合わせ中" },
-  '停電': { type: 'infrastructure', adviceKey: 'infrastructure', isRainy: true, isTrainSuspended: true, weatherText: "停電による雨天警戒", delayMessage: "停電・機関所不通のため一部列車停止" },
-  '信号故障': { type: 'infrastructure', adviceKey: 'infrastructure', isTrainSuspended: true, delayMessage: "信号故障による運行停止" },
-  '線路破損': { type: 'infrastructure', adviceKey: 'infrastructure', isTrainSuspended: true, delayMessage: "線路破損による運行停止" },
-  'accident': { type: 'accident', adviceKey: 'accident', isTrainSuspended: true, delayMessage: "事故により一部列車が運転見合わせ中" },
-  '猛暑': { type: 'weather', adviceKey: 'hot', isHot: true, weatherText: "猛暑日・高温注意報", delayMessage: "猛暑による高温注意" },
-  '熱中症': { type: 'weather', adviceKey: 'hot', isHot: true, weatherText: "熱中症警戒アラート発令中", delayMessage: "熱中症に厳重警戒" },
-  '降雪': { type: 'weather', adviceKey: 'snow', isRainy: true, isTrainSuspended: true, weatherText: "降雪による路面凍結注意", delayMessage: "降雪のため一部列車が遅延・運休" },
-  '豪雨': { type: 'weather', adviceKey: 'flood', isRainy: true, isSevereWeather: true, isTrainSuspended: true, weatherText: "豪雨による洪水・土砂災害警戒", delayMessage: "豪雨のため一部区間で運転見合わせ" }
+const FAILURE_TYPES = {
+  'typhoon': {
+    type: 'weather', adviceKey: 'typhoon', isRainy: true, isSevereWeather: true, isTrainSuspended: true,
+    keywords: { ja: ['台風'], en: ['typhoon'], zh: ['台风', '颱風'] },
+    weatherText: { ja: "台風接近に伴う大雨・暴風特別警報", en: "Special heavy rain and wind warning due to approaching typhoon", zh: "台风逼近引发的大雨暴风特别警报" },
+    delayMessage: { ja: "台風接近・特別警報・運転見合わせ", en: "Approaching typhoon / Emergency warning / Service suspended", zh: "台风逼近・特别警报・列车暂停运行" }
+  },
+  'earthquake': {
+    type: 'disaster', adviceKey: 'earthquake', isTrainSuspended: true,
+    keywords: { ja: ['地震'], en: ['earthquake', 'quake'], zh: ['地震'] },
+    weatherText: { ja: "地震発生に伴う緊急情報", en: "Emergency notice due to earthquake", zh: "地震引发的紧急信息" },
+    delayMessage: { ja: "地震による一時運行停止", en: "Temporary service suspension due to earthquake", zh: "因地震导致临时暂停运行" }
+  },
+  'flood': {
+    type: 'flood', adviceKey: 'flood', isRainy: true, isSevereWeather: true, isTrainSuspended: true,
+    keywords: { ja: ['浸水'], en: ['flood', 'flooding', 'inundation'], zh: ['积水', '積水', '淹水', '浸水'] },
+    weatherText: { ja: "浸水による運行停止", en: "Service suspended due to flooding", zh: "因积水导致暂停运行" },
+    delayMessage: { ja: "駅周辺浸水・運転見合わせ", en: "Station area flooding / Service suspended", zh: "车站周边积水・列车暂停运行" }
+  },
+  'accident': {
+    type: 'accident', adviceKey: 'accident', isTrainSuspended: true,
+    keywords: { ja: ['人身事故', '事故', '列車衝突事故', '列車脱線事故', '踏切障害事故', '道路障害事故', '鉄道人身事故', '鉄道物損事故'], en: ['accident', 'personal_accident', 'injury', 'person_accident', 'crash'], zh: ['人身事故', '人员伤亡', '人員傷亡', '事故'] },
+    weatherText: { ja: "人身事故発生", en: "Personal accident occurred", zh: "发生人身事故" },
+    delayMessage: { ja: "人身事故による運転見合わせ", en: "Service suspended due to a personal injury accident", zh: "因人身事故导致列车暂停运行" }
+  },
+  'fire': {
+    type: 'disaster', adviceKey: 'fire', isTrainSuspended: true,
+    keywords: { ja: ['火災', '列車火災事故'], en: ['fire'], zh: ['火灾', '火災'] },
+    weatherText: { ja: "火災発生に伴う緊急警戒", en: "Emergency alert due to fire incident", zh: "火灾引发的紧急警戒" },
+    delayMessage: { ja: "火災による運行停止", en: "Service suspended due to fire", zh: "因发生火灾导致列车暂停运行" }
+  },
+  'power_outage': {
+    type: 'infrastructure', adviceKey: 'infrastructure', isRainy: true, isTrainSuspended: true,
+    keywords: { ja: ['停電'], en: ['power_outage', 'blackout', 'power_failure', 'outage'], zh: ['停电', '停電'] },
+    weatherText: { ja: "停電による雨天警戒", en: "Warning due to power outage", zh: "因停电发布警戒" },
+    delayMessage: { ja: "停電による列車停止", en: "Train stopped due to power outage", zh: "因停电导致列车停止运行" }
+  },
+  'signal_failure': {
+    type: 'infrastructure', adviceKey: 'infrastructure', isTrainSuspended: true,
+    keywords: { ja: ['信号故障', '線路破損'], en: ['signal_failure', 'signal', 'track_damage'], zh: ['信号故障', '信號故障', '线路损坏'] },
+    weatherText: { ja: "信号系統設備障害", en: "Signal system infrastructure failure", zh: "信号系统设备故障" },
+    delayMessage: { ja: "信号故障による運行停止", en: "Service suspended due to signal failure", zh: "因信号故障导致列车暂停运行" }
+  },
+  'extreme_heat': {
+    type: 'weather', adviceKey: 'hot', isHot: true,
+    keywords: { ja: ['猛暑'], en: ['extreme_heat', 'heatwave', 'heat_wave'], zh: ['酷暑', '高温', '高溫'] },
+    weatherText: { ja: "猛暑日・高温注意報", en: "Extreme heat day / High temperature advisory", zh: "酷暑日・高温预警" },
+    delayMessage: { ja: "熱中症注意", en: "Heatstroke warning in effect", zh: "注意预防中暑" }
+  },
+  'heatstroke': {
+    type: 'weather', adviceKey: 'hot', isHot: true,
+    keywords: { ja: ['熱中症'], en: ['heatstroke', 'heat_stroke'], zh: ['中暑'] },
+    weatherText: { ja: "熱中症警戒アラート発令中", en: "Heatstroke alert issued", zh: "防暑降温预警生效中" },
+    delayMessage: { ja: "熱中症警戒アラート", en: "Heatstroke Alert", zh: "高温中暑警戒预警" }
+  },
+  'snow': {
+    type: 'weather', adviceKey: 'snow', isRainy: true, isTrainSuspended: true,
+    keywords: { ja: ['降雪', '積雪', '大雪'], en: ['snow', 'snowfall', 'heavy_snow'], zh: ['降雪', '积雪', '積雪', '大雪'] },
+    weatherText: { ja: "降雪による路面凍結注意", en: "Beware of frozen walkways due to snowfall", zh: "降雪路面结冰请注意安全" },
+    delayMessage: { ja: "積雪による運行遅延・駅構内滑り注意", en: "Delays due to snow / Beware of slippery walkways in stations", zh: "因积雪导致列车延误・请注意车站内地面湿滑" }
+  },
+  'heavy_rain': {
+    type: 'weather', adviceKey: 'flood', isRainy: true, isSevereWeather: true, isTrainSuspended: true,
+    keywords: { ja: ['豪雨', '大雨'], en: ['heavy_rain', 'torrential_rain'], zh: ['暴雨', '豪雨', '大雨'] },
+    weatherText: { ja: "豪雨による洪水・土砂災害警戒", en: "Flood and landslide warning due to heavy rain", zh: "暴雨引发洪水・泥石流灾害预警" },
+    delayMessage: { ja: "大雨による視界不良・浸水注意報", en: "Poor visibility due to heavy rain / Flood advisory", zh: "大雨视线不良・发布浸水预警" }
+  },
+  'tsunami': {
+    type: 'disaster', adviceKey: 'emergency', isTrainSuspended: true,
+    keywords: { ja: ['津波'], en: ['tsunami'], zh: ['海啸', '海嘯', '津波'] },
+    weatherText: { ja: "津波警報発表", en: "Tsunami warning issued", zh: "发布海啸预警" },
+    delayMessage: { ja: "津波による運行停止", en: "Service suspended due to tsunami warning", zh: "因海啸预警暂停运行" }
+  }
 };
 
-function detectFailureType(failureText) {
+function detectFailureType(failureText, userLang = 'ja') {
   if (!failureText) return null;
-  const key = failureText.trim();
-  if (FAILURE_TYPE_MAP[key]) return FAILURE_TYPE_MAP[key];
-  for (const [k, v] of Object.entries(FAILURE_TYPE_MAP)) {
-    if (key.includes(k) || k.includes(key)) return v;
+  const rawKey = failureText.trim().toLowerCase();
+
+  for (const [id, config] of Object.entries(FAILURE_TYPES)) {
+    for (const [lang, kwList] of Object.entries(config.keywords)) {
+      for (const kw of kwList) {
+        const lowerKw = kw.toLowerCase();
+        if (rawKey === lowerKw || rawKey.includes(lowerKw) || lowerKw.includes(rawKey)) {
+          const weatherText = typeof config.weatherText === 'object'
+            ? (config.weatherText[userLang] || config.weatherText.ja)
+            : config.weatherText;
+          const delayMessage = typeof config.delayMessage === 'object'
+            ? (config.delayMessage[userLang] || config.delayMessage.ja)
+            : config.delayMessage;
+          return {
+            ...config,
+            matchedLang: lang,
+            weatherText,
+            delayMessage
+          };
+        }
+      }
+    }
   }
-  return { type: 'unknown', isTrainSuspended: true, delayMessage: key + " のため一部列車が運行停止中" };
+
+  const fallbackMsg = {
+    ja: rawKey + " のため一部列車が運行停止中",
+    en: "Service partially suspended due to " + rawKey,
+    zh: "因 " + rawKey + " 导致部分列车暂停运行"
+  };
+  return {
+    type: 'unknown',
+    isTrainSuspended: true,
+    weatherText: userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知",
+    delayMessage: fallbackMsg[userLang] || fallbackMsg.ja
+  };
 }
 
 // ==========================================
@@ -289,8 +369,14 @@ function detectLanguage(text) {
   if (!text) return 'ja';
   const str = text.trim();
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(str)) return 'ja';
-  if (/^[A-Za-z0-9\s,.-]+$/.test(str)) return 'en';
-  if (/[东涩谷澀谷银座横滨]/.test(str) || str.includes("涩") || str.includes("东") || str.includes("银") || str.includes("横") || str.includes("澀")) return 'zh';
+  if (/^[A-Za-z0-9\s,._-]+$/.test(str)) return 'en';
+  if (/[东涩澀国关风颱积淹灾电號酷]/.test(str) ||
+      str.includes("台风") || str.includes("积水") || str.includes("淹水") ||
+      str.includes("火灾") || str.includes("停电") || str.includes("酷暑") ||
+      str.includes("中暑") || str.includes("积雪") || str.includes("暴雨") ||
+      str.includes("人员") || str.includes("伤亡")) {
+    return 'zh';
+  }
   return 'ja';
 }
 
@@ -586,7 +672,18 @@ async function searchRoute(args) {
   const parsedArgs = parseTestMode({ from: args.from, to: args.to });
   let fromInput = parsedArgs.from, toInput = parsedArgs.to;
   let simulatedFailure = parsedArgs.simulatedFailure;
-  let userLang = detectLanguage(fromInput) || detectLanguage(toInput) || 'ja';
+
+  let userLang = 'ja';
+  if (simulatedFailure) {
+    const testLang = detectLanguage(simulatedFailure);
+    const fromLang = detectLanguage(fromInput);
+    const toLang = detectLanguage(toInput);
+    if (testLang !== 'ja') userLang = testLang;
+    else if (fromLang !== 'ja') userLang = fromLang;
+    else if (toLang !== 'ja') userLang = toLang;
+  } else {
+    userLang = detectLanguage(fromInput) || detectLanguage(toInput) || 'ja';
+  }
 
   if (!fromInput || !toInput) {
     return jsonResponse(buildErrorResponse('INVALID_INPUT', '出発駅と到着駅の両方を指定してください。', { userLang, from: fromInput, to: toInput }));
@@ -602,10 +699,11 @@ async function searchRoute(args) {
 
   // -test シミュレーション
   if (simulatedFailure) {
-    const fc = detectFailureType(simulatedFailure);
+    const fc = detectFailureType(simulatedFailure, userLang);
     isRainy = fc.isRainy || false; isSevereWeather = fc.isSevereWeather || false;
     isHot = fc.isHot || false; isTrainSuspended = fc.isTrainSuspended || false;
-    weatherText = fc.weatherText || "障害検知"; delayMessage = "🚨 " + (fc.delayMessage || "シミュレーション障害");
+    weatherText = fc.weatherText || (userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知");
+    delayMessage = "🚨 " + (fc.delayMessage || (userLang === 'en' ? "Simulated disruption" : userLang === 'zh' ? "模拟交通故障" : "シミュレーション障害"));
     failureType = simulatedFailure; failureAdviceKey = fc.adviceKey || null;
   }
 

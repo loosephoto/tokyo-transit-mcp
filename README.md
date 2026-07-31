@@ -117,10 +117,8 @@ search_route(from: "渋谷", to: "新宿")
 ```
 search_route(from: "東京 -test 人身事故", to: "新宿")
 search_route(from: "新宿 -test 台風", to: "渋谷")
-search_route(from: "浅草 -test 浸水", to: "渋谷")
-search_route(from: "東京 -test 猛暑", to: "新宿")
-search_route(from: "東京 -test 降雪", to: "新宿")
-search_route(from: "東京 -test 豪雨", to: "新宿")
+search_route(from: "Tokyo -test typhoon", to: "Shinjuku")
+search_route(from: "东京 -test 台风", to: "新宿")
 ```
 
 ### 2. `get_station_info` — 駅情報取得
@@ -186,26 +184,28 @@ search_ferry(from_port: "東京", to_port: "大島")
 
 ## 🚨 障害シミュレーション（-testモード）
 
-開発時や動作検証時に実際の悪天候や交通障害を想定したテストが行えるよう、擬似的な障害を発生させるテストモードを用意しています。`search_route` に `-test` フラグを付けると実際の外部APIを呼ばずにシミュレーションできます。
+開発時や動作検証時に実際の悪天候や交通障害を想定したテストが行えるよう、擬似的な障害を発生させるテストモードを用意しています。`search_route` に `-test` フラグを付けると実際の外部APIを呼ばずにシミュレーションできます。日本語・英語・中国語のキーワード入力に対応しています。
 
 **例**:
 ```
 浅草から渋谷までの経路を調べて -test 地震
+Check route from Asakusa to Shibuya -test typhoon
+查询从浅草到涩谷的路线 -test 台风
 ```
 
-| キーワード | シミュレーション内容 |
-|:---|---|
-| `台風` | 台風接近・特別警報・運転見合わせ |
-| `地震` | 地震による一時運行停止 |
-| `浸水` | 駅周辺浸水・運転見合わせ |
-| `人身事故` | 人身事故による運転見合わせ |
-| `火災` | 火災による運行停止 |
-| `停電` | 停電による列車停止 |
-| `信号故障` | 信号故障による運行停止 |
-| `猛暑` | 熱中症注意 |
-| `熱中症` | 熱中症警戒アラート |
-| `降雪` | 積雪による運行遅延・駅構内滑り注意 |
-| `豪雨` | 大雨による視界不良・浸水注意報 |
+| 日本語 | English | 中文 | シミュレーション内容 |
+|:---|:---|:---|---|
+| `台風` | `typhoon` | `台风` / `颱風` | 台風接近・特別警報・運転見合わせ |
+| `地震` | `earthquake` | `地震` | 地震による一時運行停止 |
+| `浸水` | `flood` | `积水` / `淹水` / `浸水` | 駅周辺浸水・運転見合わせ |
+| `人身事故` | `accident` | `人身事故` / `人员伤亡` | 人身事故による運転見合わせ |
+| `火災` | `fire` | `火灾` / `火災` | 火災による運行停止 |
+| `停電` | `blackout` / `power_outage` | `停电` / `停電` | 停電による列車停止 |
+| `信号故障` | `signal_failure` | `信号故障` / `信號故障` | 信号故障による運行停止 |
+| `猛暑` | `heatwave` / `extreme_heat` | `酷暑` / `高温` | 熱中症注意 |
+| `熱中症` | `heatstroke` | `中暑` | 熱中症警戒アラート |
+| `降雪` | `snow` / `snowfall` | `降雪` / `积雪` | 積雪による運行遅延・駅構内滑り注意 |
+| `豪雨` | `heavy_rain` | `暴雨` / `豪雨` | 大雨による視界不良・浸水注意報 |
 
 ---
 
@@ -430,8 +430,8 @@ search_route(from: "Shibuya", to: "Shinjuku")
 
 **Test Mode**:
 ```
-search_route(from: "Tokyo -test 人身事故", to: "Shinjuku")
-search_route(from: "Shinjuku -test 台風", to: "Shibuya")
+search_route(from: "Tokyo -test typhoon", to: "Shinjuku")
+search_route(from: "Shinjuku -test earthquake", to: "Shibuya")
 ```
 
 ### 2. `get_station_info` — Station Info
@@ -483,26 +483,27 @@ search_ferry(from_port: "Tokyo", to_port: "Oshima")
 
 ## 🚨 Disruption Simulation (-test mode)
 
-To test system behavior under severe weather or transit disruptions during development, you can use simulated test mode. Appending `-test` flags in `search_route` triggers mock responses without calling real APIs.
+To test system behavior under severe weather or transit disruptions during development, you can use simulated test mode. Appending `-test` flags in `search_route` triggers mock responses without calling real APIs. Supports multilingual keywords (English, Japanese, Chinese).
 
 **Example**:
 ```
-Check route from Asakusa to Shibuya -test 地震
+Check route from Asakusa to Shibuya -test typhoon
+Check route from Asakusa to Shibuya -test earthquake
 ```
 
-| Keyword | Simulation Details |
-|:---|---|
-| `台風` | Typhoon approaching, emergency warning, service suspended |
-| `地震` | Earthquake service suspension |
-| `浸水` | Station area flooding, service suspended |
-| `人身事故` | Personal accident delay / service suspended |
-| `火災` | Fire incident service suspended |
-| `停電` | Power outage train stoppage |
-| `信号故障` | Signal failure service suspended |
-| `猛暑` | Extreme heat / heatstroke warning |
-| `熱中症` | Heatstroke alert |
-| `降雪` | Snowfall delays & slippery platform warnings |
-| `豪雨` | Heavy rain / flood advisory |
+| English | Japanese | Chinese | Simulation Details |
+|:---|:---|:---|---|
+| `typhoon` | `台風` | `台风` / `颱風` | Typhoon approaching, emergency warning, service suspended |
+| `earthquake` | `地震` | `地震` | Earthquake service suspension |
+| `flood` | `浸水` | `积水` / `淹水` / `浸水` | Station area flooding, service suspended |
+| `accident` | `人身事故` | `人身事故` / `人员伤亡` | Personal accident delay / service suspended |
+| `fire` | `火災` | `火灾` / `火災` | Fire incident service suspended |
+| `blackout` / `power_outage` | `停電` | `停电` / `停電` | Power outage train stoppage |
+| `signal_failure` | `信号故障` | `信号故障` / `信號故障` | Signal failure service suspended |
+| `heatwave` / `extreme_heat` | `猛暑` | `酷暑` / `高温` | Extreme heat / heatstroke warning |
+| `heatstroke` | `熱中症` | `中暑` | Heatstroke alert |
+| `snow` / `snowfall` | `降雪` | `降雪` / `积雪` | Snowfall delays & slippery platform warnings |
+| `heavy_rain` | `豪雨` | `暴雨` / `豪雨` | Heavy rain / flood advisory |
 
 ---
 
@@ -727,8 +728,9 @@ search_route(from: "渋谷", to: "新宿")
 
 **测试模式**:
 ```
-search_route(from: "東京 -test 人身事故", to: "新宿")
-search_route(from: "新宿 -test 台風", to: "渋谷")
+search_route(from: "东京 -test 人身事故", to: "新宿")
+search_route(from: "新宿 -test 台风", to: "涩谷")
+search_route(from: "浅草 -test 积水", to: "涩谷")
 ```
 
 ### 2. `get_station_info` — 获取车站信息
@@ -780,26 +782,27 @@ search_ferry(from_port: "東京", to_port: "大島")
 
 ## 🚨 故障模拟（-test 模式）
 
-为了在开发和验证过程中模拟恶劣天气或交通中断，可使用测试模式。在 `search_route` 中指定 `-test` 标记即可触发模拟响应，无需调用实际 API。
+为了在开发和验证过程中模拟恶劣天气或交通中断，可使用测试模式。在 `search_route` 中指定 `-test` 标记即可触发模拟响应，无需调用实际 API。支持中文、英文、日文多语言关键字。
 
 **示例**:
 ```
+查询从浅草到涩谷的路线 -test 台风
 查询从浅草到涩谷的路线 -test 地震
 ```
 
-| 关键字 | 模拟内容 |
-|:---|---|
-| `台風` | 台风接近、特别警报、暂停运营 |
-| `地震` | 地震导致临时暂停运营 |
-| `浸水` | 车站周边积水、暂停运营 |
-| `人身事故` | 人身事故导致暂停运营 |
-| `火災` | 火灾导致暂停运营 |
-| `停電` | 停电导致列车停运 |
-| `信号故障` | 信号故障导致暂停运营 |
-| `猛暑` | 酷暑预警 |
-| `熱中症` | 防暑警报 |
-| `降雪` | 积雪导致晚点及车站防滑提醒 |
-| `豪雨` | 大雨导致视线不良及积水预警 |
+| 中文 | English | 日文 | 模拟内容 |
+|:---|:---|:---|---|
+| `台风` / `颱風` | `typhoon` | `台風` | 台风接近、特别警报、暂停运营 |
+| `地震` | `earthquake` | `地震` | 地震导致临时暂停运营 |
+| `积水` / `淹水` / `浸水` | `flood` | `浸水` | 车站周边积水、暂停运营 |
+| `人身事故` / `人员伤亡` | `accident` | `人身事故` | 人身事故导致暂停运营 |
+| `火灾` / `火災` | `fire` | `火災` | 火灾导致暂停运营 |
+| `停电` / `停電` | `power_outage` / `blackout` | `停電` | 停电导致列车停运 |
+| `信号故障` / `信號故障` | `signal_failure` | `信号故障` | 信号故障导致暂停运营 |
+| `酷暑` / `高温` | `heatwave` | `猛暑` | 酷暑预警 |
+| `中暑` | `heatstroke` | `熱中症` | 防暑降温预警 |
+| `降雪` / `积雪` | `snow` | `降雪` | 积雪导致晚点及车站防滑提醒 |
+| `暴雨` / `豪雨` | `heavy_rain` | `豪雨` | 大雨导致视线不良及积水预警 |
 
 ---
 
