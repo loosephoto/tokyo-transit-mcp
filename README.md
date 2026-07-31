@@ -188,6 +188,11 @@ search_ferry(from_port: "東京", to_port: "大島")
 
 開発時や動作検証時に実際の悪天候や交通障害を想定したテストが行えるよう、擬似的な障害を発生させるテストモードを用意しています。`search_route` に `-test` フラグを付けると実際の外部APIを呼ばずにシミュレーションできます。
 
+**Example**:
+```
+浅草から渋谷までの経路を調べて -test 地震
+```
+
 | キーワード | シミュレーション内容 |
 |:---|---|
 | `台風` | 台風接近・特別警報・運転見合わせ |
@@ -480,6 +485,11 @@ search_ferry(from_port: "Tokyo", to_port: "Oshima")
 
 To test system behavior under severe weather or transit disruptions during development, you can use simulated test mode. Appending `-test` flags in `search_route` triggers mock responses without calling real APIs.
 
+**Example**:
+```
+浅草から渋谷までの経路を調べて -test 地震
+```
+
 | Keyword | Simulation Details |
 |:---|---|
 | `台風` | Typhoon approaching, emergency warning, service suspended |
@@ -771,6 +781,11 @@ search_ferry(from_port: "東京", to_port: "大島")
 ## 🚨 故障模拟（-test 模式）
 
 为了在开发和验证过程中模拟恶劣天气或交通中断，可使用测试模式。在 `search_route` 中指定 `-test` 标记即可触发模拟响应，无需调用实际 API。
+
+**Example**:
+```
+浅草から渋谷までの経路を調べて -test 地震
+```
 
 | 关键字 | 模拟内容 |
 |:---|---|
