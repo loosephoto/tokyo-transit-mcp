@@ -23,8 +23,7 @@ const API_BASE_URL = 'https://api.odpt.org/api/v4';
 const API_KEY = process.env.ODPT_API_KEY;
 
 if (!API_KEY) {
-  console.error('Error: ODPT_API_KEY is required in .env file');
-  process.exit(1);
+  console.warn('Warning: ODPT_API_KEY is not set in .env file, proceeding without key');
 }
 
 // ==========================================
@@ -1054,8 +1053,12 @@ async function searchBus(args) {
   }
 }
 
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus };
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
-main().catch(error => { console.error('Failed to start server:', error); process.exit(1); });
+if (import.meta.url === `file://${process.argv[1]}` || (process.argv[1] && process.argv[1].endsWith('index.mjs'))) {
+  main().catch(error => { console.error('Failed to start server:', error); process.exit(1); });
+}
