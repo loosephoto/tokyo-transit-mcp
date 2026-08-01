@@ -95,8 +95,42 @@ const cache = {
   ferryGtfs: { key: 'ferry_gtfs', ttl: 3600000 },
   jmaWeather: { key: 'jma_weather', ttl: 600000 },
   railwayFare: { key: 'railway_fare', ttl: 86400000 },
+  stationRomanToJa: { key: 'station_roman_to_ja', ttl: 86400000 },
   trainTimetable: { key: 'train_timetable', ttl: 3600000 },
   busData: { key: 'bus_data', ttl: 600000 }
+};
+
+// ローマ字駅ID → 日本語駅名 の逆引きマップ（ODPT odpt:Station から動的構築）
+// ODPT の odpt:fromStation は 'odpt.Station:TokyoMetro.Fukutoshin.Shibuya' の形式で、
+// 末尾の <Station> がローマ字（Shibuya）のため、日本語入力（渋谷）との照合に使用する。
+let _stationRomanToJa = null;
+async function getStationRomanToJa() {
+  if (_stationRomanToJa) return _stationRomanToJa;
+  const cached = cache.get(cache.stationRomanToJa.key);
+  if (cached) { _stationRomanToJa = cached; return cached; }
+  const map = {};
+  // 手動フォールバック: STATION_DISPLAY_NAMES の en 値（ローマ字）→ 日本語
+  for (const [ja, trans] of Object.entries(STATION_DISPLAY_NAMES)) {
+    if (trans.en) map[trans.en.toLowerCase()] = ja;
+  }
+  // ODPT odpt:Station から全駅を取得して上書き（より網羅的）
+  try {
+    const ops = ['TokyoMetro', 'Toei'];
+    const responses = await Promise.allSettled(ops.map(op =>
+      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 4000 })
+    ));
+    for (const r of responses) {
+      if (r.status !== 'fulfilled') continue;
+      for (const s of (r.value.data || [])) {
+        const id = (s['owl:sameAs'] || '').split('.').pop();
+        const title = s['dc:title'];
+        if (id && title) map[id.toLowerCase()] = title;
+      }
+    }
+  } catch (_) { /* フォールバックのみで続行 */ }
+  cache.set(cache.stationRomanToJa.key, map, cache.stationRomanToJa.ttl);
+  _stationRomanToJa = map;
+  return map;
 };
 
 // ==========================================
@@ -1763,14 +1797,18 @@ async function searchFare(args) {
     }
     odptBreaker.onSuccess();
 
+    const stationMap = await getStationRomanToJa();
     const displayFrom = getDisplayStationName(from, userLang);
     const displayTo = getDisplayStationName(to, userLang);
 
     const results = fares.filter(f => {
-      const fs = (f['odpt:fromStation'] || '').toLowerCase();
-      const ts = (f['odpt:toStation'] || '').toLowerCase();
-      return (fs.includes(from.toLowerCase()) || from.toLowerCase().includes(fs.split('.').pop())) &&
-             (ts.includes(to.toLowerCase()) || to.toLowerCase().includes(ts.split('.').pop()));
+      const fsKey = (f['odpt:fromStation'] || '').toLowerCase().split('.').pop() || '';
+      const tsKey = (f['odpt:toStation'] || '').toLowerCase().split('.').pop() || '';
+      const fsJa = stationMap[fsKey] || fsKey;
+      const tsJa = stationMap[tsKey] || tsKey;
+      const matchFrom = fsJa.includes(from) || from.includes(fsJa) || fsKey.includes(from.toLowerCase());
+      const matchTo = tsJa.includes(to) || to.includes(tsJa) || tsKey.includes(to.toLowerCase());
+      return matchFrom && matchTo;
     }).slice(0, 5);
 
     if (results.length === 0) {
@@ -1784,8 +1822,20 @@ async function searchFare(args) {
                      userLang === 'zh' ? "ODPT RailwayFare (缓存: 24小时)" :
                      "ODPT RailwayFare (キャッシュ: 24h)";
 
+    // 最安値を single fare フィールドにも設定（後方互換・親切表示）
+    const cheapest = results.reduce((best, f) => {
+      const ticket = f['odpt:ticketFare'] ?? f['odpt:childTicketFare'] ?? Infinity;
+      return ticket < best.ticket ? { ticket, f } : best;
+    }, { ticket: Infinity, f: null });
+
     return jsonResponse({
       status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo,
+      fare: cheapest.f ? {
+        ticket: cheapest.f['odpt:ticketFare'] || cheapest.f['odpt:childTicketFare'] || null,
+        ic: cheapest.f['odpt:icCardFare'] || cheapest.f['odpt:childIcCardFare'] || null,
+        child_ticket: cheapest.f['odpt:childTicketFare'] || null,
+        child_ic: cheapest.f['odpt:childIcCardFare'] || null
+      } : null,
       fares: results.map(f => ({
         operator: f['odpt:operator']?.replace('odpt.Operator:', '') || 'Unknown',
         ticket: f['odpt:ticketFare'] || f['odpt:childTicketFare'] || null,
