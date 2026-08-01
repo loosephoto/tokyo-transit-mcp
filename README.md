@@ -22,7 +22,7 @@
 | 🚡 AGT | ゆりかもめ・日暮里・舎人ライナー |
 | 🚝 モノレール | 東京モノレール・多摩モノレール |
 | 🚋 路面電車 | 都電荒川線（東京さくらトラム） |
-| 🚢 フェリー | 東海汽船（伊豆諸島・小笠原航路） |
+| 🚢 フェリー | 東海汽船（伊豆諸島・小笠原航路）※ODPT GTFS取得不可時は内蔵ポートリスト（20港）で検索 |
 | 🚤 水上バス | 東京クルーズ（浅草〜お台場〜豊洲） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API、1,878ポート） |
 
@@ -96,6 +96,7 @@ search_route(from: "渋谷", to: "新宿")
 **パラメータ**:
 - `from` (string) — 出発駅名
 - `to` (string) — 到着駅名
+- `user_location` (object, 任意) — 利用者の現在位置 `{ lat: number, lon: number }`。指定時は運転見合わせ時のシェアサイクル案内を現在地基準で表示（未指定時は出発駅基準）
 
 **レスポンス例**:
 ```json
@@ -275,7 +276,7 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 | シェアサイクル | 30秒 | リアルタイム情報 |
 | 時刻表 | 1時間 | 静的データ |
 | 運賃 | 24時間 | 変更レア |
-| フェリーGTFS | 1時間 | 静的データ |
+| フェリーGTFS | 1時間 | 静的データ（ODPT GTFS取得不可時は内蔵ポートリストでフォールバック） |
 
 ---
 
@@ -338,7 +339,7 @@ This server goes beyond simple route searching by integrating weather data and v
 | 🚡 AGT | Yurikamome, Nippori-Toneri Liner |
 | 🚝 Monorails | Tokyo Monorail, Tama Monorail |
 | 🚋 Trams | Toden Arakawa Line (Tokyo Sakura Tram) |
-| 🚢 Ferries | Tokai Kisen (Izu Islands & Ogasawara routes) |
+| 🚢 Ferries | Tokai Kisen (Izu Islands & Ogasawara routes) — falls back to built-in port list (20 ports) when ODPT GTFS is unavailable |
 | 🚤 Water Buses | Tokyo Cruise (Asakusa - Odaiba - Toyosu) |
 | 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
 
@@ -411,6 +412,7 @@ search_route(from: "Shibuya", to: "Shinjuku")
 **Parameters**:
 - `from` (string) — Departure station name
 - `to` (string) — Arrival station name
+- `user_location` (object, optional) — User's current location `{ lat: number, lon: number }`. When provided, bike-share guidance during service suspensions is based on the current location (otherwise based on the departure station)
 
 **Response Example**:
 ```json
@@ -573,7 +575,7 @@ Appropriate TTLs (Time To Live) are configured according to data update frequenc
 | Bike Share | 30 secs | Real-time availability |
 | Timetables | 1 hour | Static schedule data |
 | Fares | 24 hours | Rarely changes |
-| Ferry GTFS | 1 hour | Static schedule data |
+| Ferry GTFS | 1 hour | Static schedule data (falls back to built-in port list when ODPT GTFS is unavailable) |
 
 ---
 
@@ -636,7 +638,7 @@ MIT License
 | 🚡 AGT | 百合海鸥号（Yurikamome）、日暮里-舍人线 |
 | 🚝 单轨铁路 | 东京单轨电车、多摩单轨电车 |
 | 🚋 有轨电车 | 都电荒川线（东京樱花路面电车） |
-| 🚢 轮渡 | 东海汽船（伊豆群岛、小笠原航线） |
+| 🚢 轮渡 | 东海汽船（伊豆群岛、小笠原航线）※ODPT GTFS 不可用时回退至内置港口列表（20港） |
 | 🚤 水上巴士 | 东京观光汽船（浅草〜台场〜丰洲） |
 | 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878个站点） |
 
@@ -709,6 +711,7 @@ search_route(from: "渋谷", to: "新宿")
 **参数**:
 - `from` (string) — 出发车站名称
 - `to` (string) — 到达车站名称
+- `user_location` (object, 可选) — 用户当前位置 `{ lat: number, lon: number }`。指定时，运行中断期间的共享自行车指引以当前位置为基准（未指定时以出发站为基准）
 
 **响应示例**:
 ```json
@@ -872,7 +875,7 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 | 共享单车 | 30秒 | 实时车辆可用性 |
 | 时刻表 | 1小时 | 静态运行计划 |
 | 票价 | 24小时 | 极少变动 |
-| 轮渡 GTFS | 1小时 | 静态运行计划 |
+| 轮渡 GTFS | 1小时 | 静态运行计划（ODPT GTFS 不可用时回退至内置港口列表） |
 
 ---
 
