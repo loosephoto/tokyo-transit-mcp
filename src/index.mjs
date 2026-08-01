@@ -230,13 +230,16 @@ const FAILURE_TYPES = {
 function detectFailureType(failureText, userLang = 'ja') {
   if (!failureText) return null;
   const rawKey = failureText.trim().toLowerCase();
+  const textLang = detectLanguage(rawKey); // テキスト自体の言語（ja/zh 共通キーワードの判別用）
 
   for (const [id, config] of Object.entries(FAILURE_TYPES)) {
     for (const [lang, kwList] of Object.entries(config.keywords)) {
       for (const kw of kwList) {
         const lowerKw = kw.toLowerCase();
         if (rawKey === lowerKw || rawKey.includes(lowerKw) || lowerKw.includes(rawKey)) {
-          const effectiveLang = (userLang && userLang !== 'ja') ? userLang : lang;
+          // ja/zh 共通キーワードの場合、テキストの言語判定を優先
+          const effectiveMatchedLang = (textLang !== 'ja') ? textLang : lang;
+          const effectiveLang = (userLang && userLang !== 'ja') ? userLang : effectiveMatchedLang;
           const weatherText = typeof config.weatherText === 'object'
             ? (config.weatherText[effectiveLang] || config.weatherText.ja)
             : config.weatherText;
@@ -245,7 +248,7 @@ function detectFailureType(failureText, userLang = 'ja') {
             : config.delayMessage;
           return {
             ...config,
-            matchedLang: lang,
+            matchedLang: effectiveMatchedLang,
             weatherText,
             delayMessage
           };
@@ -538,7 +541,9 @@ function detectLanguage(text) {
       str.includes("台风") || str.includes("积水") || str.includes("淹水") ||
       str.includes("火灾") || str.includes("停电") || str.includes("酷暑") ||
       str.includes("中暑") || str.includes("积雪") || str.includes("暴雨") ||
-      str.includes("人员") || str.includes("伤亡") || str.includes("台场")) {
+      str.includes("人员") || str.includes("伤亡") || str.includes("台场") ||
+      str.includes("地震") || str.includes("人身事故") || str.includes("信号故障") ||
+      str.includes("降雪") || str.includes("海啸") || str.includes("海嘯")) {
     return 'zh';
   }
   return 'ja';
@@ -1177,12 +1182,15 @@ async function searchRoute(args) {
 
   let userLang = 'ja';
   if (simulatedFailure) {
-    const testLang = detectLanguage(simulatedFailure);
-    const fromLang = detectLanguage(fromInput);
-    const toLang = detectLanguage(toInput);
-    if (testLang !== 'ja') userLang = testLang;
-    else if (fromLang !== 'ja') userLang = fromLang;
-    else if (toLang !== 'ja') userLang = toLang;
+    // fromInput の駅名部分（'-test' より前）の言語を優先判定。
+    // ja/zh 共通キーワード（地震・人身事故等）でも、駅名が日本語なら ja、中国語なら zh となる。
+    const stationPart = fromInput.split(/\s*-+\s*test/i)[0].trim();
+    const stationLang = detectLanguage(stationPart);
+    if (stationLang !== 'ja') {
+      userLang = stationLang;
+    }
+    // 駅名が日本語（ja）の場合は userLang を 'ja' のままにする。
+    // （ja/zh 共通キーワードの場合、駅名の言語を信頼する）
   } else {
     userLang = detectLanguage(fromInput) || detectLanguage(toInput) || 'ja';
   }
@@ -1202,9 +1210,8 @@ async function searchRoute(args) {
   // -test シミュレーション
   if (simulatedFailure) {
     const fc = detectFailureType(simulatedFailure, userLang);
-    if (fc && fc.matchedLang && userLang === 'ja') {
-      userLang = fc.matchedLang;
-    }
+    // 注意: userLang は初期化部で fromInput の駅名言語に基づき決定済み。
+    // ja/zh 共通キーワード（地震等）でも駅名の言語を優先するため、ここでは上書きしない。
     isRainy = fc.isRainy || false; isSevereWeather = fc.isSevereWeather || false;
     isHot = fc.isHot || false; isTrainSuspended = fc.isTrainSuspended || false;
     weatherText = fc.weatherText || (userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知");
