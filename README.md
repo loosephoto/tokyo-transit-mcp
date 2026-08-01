@@ -22,7 +22,7 @@
 | 🚡 AGT | ゆりかもめ・日暮里・舎人ライナー |
 | 🚝 モノレール | 東京モノレール・多摩モノレール |
 | 🚋 路面電車 | 都電荒川線（東京さくらトラム） |
-| 🚢 フェリー | 東海汽船（伊豆諸島・小笠原航路）※ODPT GTFS取得不可時は内蔵ポートリスト（20港）で検索 |
+| 🚢 フェリー | 東海汽船（伊豆諸島・小笠原航路）※ODPT GTFS取得不可時は内蔵ポートリスト（19港）で検索 |
 | 🚤 水上バス | 東京クルーズ（浅草〜お台場〜豊洲） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API、1,878ポート） |
 
@@ -353,7 +353,7 @@ This server goes beyond simple route searching by integrating weather data and v
 | 🚡 AGT | Yurikamome, Nippori-Toneri Liner |
 | 🚝 Monorails | Tokyo Monorail, Tama Monorail |
 | 🚋 Trams | Toden Arakawa Line (Tokyo Sakura Tram) |
-| 🚢 Ferries | Tokai Kisen (Izu Islands & Ogasawara routes) — falls back to built-in port list (20 ports) when ODPT GTFS is unavailable |
+| 🚢 Ferries | Tokai Kisen (Izu Islands & Ogasawara routes) — falls back to built-in port list (19 ports) when ODPT GTFS is unavailable |
 | 🚤 Water Buses | Tokyo Cruise (Asakusa - Odaiba - Toyosu) |
 | 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
 
@@ -666,7 +666,7 @@ MIT License
 | 🚡 AGT | 百合海鸥号（Yurikamome）、日暮里-舍人线 |
 | 🚝 单轨铁路 | 东京单轨电车、多摩单轨电车 |
 | 🚋 有轨电车 | 都电荒川线（东京樱花路面电车） |
-| 🚢 轮渡 | 东海汽船（伊豆群岛、小笠原航线）※ODPT GTFS 不可用时回退至内置港口列表（20港） |
+| 🚢 轮渡 | 东海汽船（伊豆群岛、小笠原航线）※ODPT GTFS 不可用时回退至内置港口列表（19港） |
 | 🚤 水上巴士 | 东京观光汽船（浅草〜台场〜丰洲） |
 | 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878个站点） |
 
