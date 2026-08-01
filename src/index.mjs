@@ -511,7 +511,9 @@ function getDisplayStationName(stationName, userLang) {
 
 const FERRY_PORT_MAP = {
   // 日本語
-  '東京': '日の出桟橋', '東京・竹芝': '東京・竹芝', '竹芝': '東京・竹芝', '竹芝客船ターミナル': '東京・竹芝',
+  // 注: '東京' は東海汽船の竹芝発（大島・伊豆諸島航路）を指す。水上バスに「東京」港は存在しないため、
+  // 曖昧さを避けるため東海汽船の '東京・竹芝' にマップする。
+  '東京': '東京・竹芝', '東京・竹芝': '東京・竹芝', '竹芝': '東京・竹芝', '竹芝客船ターミナル': '東京・竹芝',
   '横浜': '横浜・大さん橋', '横浜・大さん橋': '横浜・大さん橋', '大さん橋': '横浜・大さん橋', '大桟橋': '横浜・大さん橋',
   '大島': '大島', '利島': '利島', '新島': '新島', '式根島': '式根島', '神津島': '神津島',
   '三宅島': '三宅島', '御蔵島': '御蔵島', '八丈島': '八丈島', '青ヶ島': '青ヶ島',
@@ -1066,10 +1068,10 @@ const FERRY_GTFS_SOURCES = [
   // 東海汽船 GTFS エンドポイント（files/odpt/...）が ODPT 側で 404/500 となる場合のフォールバック。
   // ハードコード港リストを stop として展開し、伊豆諸島航路等を検索可能にする。
   { name: '東海汽船（ハードコード）', hardCoded: true, stops: [
-    '東京', '東京・竹芝', '竹芝', '大島', '利島', '新島', '式根島', '神津島',
+    '東京・竹芝', '竹芝', '大島', '利島', '新島', '式根島', '神津島',
     '三宅島', '御蔵島', '八丈島', '青ヶ島', '父島', '母島', '久里浜', '館山',
     '熱海', '伊東', '稲取', '下田'
-  ] }
+  ] },
 ];
 
 async function fetchFerryData() {
@@ -1103,7 +1105,24 @@ async function fetchFerryData() {
           seenStopIds.add(sid);
         }
       }
-      console.log(`[Ferry] ${src.name}: loaded (hardcoded ${src.stops.length} ports)`);
+      // 航路データも合成: 基点（東京・竹芝/竹芝）から各島への往復航路を生成
+      const bases = src.stops.filter(s => s === '東京・竹芝' || s === '竹芝');
+      const dests = src.stops.filter(s => s !== '東京・竹芝' && s !== '竹芝');
+      let tripSeq = 0;
+      for (const base of bases) {
+        for (const dest of dests) {
+          const rid = `TokaiKisenHC:${base}-${dest}`;
+          if (!seenRouteIds.has(rid)) {
+            allRoutes.push({ route_id: rid, route_short_name: `${base}→${dest}`, route_long_name: `${base}〜${dest}`, _source: src.name });
+            seenRouteIds.add(rid);
+          }
+          const tripId = `TokaiKisenHC:T${tripSeq++}`;
+          allTrips.push({ route_id: rid, trip_id: tripId, _source: src.name });
+          allStopTimes.push({ trip_id: tripId, stop_id: `TokaiKisenHC:${base}`, stop_sequence: '1', arrival_time: '', departure_time: '' });
+          allStopTimes.push({ trip_id: tripId, stop_id: `TokaiKisenHC:${dest}`, stop_sequence: '2', arrival_time: '', departure_time: '' });
+        }
+      }
+      console.log(`[Ferry] ${src.name}: loaded (hardcoded ${src.stops.length} ports, synthesized routes)`);
       continue;
     }
     try {
@@ -1742,8 +1761,8 @@ async function searchFerry(args) {
       detected_language: userLang,
       from_port: displayFrom,
       to_port: displayTo,
-      routes: results,
-      total_routes: results.length,
+      routes: relevantRoutes,
+      total_routes: relevantRoutes.length,
       operator: operatorName,
       official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/'
     });
