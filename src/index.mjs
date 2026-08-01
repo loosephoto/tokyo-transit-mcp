@@ -438,6 +438,45 @@ const STATION_NAME_MAP = {
   '渋谷駅': '渋谷', '新宿駅': '新宿', '東京駅': '東京', '品川駅': '品川', '池袋駅': '池袋', // suffix も念のため（resolveStation で大半解決済み）
 };
 
+// 路線名: 日本語 → ODPT ローマ字IDキー（odpt:railway の末尾セグメント）
+// ODPT は 'odpt.Railway:JR-East.Yamanote' の形式で、末尾がローマ字ID（Yamanote）のため、
+// 日本語入力（山手線）との照合に使用。部分一致でも検索できるよう複数形を用意。
+const RAILWAY_NAME_MAP = {
+  '山手線': 'yamanote', '山手': 'yamanote',
+  '中央線': 'chuo', '中央': 'chuo', '中央・総武線': 'chuo-sobu', '総武線': 'sobu',
+  '京浜東北線': 'keihin-tohoku', '京浜東北': 'keihin-tohoku',
+  '東海道線': 'tokaido', '東海道': 'tokaido',
+  '埼京線': 'saikyo', '埼京': 'saikyo',
+  '湘南新宿ライン': 'shonan-shinjuku', '湘南新宿': 'shonan-shinjuku',
+  '東京メトロ丸ノ内線': 'marunouchi', '丸ノ内線': 'marunouchi', '丸ノ内': 'marunouchi',
+  '東京メトロ銀座線': 'ginza', '銀座線': 'ginza', '銀座': 'ginza',
+  '東京メトロ日比谷線': 'hibiya', '日比谷線': 'hibiya', '日比谷': 'hibiya',
+  '東京メトロ千代田線': 'chiyoda', '千代田線': 'chiyoda', '千代田': 'chiyoda',
+  '東京メトロ東西線': 'tozai', '東西線': 'tozai', '東西': 'tozai',
+  '東京メトロ半蔵門線': 'hanzomon', '半蔵門線': 'hanzomon', '半蔵門': 'hanzomon',
+  '東京メトロ南北線': 'nanboku', '南北線': 'nanboku', '南北': 'nanboku',
+  '東京メトロ有楽町線': 'yurakucho', '有楽町線': 'yurakucho', '有楽町': 'yurakucho',
+  '東京メトロ副都心線': 'fukutoshin', '副都心線': 'fukutoshin', '副都心': 'fukutoshin',
+  '都営浅草線': 'asakusa', '浅草線': 'asakusa',
+  '都営三田線': 'mita', '三田線': 'mita',
+  '都営新宿線': 'shinjuku', '新宿線': 'shinjuku',
+  '都営大江戸線': 'oedo', '大江戸線': 'oedo', '大江戸': 'oedo',
+  'りんかい線': 'rinkai', '臨海線': 'rinkai', 'りんかい': 'rinkai',
+  'ゆりかもめ': 'yurikamome', '百合海鸥': 'yurikamome',
+  'つくbaエクスプレス': 'tsukuba', 'つくバエクスプレス': 'tsukuba', 'tx': 'tsukuba',
+  '東急東横線': 'toyoko', '東横線': 'toyoko', '東横': 'toyoko',
+  '東急田園都市線': 'denentoshi', '田園都市線': 'denentoshi', '田園都市': 'denentoshi',
+  '京王線': 'keio', '京王': 'keio',
+  '小田急線': 'odakyu', '小田急': 'odakyu',
+  '西武池袋線': 'seibu', '西武': 'seibu',
+  '東武東上線': 'tobu-tojo', '東武': 'tobu',
+  '京成線': 'keisei', '京成': 'keisei',
+  '京急線': 'keikyu', '京急': 'keikyu',
+  '相鉄線': 'sotetsu', '相鉄': 'sotetsu',
+  '横浜市営地下鉄': 'yokohama', '横浜市営': 'yokohama',
+  ' JR ': 'jr-east', 'JR東日本': 'jr-east', 'JR西日本': 'jr-west',
+};
+
 // 多言語表示名辞書
 const STATION_DISPLAY_NAMES = {
   '東京': { en: 'Tokyo', zh: '东京' },
@@ -1885,11 +1924,23 @@ async function getTimetable(args) {
     });
 
     if (railwayFilter) {
+      // 日本語路線名を ODPT ローマ字IDに変換（例: 山手線 → yamanote）
+      const rfLower = railwayFilter.toLowerCase();
+      const railwayKey = RAILWAY_NAME_MAP[railwayFilter] || RAILWAY_NAME_MAP[railwayFilter.replace(/線$/, '')] || rfLower;
       const filtered = matched.filter(t => {
-        const r = t['odpt:railway'] || '';
-        return r.toLowerCase().includes(railwayFilter.toLowerCase());
+        const r = (t['odpt:railway'] || '').toLowerCase();
+        // odpt:railway の末尾セグメント（ローマ字）または全体でマッシュ
+        const rKey = r.split('.').pop() || r;
+        return r.includes(railwayKey) || rKey.includes(railwayKey) || railwayKey.includes(rKey);
       });
-      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway_filter: railwayFilter, total: filtered.length, timetable: filtered.slice(0, 20).map(t => ({ train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: railwayFilter, total: filtered.length, timetable: filtered.slice(0, 20).map(t => ({ railway: t['odpt:railway'], train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      // フィルタ結果が 0 件なら「該当路線のデータなし」を明確に返す（誤って全件を返さない）
+      const noRailwayMsg = userLang === 'en'
+        ? `No timetable found for railway "${railwayFilter}" at ${displayStation}.`
+        : userLang === 'zh'
+          ? `在${displayStation}未找到路线「${railwayFilter}」的时程表。`
+          : `${displayStation}の「${railwayFilter}」の時刻表は見つかりませんでした。`;
+      return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, railway: railwayFilter, total: 0, message: noRailwayMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
     }
     return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, total: matched.length, timetable: matched.slice(0, 20).map(t => ({ railway: t['odpt:railway'], train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
   } catch (error) {
