@@ -274,6 +274,18 @@ function buildErrorResponse(errorType, errorMessage, details = {}) {
         en: ["Please check the station name or query entered.", "Enter a valid station name (e.g., Shibuya, Shinjuku)."],
         zh: ["请检查输入的站名或查询内容。", "请输入正确的站名（如：涩谷、新宿）。"] },
       suggestionKey: "CHECK_INPUT" },
+    NO_ROUTE: { httpCode: 404, retryable: false,
+      suggestions: {
+        ja: ["指定された2駅間に接続ルートが見つかりませんでした。", "Yahoo!路線情報などの代替検索をご利用ください。"],
+        en: ["No connecting route found between the specified stations.", "Please use alternative services like Yahoo! Transit."],
+        zh: ["未找到指定两站之间的连接路线。", "请使用雅虎路线信息等替代搜索。"] },
+      suggestionKey: "NO_ROUTE" },
+    STATION_NOT_FOUND: { httpCode: 404, retryable: false,
+      suggestions: {
+        ja: ["指定された駅は経路検索データに含まれていません。", "別の駅名（例: 近隣の主要駅）をお試しください。"],
+        en: ["The specified station is not in the routing data.", "Try another station name (e.g., a nearby major station)."],
+        zh: ["指定车站不在路径搜索数据中。", "请尝试其他站名（如附近的主要车站）。"] },
+      suggestionKey: "STATION_NOT_FOUND" },
     UNKNOWN_ERROR: { httpCode: 500, retryable: false,
       suggestions: {
         ja: ["予期しないエラーが発生しました。", "もう一度お試しいただくか、管理者にお問い合わせください。"],
@@ -324,12 +336,29 @@ const STATION_NAME_MAP = {
   'Meguro': '目黒', 'Kanda': '神田', 'Hamamatsucho': '浜松町', 'Shimbashi': '新橋', 'Shin-Okubo': '新大久保',
   'Takadanobaba': '高田馬場', 'Sugamo': '巣鴨', 'Nippori': '日暮里', 'Ochanomizu': '御茶ノ水',
   'Osaka': '大阪', 'Kyoto': '京都', 'Narita Airport': '成田空港', 'Haneda Airport': '羽田空港',
+  'Tokyo Skytree': 'とうきょうスカイツリー', 'Skytree': 'とうきょうスカイツリー',
+  'Tokyo Big Sight': '東京ビッグサイト', 'Big Sight': '東京ビッグサイト',
+  'Otemachi': '大手町', 'Otodo': '大手町', 'Shibuya': '渋谷',
+  'Kasumigaseki': '霞ケ関', 'Kasumigaseki': '霞ケ関', 'Hibiya': '日比谷', 'Tokyo Station': '東京',
 
   // 中文 (簡体字 / 繁体字)
   '东京': '東京', '新宿': '新宿', '涩谷': '渋谷', '澀谷': '渋谷', '银座': '銀座', '銀座': '銀座',
   '横滨': '横浜', '橫濱': '横浜', '浅草': '浅草', '品川': '品川', '池袋': '池袋', '上野': '上野',
   '秋叶原': '秋葉原', '秋葉原': '秋葉原', '六本木': '六本木', '原宿': '原宿', '台场': 'お台場',
-  '惠比寿': '恵比寿', '目黑': '目黒', '神田': '神田', '滨松町': '浜松町', '新桥': '新橋', '大阪': '大阪', '京都': '京都'
+  '惠比寿': '恵比寿', '目黑': '目黒', '神田': '神田', '滨松町': '浜松町', '新桥': '新橋', '大阪': '大阪', '京都': '京都',
+  '东京晴空塔': 'とうきょうスカイツリー', '晴空塔': 'とうきょうスカイツリー',
+  '东京国际展示场': '東京ビッグサイト', '国际展示场': '東京ビッグサイト',
+
+  // 旧駅名・別表記（外部API/テーブルデータや古い入力で残りうるもの）
+  'テレコムセンター': '東京ビッグサイト',     // ゆりかもめ旧駅名（現:東京ビッグサイト付近）
+  '東京国際展示場正門': '東京ビッグサイト',   // ゆりかもめ旧駅名
+  '東京国際展示場': '国際展示場',             // りんかい線 国際展示場駅の別表記
+  '西銀座': '銀座',                           // 東京メトロ銀座線 旧・西銀座駅（現:銀座）
+  '数寄屋橋': '銀座',                         // 東京メトロ銀座線 旧・数寄屋橋駅（現:銀座）
+  '歌舞伎町': '新宿',                         // 地域・バス停名（最寄り:新宿）
+  '西新宿': '都庁前',                         // 大江戸線 都庁前駅の別称
+  '新宿西口': '新宿',                         // バス停・出口名
+  '渋谷駅': '渋谷', '新宿駅': '新宿', '東京駅': '東京', '品川駅': '品川', '池袋駅': '池袋', // suffix も念のため（resolveStation で大半解決済み）
 };
 
 // 多言語表示名辞書
@@ -366,8 +395,8 @@ function getDisplayStationName(stationName, userLang) {
 
 const FERRY_PORT_MAP = {
   // 日本語
-  '東京': '東京・竹芝', '東京・竹芝': '東京・竹芝', '竹芝': '東京・竹芝', '竹芝客船ターミナル': '東京・竹芝',
-  '横浜': '横浜・大さん橋', '横浜・大さん橋': '横浜・大さん橋', '大さん橋': '横浜・大さん橋',
+  '東京': '日の出桟橋', '東京・竹芝': '東京・竹芝', '竹芝': '東京・竹芝', '竹芝客船ターミナル': '東京・竹芝',
+  '横浜': '横浜・大さん橋', '横浜・大さん橋': '横浜・大さん橋', '大さん橋': '横浜・大さん橋', '大桟橋': '横浜・大さん橋',
   '大島': '大島', '利島': '利島', '新島': '新島', '式根島': '式根島', '神津島': '神津島',
   '三宅島': '三宅島', '御蔵島': '御蔵島', '八丈島': '八丈島', '青ヶ島': '青ヶ島',
   '父島': '父島', '母島': '母島', '久里浜': '久里浜', '館山': '館山',
@@ -376,6 +405,13 @@ const FERRY_PORT_MAP = {
   '浅草(水上)': '浅草', '浅草': '浅草', 'お台場海浜公園': 'お台場海浜公園', 'お台場': 'お台場海浜公園',
   '豊洲': '豊洲', '日の出桟橋': '日の出桟橋', '日の出': '日の出桟橋',
   '浜離宮': '浜離宮', '浜離宮庭園': '浜離宮',
+
+  // 表記揺れ・旧名（中黒なし・suffix 付き等）
+  '東京竹芝': '東京・竹芝', '竹芝桟橋': '東京・竹芝', '竹芝ピア': '東京・竹芝', '竹芝埠頭': '東京・竹芝',
+  '横浜大さん橋': '横浜・大さん橋', '大サンブリッジ': '横浜・大さん橋',
+  '台場': 'お台場海浜公園', 'お台場海浜公園': 'お台場海浜公園',
+  '日の出码头': '日の出桟橋', '日の出埠頭': '日の出桟橋',
+  '浜離宮庭園': '浜離宮', '浜離宮 Gardens': '浜離宮',
 
   // English
   'Tokyo': '東京・竹芝', 'Takeshiba': '東京・竹芝', 'Takeshiba Pier': '東京・竹芝',
@@ -580,20 +616,318 @@ const STATION_COORDS = {
   '熱海': { lat: 35.090288, lon: 139.076004 },
   '伊東': { lat: 34.972012, lon: 139.103358 },
   '八丈島': { lat: 33.122652, lon: 139.818955 },
-  '父島': { lat: 27.095447, lon: 142.197338 }
+  '父島': { lat: 27.095447, lon: 142.197338 },
+  // 西武線
+  '久米川': { lat: 35.742244, lon: 139.469772 },
+  // 埼京線（距離ベース重みの精度向上のため主要駅座標を追加）
+  '大崎': { lat: 35.619672, lon: 139.728870 },
+  '恵比寿': { lat: 35.646694, lon: 139.710028 },
+  '渋谷': { lat: 35.658034, lon: 139.701636 },
+  '新宿': { lat: 35.689487, lon: 139.700706 },
+  '池袋': { lat: 35.729504, lon: 139.710996 },
+  '板橋': { lat: 35.742857, lon: 139.710811 },
+  '十条': { lat: 35.750228, lon: 139.714328 },
+  '赤羽': { lat: 35.777409, lon: 139.721828 },
+  '北赤羽': { lat: 35.789097, lon: 139.715967 },
+  '浮間舟渡': { lat: 35.796019, lon: 139.709575 },
+  '戸田公園': { lat: 35.801551, lon: 139.697952 },
+  '戸田': { lat: 35.806218, lon: 139.691083 },
+  '北戸田': { lat: 35.811389, lon: 139.681328 },
+  '武蔵浦和': { lat: 35.827108, lon: 139.670675 },
+  '中浦和': { lat: 35.835717, lon: 139.666014 },
+  '南与野': { lat: 35.845775, lon: 139.660658 },
+  '与野本町': { lat: 35.854889, lon: 139.659625 },
+  '北与野': { lat: 35.862681, lon: 139.659086 },
+  '大宮': { lat: 35.908095, lon: 139.656606 }
 };
 
-async function findNearestBikeStations(stationName, maxResults = 5, maxDistance = 2000) {
+// ==========================================
+// 🗺️ 経路探索エンジン（ODPTキー不要・自己完結型）
+// 鉄道路線の順序付き駅リストから無向グラフを構築し、ダイクストラで最短乗り継ぎルートを算出。
+// 主要都内路線＋臨海部（ゆりかもめ）を網羅し、浅草↔お台場等の主要区間をカバー。
+// ==========================================
+const RAILWAY_LINES = {
+  '都営浅草線': ['西馬込','馬込','中延','戸越','五反田','高輪台','泉岳寺','三田','大門','新橋','東銀座','宝町','日本橋','人形町','水天宮前','清澄白河','森下','菊川','住吉','西大島','大島','新大島','東大島','船堀','篠崎','本八幡'],
+  '東京メトロ銀座線': ['浅草','田原町','稲荷町','上野','上野広小路','末広町','神田','三越前','日本橋','京橋','銀座','新橋','虎ノ門','溜池山王','赤坂見附','青山一丁目','外苑前','表参道','渋谷'],
+  '東京メトロ日比谷線': ['中目黒','恵比寿','広尾','六本木','神谷町','霞ケ関','日比谷','銀座','東銀座','築地','八丁堀','茅場町','人形町','小伝馬町','秋葉原','仲御徒町','上野','入谷','三ノ輪','南千住','北千住'],
+  'ゆりかもめ': ['新橋','汐留','竹芝','日の出','芝浦ふ頭','お台場海浜公園','台場','東京国際クルーズターミナル','東京ビッグサイト','青海','有明','有明テニスの森','市場前','新豊洲','豊洲'],
+  'JR山手線': ['東京','神田','秋葉原','御徒町','上野','鶯谷','日暮里','西日暮里','田端','駒込','巣鴨','大塚','池袋','目白','高田馬場','新大久保','新宿','代々木','原宿','渋谷','恵比寿','目黒','五反田','大崎','品川','田町','浜松町','新橋'],
+  '都営大江戸線': ['新宿','都庁前','西新宿五丁目','中野坂上','東中野','中井','落合南長崎','高田馬場','江古田','新江古田','練馬','豊島園','練馬春日町','光が丘','春日','本郷三丁目','上野御徒町','新御徒町','仲御徒町','稲荷町','大門','汐留','築地市場','勝どき','月島','越中島','門前仲町','清澄白河','森下','菊川','住吉','西大島','大島','東大島','船堀','瑞江','一之江','春日町','葛西','木場','東陽町','門前仲町'],
+  '東京メトロ丸ノ内線': ['池袋','新大塚','茗荷谷','後楽園','本郷三丁目','御茶ノ水','淡路町','大手町','東京','銀座','京橋','霞ケ関','国会議事堂前','赤坂見附','四ツ谷','四谷三丁目','新宿御苑前','新宿三丁目','新宿'],
+  '京浜東北線': ['大宮','赤羽','王子','上中里','田端','西日暮里','日暮里','鶯谷','上野','御徒町','秋葉原','神田','東京','有楽町','浜松町','田町','品川','大井町','大森','蒲田','川崎','横浜'],
+  // 西武鉄道（池袋線・新宿線）— 久米川への接続のため追加
+  '西武池袋線': ['池袋','椎名町','東長崎','江古田','桜台','練馬','中村橋','富士見台','練馬高野台','石神井公園','大泉学園','保谷','ひばりヶ丘','東久留米','清瀬','秋津','所沢','西所沢','小手指','狭山ヶ丘','武蔵藤沢','稲荷山公園','入間市','仏子','元加治','飯能'],
+  '西武新宿線': ['西武新宿','高田馬場','下落合','中井','新井薬師前','中野','野方','都立家政','鷺ノ宮','下井草','井荻','上井草','上石神井','武蔵関','東伏見','西武柳沢','田無','花小金井','小平','久米川','東村山','所沢','航空公園','新所沢','本川越'],
+  // ===== JR東日本（山手線・京浜東北線に加え主要路線を追加）=====
+  'JR中央線快速': ['東京','神田','御茶ノ水','水道橋','飯田橋','市ヶ谷','四ツ谷','信濃町','千駄ヶ谷','代々木','新宿','大久保','東中野','中野','高円寺','荻窪','西荻窪','吉祥寺','三鷹','武蔵境','東小金井','武蔵小金井','国分寺','西国分寺','立川','日野','豊田','八王子','西八王子','高尾'],
+  'JR総武線各停': ['東京','新日本橋','馬喰町','浅草橋','秋葉原','両国','錦糸町','亀戸','平井','新小岩','小岩','市川','本八幡','下総中山','西船橋','船橋','東船橋','津田沼','幕張','幕張本郷','新検見川','稲毛','西千葉','千葉'],
+  'JR中央総武線各停': ['三鷹','武蔵境','国分寺','西国分寺','新小平','新秋津','東所沢','南浦和','武蔵浦和','西浦和','与野','北与野','大宮','南流山','新松戸','北小金','馬橋','松戸','新八柱','東松戸','市川大野','本八幡','西船橋','船橋','東船橋','津田沼','幕張','幕張本郷','新検見川','稲毛','西千葉','千葉'],
+  'JR埼京線': ['大崎','恵比寿','渋谷','新宿','池袋','板橋','十条','赤羽','北赤羽','浮間舟渡','戸田公園','戸田','北戸田','武蔵浦和','中浦和','南与野','与野本町','北与野','大宮'],
+  'JR京葉線': ['東京','八丁堀','越中島','潮見','新木場','舞浜','浦安','新浦安','市川塩浜','西船橋'],
+  'JR武蔵野線': ['府中本町','北府中','西国分寺','新小平','新秋津','東所沢','北朝霞','朝霞','和光市','新座','東所沢','南浦和','武蔵浦和','西浦和','与野','北与野','大宮','東川口','南流山','新松戸','北小金','馬橋','松戸','新八柱','東松戸','市川大野','本八幡','西船橋'],
+  'JR常磐線快速': ['日暮里','三河島','南千住','北千住','松戸','柏','取手'],
+  // ===== JR東海（東海道線・熱海方面）=====
+  'JR東海道線': ['東京','品川','川崎','横浜','戸塚','大船','藤沢','茅ヶ崎','平塚','小田原','熱海'],
+  // ===== 東京メトロ（残り5路線）=====
+  '東京メトロ東西線': ['中野','落合南長崎','西落合','神楽坂','飯田橋','九段下','竹橋','大手町','日本橋','茅場町','門前仲町','木場','東陽町','南砂町','西葛西','葛西','浦安','南行徳','行徳','妙典','原木中山','西船橋'],
+  '東京メトロ千代田線': ['代々木上原','明治神宮前','表参道','乃木坂','赤坂','国会議事堂前','霞ケ関','日比谷','二重橋前','大手町','新御茶ノ水','湯島','千駄木','根津','西日暮里','町屋','綾瀬','北綾瀬'],
+  '東京メトロ半蔵門線': ['渋谷','表参道','青山一丁目','永田町','半蔵門','九段下','神保町','大手町','三越前','水天宮前','清澄白河','住吉','錦糸町','押上'],
+  '東京メトロ有楽町線': ['和光市','平和台','氷川台','小竹向原','千川','要町','池袋','東池袋','護国寺','江戸川橋','飯田橋','市ヶ谷','麹町','永田町','桜田門','有楽町','銀座一丁目','新富町','月島','豊洲','辰巳','新木場'],
+  '東京メトロ副都心線': ['和光市','平和台','氷川台','小竹向原','千川','要町','池袋','雑司が谷','西早稲田','東新宿','新宿三丁目','北参道','明治神宮前','渋谷'],
+  // ===== 私鉄（主要路線）=====
+  '小田急小田原線': ['新宿','南新宿','参宮橋','代々木八幡','代々木上原','東北沢','下北沢','世田谷代田','梅ヶ丘','豪徳寺','経堂','千歳船橋','祖師ヶ谷大蔵','成城学園前','喜多見','狛江','和泉多摩川','登戸','向ヶ丘遊園','新百合ヶ丘','柿生','鶴川','玉川学園前','町田'],
+  '京王線': ['新宿','初台','幡ヶ谷','笹塚','代田橋','明大前','下高井戸','桜上水','上北沢','八幡山','芦花公園','千歳烏山','仙川','つつじヶ丘','柴崎','国領','布田','調布','京王多摩川','若葉台','稲城','京王永山','京王多摩センター','多摩動物公園','京王堀之内','南大沢','橋本'],
+  '東急東横線': ['渋谷','代官山','中目黒','自由が丘','田園調布','多摩川','新丸子','武蔵小杉','元住吉','日吉','綱島','大倉山','菊名','横浜'],
+  '東急田園都市線': ['渋谷','池尻大橋','三軒茶屋','駒沢大学','桜新町','用賀','二子玉川','沼部','鷺沼','宮前平','宮崎台','梶が谷','江田','市が尾','藤が丘','青葉台','田奈','長津田','つくし野','すずかけ台','南町田','鶴間','大和','中央林間'],
+  '東武東上線': ['池袋','北池袋','下板橋','大山','中板橋','常盤台','上板橋','東武練馬','下赤塚','成増','和光市','朝霞','朝霞台','志木','柳瀬川','みずほ台','鶴瀬','ふじみ野','上福岡','新河岸','川越','川越市','霞ヶ関','森林公園','つきのわ','坂戸','若葉','東毛呂','武州長瀬','東松山','高坂','森林公園','男衾','玉石','妻鹿野','寄居'],
+  '東武伊勢崎線': ['浅草','とうきょうスカイツリー','押上','曳舟','東向島','鐘ヶ淵','堀切','牛田','北千住','小菅','五反野','梅島','西新井','竹ノ塚','草加','谷塚','越谷','北越谷','大袋','せんげん台','武里','一ノ割','春日部','藤の牛島','北春日部','姫宮','東武動物公園','和戸','久喜','鷲宮','加須','花崎','川俣','茂林寺前','治良門橋','板倉東洋大前','川島','的場','笠松','伊勢崎'],
+  '京急本線': ['品川','北品川','鮫洲','青物横丁','新馬場','立会川','平和島','大森海岸','平和島','梅屋敷','京急蒲田','雑色','六郷土手','京急川崎','八丁畷','六浦','神武寺','横須賀中央','汐入','横須賀・安浦','逸見','県立大学','日の出','黄金町','屏風浦','上大岡','弘明寺','井土ヶ谷','湘南町屋','上永谷','下永谷','上永谷','京急東神奈川','神奈川','横浜','戸部','日ノ出町','黄金町','南太田','井土ヶ谷','弘明寺','上大岡','屏風浦','杉田','京急富岡','福浦','金沢八景','追浜','京急田浦','安針塚','逸見','県立大学','汐入','横須賀中央','神武寺','堀ノ内','浦賀'],
+  '京成押上線': ['押上','京成曳舟','八広','京成関屋','堀切菖蒲園','お花茶屋','青砥','京成立石','京成小岩','江戸川','国府台','市川真間','菅野','京成八幡','東中山','京成西船','海神','京成船橋','大神宮下','京成津田沼','京成幕張','検見川','京成稲毛','みどり台','青山','勝田台','志津','ユーカリが丘','京成臼井','京成佐倉','京成酒々井','宗吾参道','公津の杜','京成成田','駿河台下','東成田','空港第2ビル','成田空港'],
+  '相鉄本線': ['横浜','平沼橋','西横浜','天王町','星川','和田町','上星川','西谷','鶴ヶ峰','二俣川','希望ヶ丘','さがみ野','かしわ台','海老名'],
+  // ===== 私鉄（続き）・AGT・モノレール・路面電車・都営 =====
+  'つくばエクスプレス': ['秋葉原','新御茶ノ水','水道橋','飯田橋','北千住','南千住','青井','六町','八潮','三郷中央','流山おおたかの森','柏の葉キャンパス','柏たなか','守谷','みらい平','みどりの','万博記念公園','研究学園','つくば'],
+  'りんかい線': ['大崎','大井町','御殿山','国際展示場','東京テレポート','天王洲アイル','品川シーサイド','鮫洲','新木場'],
+  'みなとみらい線': ['横浜','新高島','みなとみらい','馬車道','日本大通り','元町・中華街'],
+  '箱根登山線': ['小田原','箱根板橋','風祭','入生田','箱根湯本','小涌谷','宮ノ下','強羅'],
+  '北総鉄道': ['京成高砂','新柴又','北国分','松飛台','東松戸','秋山','東松戸','大町','ちはら台','印旛日本医大'],
+  '埼玉高速鉄道': ['赤羽岩淵','志茂','和戸','戸田喜多','川口元郷','赤井','浦和美園'],
+  '東葉高速鉄道': ['西船橋','東中山','原木中山','北習志野','船橋日大前','飯山満','八千代緑が丘','八千代中央','村上','東葉勝田台'],
+  '芝山鉄道': ['東成田','芝山千代田'],
+  '日暮里舎人ライナー': ['日暮里','西日暮里','町屋','熊野前','足立小台','宮ノ前','小台','扇大橋','高野','熊野前','舎人','舎人公園'],
+  '東京モノレール': ['モノレール浜松町','浜松町','天空橋','整備場','新平和島','昭和島','流通センター','羽田空港第1ターミナル','羽田空港第2ターミナル','羽田空港第3ターミナル'],
+  '多摩モノレール': ['多摩センター','唐木田','程久保','多摩動物公園','中央大学・明星大学','大塚・帝京大学','松が谷','玉川上水','桜街道','立飛','高松','武蔵野台','多摩センター'],
+  '都電荒川線': ['早稲田','荒川女学院','学習院下','面影橋','都電雑司ヶ谷','鬼子母神前','東京さくらトラム','荒川一中前','荒川区役所前','荒川二丁目','荒川七丁目','町屋駅前','町屋二丁目','東尾久三丁目','熊野前','宮ノ前','小台','扇大橋','栄町','王子駅前','王子駅','飛鳥山','滝野川一丁目','西ヶ原四丁目','新庚申塚','庚申塚','巣鴨新田','大塚駅前'],
+  '都営三田線': ['目黒','白金台','白金高輪','麻布十番','六本木一丁目','永田町','溜池山王','内幸町','大手町','神保町','水道橋','春日','後楽園','飯田橋','市ヶ谷','四ツ谷','一番町','青山一丁目','赤羽橋','三田','芝公園','御成門','浜松町','大門','中浜','高島平','西台','蓮根','志村三丁目','志村坂上','新板橋','板橋区役所前','本蓮沼','上板橋','東板橋','大山','西台','高島平'],
+  '都営新宿線': ['新宿','新宿三丁目','曙橋','市ヶ谷','九段下','神保町','小川町','淡路町','岩本町','馬喰横山','浜町','森下','菊川','住吉','西大島','大島','東大島','船堀','瑞江','一之江','春日町','篠崎','本八幡']
+};
+
+// 駅→路線リスト の逆引きインデックス
+const STATION_TO_LINES = {};
+for (const [lineName, stations] of Object.entries(RAILWAY_LINES)) {
+  stations.forEach((st, idx) => {
+    if (!STATION_TO_LINES[st]) STATION_TO_LINES[st] = [];
+    STATION_TO_LINES[st].push({ line: lineName, index: idx, total: stations.length });
+  });
+}
+
+// グラフ構築
+// ハイパーノード方式: 各(駅, 路線)をノードとし、同一路線内の隣接駅を重み1の「乗車エッジ」、
+// 同一駅での路線間を重み TRANSFER_PENALTY の「乗換エッジ」で結ぶ。
+// これによりダイクストラは「乗換を避ける・最短時間」の経路を選べる。
+const TRANSFER_PENALTY = 3; // 乗換1回 ≈ 駅数3個分（所要時間ペナルティ：実用的な路線選択のため適正値）
+const GRAPH = {}; // キー: "駅@路線" または "駅"（隣接駅探索用に駅のみのインデックスも保持）
+function addEdge(a, b, w) {
+  if (!GRAPH[a]) GRAPH[a] = {};
+  if (!GRAPH[b]) GRAPH[b] = {};
+  GRAPH[a][b] = w;
+  GRAPH[b][a] = w;
+}
+// 同一路線内の隣接駅を結ぶ（乗車エッジ）。重みは駅間実距離（m）÷100（1km≈10単位）とし、
+// 座標未登録の駅はフォールバック重み 10 を使用。これによりダイクストラは実距離が短い経路を選ぶ。
+function stationEdgeWeight(a, b) {
+  return 1; // 均等重み（駅数ベース）。距離ベースは座標未登録駅で不均一になるため使用しない
+}
+for (const [lineName, stations] of Object.entries(RAILWAY_LINES)) {
+  for (let i = 0; i < stations.length - 1; i++) {
+    const a = `${stations[i]}@${lineName}`;
+    const b = `${stations[i + 1]}@${lineName}`;
+    addEdge(a, b, stationEdgeWeight(stations[i], stations[i + 1]));
+  }
+}
+// 同一駅での路線間を結ぶ（乗換エッジ）
+for (const [st, entries] of Object.entries(STATION_TO_LINES)) {
+  const nodes = entries.map(e => `${st}@${e.line}`);
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      addEdge(nodes[i], nodes[j], TRANSFER_PENALTY);
+    }
+  }
+}
+
+// 駅ノード（出発・到着のために全路線分を仮想起点/終点として扱うためのマップ）
+// 出発駅・到着駅は「その駅の全路線ノードから開始/到着」とみなす
+
+// 最寄り駅探索（部分一致・前方一致）
+function resolveStation(rawName) {
+  if (!rawName) return null;
+  const key = rawName.trim();
+  if (STATION_TO_LINES[key]) return key;
+  // 完全一致（正規化後）
+  const norm = normalizeStationName(key);
+  if (STATION_TO_LINES[norm]) return norm;
+  // 部分一致: 入力（および正規化後）の両方で候補を探す
+  //   containsKey   = 候補が入力を含む（具体的な駅名）
+  //   includedByKey = 入力が候補を含む（一般的な駅名）
+  const searchKeys = [key, norm].filter((v, i, a) => a.indexOf(v) === i); // key と norm の重複排除
+  const containsKey = [];
+  const includedByKey = [];
+  for (const s of Object.keys(STATION_TO_LINES)) {
+    for (const k of searchKeys) {
+      if (s.includes(k)) { if (!containsKey.includes(s)) containsKey.push(s); }
+      else if (k.includes(s)) { if (!includedByKey.includes(s)) includedByKey.push(s); }
+    }
+  }
+  // 具体的な駅名（入力を含む候補）を最優先、なければ入力が含む候補（より長い方）
+  if (containsKey.length) {
+    containsKey.sort((a, b) => b.length - a.length);
+    return containsKey[0];
+  }
+  if (includedByKey.length) {
+    includedByKey.sort((a, b) => b.length - a.length);
+    return includedByKey[0];
+  }
+  // 正規化名で再試行（STATION_NAME_MAP に旧名がある場合）
+  if (norm !== key && STATION_TO_LINES[normalizeStationName(key)]) return normalizeStationName(key);
+  return null;
+}
+
+// ダイクストラ法による最短経路探索（ハイパーノード版）
+// 出発・到着は「駅名」で与えられ、内部ではその駅の全路線ノードを仮想起点/終点とする。
+// 評価基準: 第1に乗換回数を最小化、第2に実距離（駅間重み）を最小化。
+function findShortestPath(start, goal) {
+  const startNodes = (STATION_TO_LINES[start] || []).map(e => `${start}@${e.line}`);
+  const goalNodes = (STATION_TO_LINES[goal] || []).map(e => `${goal}@${e.line}`);
+  if (!startNodes.length || !goalNodes.length) return null;
+  const goalSet = new Set(goalNodes);
+  if (start === goal) return { path: [start], lines: [] };
+  // best[node] = { transfers, dist }。比較: transfers 優先、同率なら dist 小さい方
+  const best = {};
+  const prev = {};
+  const visited = new Set();
+  const pq = [];
+  for (const n of startNodes) { best[n] = { transfers: 0, dist: 0 }; pq.push({ node: n, transfers: 0, dist: 0 }); }
+  let bestGoal = null; // { transfers, dist, node }
+  while (pq.length) {
+    pq.sort((a, b) => a.transfers - b.transfers || a.dist - b.dist);
+    const { node, transfers, dist } = pq.shift();
+    // 確定的打ち切り: 既に見つけたゴール解が、これから pop する全ノードより優秀なら終了
+    if (bestGoal && (transfers > bestGoal.transfers || (transfers === bestGoal.transfers && dist >= bestGoal.dist))) break;
+    if (visited.has(node)) continue;
+    visited.add(node);
+    if (goalSet.has(node)) {
+      if (!bestGoal || transfers < bestGoal.transfers || (transfers === bestGoal.transfers && dist < bestGoal.dist)) {
+        bestGoal = { transfers, dist, node };
+      }
+      continue; // ゴールノードからの先は探索しない（到着済み）
+    }
+    for (const [next, w] of Object.entries(GRAPH[node] || {})) {
+      const isTransfer = w >= TRANSFER_PENALTY;
+      const nTransfers = transfers + (isTransfer ? 1 : 0);
+      const nDist = dist + (isTransfer ? 0 : w);
+      const cur = best[next];
+      if (!cur || nTransfers < cur.transfers || (nTransfers === cur.transfers && nDist < cur.dist)) {
+        best[next] = { transfers: nTransfers, dist: nDist };
+        prev[next] = node;
+        pq.push({ node: next, transfers: nTransfers, dist: nDist });
+      }
+    }
+  }
+  if (!bestGoal) return null;
+  // ゴールノードからパスを復元
+  const node = bestGoal.node;
+  const nodePath = [];
+  let cur = node;
+  while (cur !== undefined) {
+    nodePath.unshift(cur);
+    if (startNodes.includes(cur)) break;
+    cur = prev[cur];
+  }
+  if (!nodePath.length || nodePath[0].split('@')[0] !== start) return null;
+  const path = [];
+  const lines = [];
+  for (let i = 0; i < nodePath.length; i++) {
+    const [st, ln] = nodePath[i].split('@');
+    path.push(st);
+    if (i > 0) lines.push(nodePath[i - 1].split('@')[1]);
+  }
+  return { path, lines };
+}
+
+// 経路を路線セグメントに分割（乗り換え検出）
+// findShortestPath が返す「駅名パス path」と「各区間の実通過路線 lines」をもとに、
+// 連続する同路線区間を1セグメントにまとめる。これにより乗換回数が正確になる。
+function buildRouteSegments(path, lines) {
+  if (!path || path.length < 2) return [];
+  const segments = [];
+  let curLine = lines[0];
+  let cur = { line: curLine, from: path[0], to: path[1], count: 1 };
+  for (let i = 1; i < lines.length; i++) {
+    const ln = lines[i];
+    if (ln === cur.line) {
+      cur.to = path[i + 1];
+      cur.count++;
+    } else {
+      segments.push({ ...cur });
+      cur = { line: ln, from: path[i], to: path[i + 1], count: 1 };
+    }
+  }
+  segments.push({ ...cur });
+  return segments.filter(s => s.from && s.to);
+}
+
+// 2駅間をつなぐ路線（両方に存在する路線）を返す
+function commonLines(a, b) {
+  const la = (STATION_TO_LINES[a] || []).map(x => x.line);
+  const lb = (STATION_TO_LINES[b] || []).map(x => x.line);
+  const shared = la.filter(l => lb.includes(l));
+  // 共通路線がなければ（乗り換え駅など）それぞれの路線を返す
+  return shared.length ? shared : [...new Set([...la, ...lb])];
+}
+
+// ルート検索のメインエントリ（searchRouteから呼び出し）
+function computeRoutes(fromRaw, toRaw) {
+  const from = resolveStation(fromRaw);
+  const to = resolveStation(toRaw);
+  if (!from || !to) {
+    return { error: 'STATION_NOT_FOUND', from, to, suggestion_from: fromRaw, suggestion_to: toRaw };
+  }
+  const result = findShortestPath(from, to);
+  if (!result || !result.path) {
+    return { error: 'NO_ROUTE', from, to };
+  }
+  const { path, lines } = result;
+  const segments = buildRouteSegments(path, lines);
+  const totalStops = path.length - 1;
+  // 所要時間の簡易見積もり（駅数ベース: 1区間≈2.5分、乗換≈4分）
+  const transfers = Math.max(0, segments.length - 1);
+  const estimatedMinutes = Math.round(totalStops * 2.5 + transfers * 4);
+
+  const routes = [{
+    summary: {
+      from,
+      to,
+      transfers,
+      total_stops: totalStops,
+      estimated_minutes: estimatedMinutes,
+      main_line: segments[0]?.line || null,
+      terminal_station: path[path.length - 1]
+    },
+    segments: segments.map(seg => ({
+      line: seg.line,
+      from: seg.from,
+      to: seg.to,
+      stops: seg.count
+    })),
+    path
+  }];
+  return { routes, from, to };
+}
+
+async function findNearestBikeStations(stationName, userLocation = null, maxResults = 5, maxDistance = 2000) {
   try {
     const data = await fetchBikeShareData();
-    const coord = STATION_COORDS[stationName];
+    // 基準座標: ユーザーの現在位置（GPS）が指定されていればそれを優先、なければ出発駅座標
+    let coord = (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lon === 'number')
+      ? { lat: userLocation.lat, lon: userLocation.lon }
+      : STATION_COORDS[stationName];
     if (!coord) return null;
+    const baseLabel = (userLocation && typeof userLocation.lat === 'number') ? 'user_location' : 'station';
     const available = data.stations
       .filter(s => { const st = data.statuses[s.station_id]; return st && st.is_renting && st.num_bikes_available > 0; })
       .map(s => {
         const st = data.statuses[s.station_id];
         const name = typeof s.name === 'string' ? s.name : s.name?.ja || s.name?.[0]?.text || '?';
-        return { station_id: s.station_id, name, distance: haversineDistance(coord.lat, coord.lon, s.lat, s.lon), bikes_available: st.num_bikes_available, docks_available: st.num_docks_available, lat: s.lat, lon: s.lon };
+        return { station_id: s.station_id, name, distance: haversineDistance(coord.lat, coord.lon, s.lat, s.lon), bikes_available: st.num_bikes_available, docks_available: st.num_docks_available, lat: s.lat, lon: s.lon, reference: baseLabel };
       })
       .filter(s => s.distance <= maxDistance)
       .sort((a, b) => a.distance - b.distance)
@@ -610,7 +944,14 @@ async function findNearestBikeStations(stationName, maxResults = 5, maxDistance 
 // ==========================================
 const FERRY_GTFS_SOURCES = [
   { name: '東海汽船', url: `${API_BASE_URL}/files/odpt/TokaiKisen/AllLines.zip`, date: () => new Date().toISOString().slice(0, 10).replace(/-/g, '') },
-  { name: '東京クルーズ（水上バス）', url: 'https://api-public.odpt.org/api/v4/files/odpt/TokyoCruiseShip/AllLines.zip', date: () => '20250402' }
+  { name: '東京クルーズ（水上バス）', url: 'https://api-public.odpt.org/api/v4/files/odpt/TokyoCruiseShip/AllLines.zip', date: () => '20250402' },
+  // 東海汽船 GTFS エンドポイント（files/odpt/...）が ODPT 側で 404/500 となる場合のフォールバック。
+  // ハードコード港リストを stop として展開し、伊豆諸島航路等を検索可能にする。
+  { name: '東海汽船（ハードコード）', hardCoded: true, stops: [
+    '東京', '東京・竹芝', '竹芝', '大島', '利島', '新島', '式根島', '神津島',
+    '三宅島', '御蔵島', '八丈島', '青ヶ島', '父島', '母島', '久里浜', '館山',
+    '熱海', '伊東', '稲取', '下田'
+  ] }
 ];
 
 async function fetchFerryData() {
@@ -635,6 +976,18 @@ async function fetchFerryData() {
   let allStops = [], allRoutes = [], allTrips = [], allStopTimes = [];
   const seenStopIds = new Set(), seenRouteIds = new Set();
   for (const src of FERRY_GTFS_SOURCES) {
+    if (src.hardCoded) {
+      // フォールバック: ハードコード港リストを stop として展開（東海汽船 GTFS 取得不可時）
+      for (const name of src.stops) {
+        const sid = `TokaiKisenHC:${name}`;
+        if (!seenStopIds.has(sid)) {
+          allStops.push({ stop_id: sid, stop_name: name, stop_lat: '0', stop_lon: '0' });
+          seenStopIds.add(sid);
+        }
+      }
+      console.log(`[Ferry] ${src.name}: loaded (hardcoded ${src.stops.length} ports)`);
+      continue;
+    }
     try {
       const res = await axios.get(src.url, { params: { date: src.date(), 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: 10000 });
       const zip = new AdmZip(Buffer.from(res.data));
@@ -654,7 +1007,19 @@ async function fetchFerryData() {
 function normalizeFerryPortName(name) {
   const trimmed = name.trim();
   if (FERRY_PORT_MAP[trimmed]) return FERRY_PORT_MAP[trimmed];
-  for (const [k, v] of Object.entries(FERRY_PORT_MAP)) { if (k.includes(trimmed) || trimmed.includes(k)) return v; }
+  // 中黒・スペース・括弧・suffix（桟橋/ピア/码头/港）を除去した正規化形でも試す
+  const norm = trimmed.replace(/[・\s()（）]/g, '').replace(/(桟橋|ピア|码头|港|ターミナル)$/g, '');
+  if (FERRY_PORT_MAP[norm]) return FERRY_PORT_MAP[norm];
+  // 部分一致: 候補が入力を含む（具体的）を優先、その次に入力が候補を含む
+  const containsKey = [];
+  const includedByKey = [];
+  for (const [k, v] of Object.entries(FERRY_PORT_MAP)) {
+    const kNorm = k.replace(/[・\s()（）]/g, '');
+    if (k.includes(trimmed) || kNorm.includes(norm)) { if (!containsKey.includes(v)) containsKey.push(v); }
+    else if (trimmed.includes(k) || norm.includes(kNorm)) { if (!includedByKey.includes(v)) includedByKey.push(v); }
+  }
+  if (containsKey.length) { containsKey.sort((a, b) => b.length - a.length); return containsKey[0]; }
+  if (includedByKey.length) { includedByKey.sort((a, b) => b.length - a.length); return includedByKey[0]; }
   return trimmed;
 }
 
@@ -669,8 +1034,8 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     { name: 'search_route',
-      description: '乗り換えルート検索 - 出発駅から到着駅までのルートを検索。日本語・英語・中国語自動識別、天候/高温/運休を検出しAIアドバイスを返答。',
-      inputSchema: { type: 'object', properties: { from: { type: 'string', description: '出発駅名' }, to: { type: 'string', description: '到着駅名' } }, required: ['from', 'to'] }
+      description: '乗り換えルート検索 - 出発駅から到着駅までのルートを検索。日本語・英語・中国語自動識別、天候/高温/運休を検出しAIアドバイスを返答。user_location（緯度経度）を指定すると運転見合わせ時のシェアサイクル案内を現在地基準で表示。',
+      inputSchema: { type: 'object', properties: { from: { type: 'string', description: '出発駅名' }, to: { type: 'string', description: '到着駅名' }, user_location: { type: 'object', description: 'ユーザーの現在位置（緯度経度）。運転見合わせ時のシェアサイクル案内を現在地基準で表示する場合に指定。例: {"lat": 35.681, "lon": 139.767}', properties: { lat: { type: 'number' }, lon: { type: 'number' } } } }, required: ['from', 'to'] }
     },
     { name: 'get_station_info',
       description: '駅情報取得 - 駅の基本情報をODPT APIから取得。',
@@ -760,6 +1125,15 @@ async function searchRoute(args) {
   const parsedArgs = parseTestMode({ from: args.from, to: args.to });
   let fromInput = parsedArgs.from, toInput = parsedArgs.to;
   let simulatedFailure = parsedArgs.simulatedFailure;
+
+  // ユーザーの現在位置（GPS）: { lat, lon } 任意。指定時はシェアサイクル検索の基準にする
+  let userLocation = null;
+  if (args.user_location && typeof args.user_location.lat === 'number' && typeof args.user_location.lon === 'number') {
+    userLocation = { lat: args.user_location.lat, lon: args.user_location.lon };
+  } else if (typeof args.user_location === 'string') {
+    const m = args.user_location.match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+    if (m) userLocation = { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+  }
 
   let userLang = 'ja';
   if (simulatedFailure) {
@@ -881,11 +1255,50 @@ async function searchRoute(args) {
   // 🚲 運転見合わせ時のみ自転車（荒天は非表示）
   let bikeShareInfo = null;
   if (isTrainSuspended && !isSevereWeather) {
-    bikeShareInfo = await findNearestBikeStations(fromName);
+    bikeShareInfo = await findNearestBikeStations(fromName, userLocation);
   }
 
   const displayFrom = getDisplayStationName(fromName, userLang);
   const displayTo = getDisplayStationName(toName, userLang);
+
+  // 🗺️ 経路探索エンジン（ODPTキー不要・自己完結型）で実ルートを算出
+  const routeResult = (simulatedFailure) ? { error: 'TEST_MODE' } : computeRoutes(fromName, toName);
+
+  // ルートが見つからない場合は、エラー種別に応じた統一エラー応答を返す（SUCCESSを誤って返さない）
+  if (routeResult && routeResult.error && routeResult.error !== 'TEST_MODE') {
+    const errType = routeResult.error === 'STATION_NOT_FOUND' ? 'STATION_NOT_FOUND' : 'NO_ROUTE';
+    const errMsg = errType === 'STATION_NOT_FOUND'
+      ? (userLang === 'en' ? `Station not found: ${routeResult.suggestion_from || fromName} / ${routeResult.suggestion_to || toName}`
+         : userLang === 'zh' ? `未找到车站：${routeResult.suggestion_from || fromName} / ${routeResult.suggestion_to || toName}`
+         : `駅が見つかりません：${routeResult.suggestion_from || fromName} / ${routeResult.suggestion_to || toName}`)
+      : (userLang === 'en' ? `No route found from ${displayFrom} to ${displayTo}.`
+         : userLang === 'zh' ? `未找到从 ${displayFrom} 到 ${displayTo} 的路线。`
+         : `${displayFrom} から ${displayTo} への経路が見つかりません。`);
+    return jsonResponse(buildErrorResponse(errType, errMsg, {
+      userLang, from: displayFrom, to: displayTo,
+      suggestion_from: routeResult.suggestion_from, suggestion_to: routeResult.suggestion_to
+    }));
+  }
+
+  let routesPayload = undefined;
+  if (routeResult && routeResult.routes) {
+    routesPayload = routeResult.routes.map(r => ({
+      summary: {
+        from: r.summary.from,
+        to: r.summary.to,
+        transfers: r.summary.transfers,
+        total_stops: r.summary.total_stops,
+        estimated_minutes: r.summary.estimated_minutes,
+        main_line: r.summary.main_line
+      },
+      segments: r.segments.map(s => ({
+        line: s.line,
+        from: s.from,
+        to: s.to,
+        stops: s.stops
+      }))
+    }));
+  }
 
   const resultPayload = {
     status: simulatedFailure ? (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "TEST_MODE") : (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "SUCCESS"),
@@ -893,6 +1306,11 @@ async function searchRoute(args) {
     detected_language: userLang,
     detected_user_language: userLang,
     degraded_mode: apiDegraded ? true : undefined,
+    // 実ルート（自己完結型エンジンで算出・Yahoo非依存）
+    routes: routesPayload,
+    route_note: userLang === 'en' ? "Route computed by self-contained graph engine (ODPT-independent)." :
+                userLang === 'zh' ? "路线由自包含图引擎计算（不依赖雅虎）。" :
+                "経路は自己完結型エンジンで算出（Yahoo非依存）。",
     weather_text: userLang === 'en' ? `Tokyo Area: ${weatherText}` : userLang === 'zh' ? `东京地区: ${weatherText}` : `東京地方: ${weatherText}`,
     // Yahoo!路線情報はフォールバックとして維持（完全依存はしない）
     direct_search_url: (isRainy || isEmergencyActive) ? `${webSearchUrl}&useLocalBus=true&walkSpeed=slow` : webSearchUrl,
@@ -911,13 +1329,20 @@ async function searchRoute(args) {
   };
 
   if (isTrainSuspended && !isSevereWeather && bikeShareInfo) {
+    const ref = bikeShareInfo[0]?.reference;
+    const isUserLoc = ref === 'user_location';
     resultPayload.cycling_alternative = {
       note: userLang === 'en' ? "🚲 [Transit Suspension - Bike Share Guidance]" :
             userLang === 'zh' ? "🚲 【暂停运营 - 共享单车指南】" :
             "🚲 【運転見合わせ - シェアサイクル案内】",
-      recommendation: userLang === 'en' ? "🚲 Nearest bike share ports from origin station:" :
-                      userLang === 'zh' ? "🚲 出发站附近的共享单车停靠点：" :
-                      "🚲 出発駅最寄りのシェアサイクルポート：",
+      recommendation: isUserLoc
+        ? (userLang === 'en' ? "🚲 Nearest bike share ports from your current location:" :
+           userLang === 'zh' ? "🚲 您当前位置附近的共享单车停靠点：" :
+           "🚲 現在地最寄りのシェアサイクルポート：")
+        : (userLang === 'en' ? "🚲 Nearest bike share ports from origin station:" :
+           userLang === 'zh' ? "🚲 出发站附近的共享单车停靠点：" :
+           "🚲 出発駅最寄りのシェアサイクルポート："),
+      based_on: isUserLoc ? 'user_location' : 'origin_station',
       stations: bikeShareInfo, total_nearby: bikeShareInfo.length, data_source: "docomo-cycle-tokyo GBFS"
     };
   }
@@ -1133,8 +1558,19 @@ async function searchFerry(args) {
   }
   try {
     const data = await fetchFerryData();
-    const fromStop = data.stops.find(s => s.stop_name.includes(fromPort) || fromPort.includes(s.stop_name));
-    const toStop = data.stops.find(s => s.stop_name.includes(toPort) || toPort.includes(s.stop_name));
+    // 正規化後の名前でも部分一致させる（中黒・スペース・suffix の揺れに対応）
+    const fromPortNorm = fromPort.replace(/[・\s()（）]/g, '').replace(/(桟橋|ピア|码头|港|ターミナル)$/g, '');
+    const toPortNorm = toPort.replace(/[・\s()（）]/g, '').replace(/(桟橋|ピア|码头|港|ターミナル)$/g, '');
+    const fromStop = data.stops.find(s => {
+      const sn = s.stop_name;
+      const snNorm = sn.replace(/[・\s()（）]/g, '').replace(/(桟橋|ピア|码头|港|ターミナル)$/g, '');
+      return sn.includes(fromPort) || fromPort.includes(sn) || snNorm.includes(fromPortNorm) || fromPortNorm.includes(snNorm);
+    });
+    const toStop = data.stops.find(s => {
+      const sn = s.stop_name;
+      const snNorm = sn.replace(/[・\s()（）]/g, '').replace(/(桟橋|ピア|码头|港|ターミナル)$/g, '');
+      return sn.includes(toPort) || toPort.includes(sn) || snNorm.includes(toPortNorm) || toPortNorm.includes(snNorm);
+    });
     if (!fromStop || !toStop) {
       const errMsg = userLang === 'en' ? 'Port not found. Please check list_ferry_ports for available ports.' :
                      userLang === 'zh' ? '未找到港口，请在 list_ferry_ports 中查看可用港口。' :
@@ -1383,7 +1819,16 @@ async function searchBus(args) {
     if (!busstopName) {
       return jsonResponse({ status: "SUCCESS", detected_language: userLang, total: buses.length, bus_routes: buses.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
     }
-    const matched = buses.filter(b => (b['odpt:note'] || '').includes(busstopName));
+    const matched = buses.filter(b => {
+      const note = b['odpt:note'] || '';
+      const norm = normalizeStationName(busstopName);
+      // 入力（および正規化後）の両方で部分一致。suffix（停留所/バス停）も除去して比較
+      const variants = [busstopName, norm].filter((v, i, a) => a.indexOf(v) === i);
+      return variants.some(v => {
+        const stripped = v.replace(/(停留所|バス停|駅)$/, '');
+        return note.includes(v) || (stripped !== v && note.includes(stripped));
+      });
+    });
     return jsonResponse({ status: "SUCCESS", detected_language: userLang, busstop: busstopName, total: matched.length, bus_routes: matched.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'], frequency: b['odpt:frequency'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
   } catch (error) {
     odptBreaker.onFailure(error);
@@ -1391,7 +1836,7 @@ async function searchBus(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, parseTestMode };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, parseTestMode, computeRoutes, findShortestPath, resolveStation };
 
 async function main() {
   const transport = new StdioServerTransport();
