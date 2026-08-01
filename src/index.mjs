@@ -318,6 +318,17 @@ function buildErrorResponse(errorType, errorMessage, details = {}) {
 }
 
 function jsonResponse(data) {
+  // ai_transit_advice が含まれる場合、それを独立したテキストブロックとして最初に配置。
+  // LLM が長い JSON を要約する際に後半を省略してしまうのを防ぐため。
+  if (data && typeof data === 'object' && typeof data.ai_transit_advice === 'string' && data.ai_transit_advice) {
+    const { ai_transit_advice, ...rest } = data;
+    return {
+      content: [
+        { type: 'text', text: ai_transit_advice },
+        { type: 'text', text: JSON.stringify(rest, null, 2) }
+      ]
+    };
+  }
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 }
 
@@ -1302,6 +1313,8 @@ async function searchRoute(args) {
 
   const resultPayload = {
     status: simulatedFailure ? (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "TEST_MODE") : (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "SUCCESS"),
+    // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
+    ai_transit_advice: aiAdvice,
     from: displayFrom, to: displayTo, mode: simulatedFailure ? "TEST_MODE" : "LIVE",
     detected_language: userLang,
     detected_user_language: userLang,
@@ -1314,7 +1327,6 @@ async function searchRoute(args) {
     weather_text: userLang === 'en' ? `Tokyo Area: ${weatherText}` : userLang === 'zh' ? `东京地区: ${weatherText}` : `東京地方: ${weatherText}`,
     // Yahoo!路線情報はフォールバックとして維持（完全依存はしない）
     direct_search_url: (isRainy || isEmergencyActive) ? `${webSearchUrl}&useLocalBus=true&walkSpeed=slow` : webSearchUrl,
-    ai_transit_advice: aiAdvice,
     // Yahooに依存しない運賃情報をsearch_fareツールで取得可能
     fare_available: true,
     fare_note: userLang === 'en' ? "Use search_fare tool to find station-to-station fares." :
@@ -1478,12 +1490,13 @@ async function getWeather(args) {
     const displayArea = userLang === 'en' ? 'Tokyo Area' : userLang === 'zh' ? '东京地区' : areaName;
     return jsonResponse({
       status: "SUCCESS",
+      // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
+      ai_transit_advice: MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja,
       detected_language: userLang,
       area: displayArea,
       weather,
       max_temp: maxTemp || undefined,
       heat_alert: isHot || undefined,
-      ai_transit_advice: MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja,
       gov_facility_search_support: {
         note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
               userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
