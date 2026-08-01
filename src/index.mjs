@@ -105,6 +105,8 @@ const cache = {
 function parseTestMode(args) {
   const from = (args && args.from) || '';
   const to = (args && args.to) || '';
+  // 別パラメータ形式も対応: args['-test'] / args.test / args.test_mode
+  const explicitTest = args && (args['-test'] || args.test || args.test_mode);
   const combined = (from + ' ' + to).trim();
   const testMatch = combined.match(/-+\s*test\s*-*/i);
   if (testMatch) {
@@ -117,7 +119,34 @@ function parseTestMode(args) {
       simulatedFailure: afterTest.split(/\s+/)[0] || '台風'
     };
   }
+  if (explicitTest) {
+    // 自然言語入力から from/to を抽出（「から」「到」「→」等の区切り）
+    const extracted = extractStationsFromNaturalLanguage(combined);
+    return {
+      from: extracted.from || from,
+      to: extracted.to || to,
+      simulatedFailure: String(explicitTest).trim() || '台風'
+    };
+  }
   return { from: args.from, to: args.to, simulatedFailure: null };
+}
+
+// 自然言語入力（「查询从浅草到涩谷的路线」「浅草から渋谷まで」等）から駅名を抽出
+function extractStationsFromNaturalLanguage(text) {
+  if (!text) return { from: null, to: null };
+  // 中国語: 从A到B / 查询从A到B的路线
+  let m = text.match(/从\s*([^\s到]+)\s*到\s*([^\s的]+)/);
+  if (m) return { from: m[1], to: m[2] };
+  // 日本語: AからBまで / AからBへ
+  m = text.match(/([^\sから]+)\s*から\s*([^\sまでへ]+)/);
+  if (m) return { from: m[1], to: m[2] };
+  // 英語: from A to B
+  m = text.match(/from\s+([^\s]+)\s+to\s+([^\s]+)/i);
+  if (m) return { from: m[1], to: m[2] };
+  // 矢印/ハイフン区切り
+  m = text.match(/([^\s→\-]+)\s*[→\-]\s*([^\s→\-]+)/);
+  if (m) return { from: m[1], to: m[2] };
+  return { from: null, to: null };
 }
 
 // ==========================================
@@ -1133,7 +1162,7 @@ function normalizeStationName(name) {
 // 🚃 乗り換えルート検索（統合版）
 // ==========================================
 async function searchRoute(args) {
-  const parsedArgs = parseTestMode({ from: args.from, to: args.to });
+  const parsedArgs = parseTestMode({ from: args.from, to: args.to, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
   let fromInput = parsedArgs.from, toInput = parsedArgs.to;
   let simulatedFailure = parsedArgs.simulatedFailure;
 
