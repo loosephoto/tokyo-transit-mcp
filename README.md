@@ -39,6 +39,18 @@
 - **荒天時安全ロジック**: 台風・浸水時は自転車案内を自動非表示
 - **LLMフレンドリーJSON**: 全エラーを構造化データで出力
 
+### 💬 自然言語で簡単検索
+駅名・バス停・港名は**部分一致・表記揺れ・旧名でも自動解決**するため、厳密な入力不要で直感的に検索できます。「スカイツリーからテレコムセンターまで」「Odaiba から Toyosu」「東京ビッグサイトまでバス」のように、**日本語・英語・中国語の自然な表現をそのまま渡す**だけで経路・バス・フェリーを検索できます。
+
+**検索例**:
+```
+スカイツリーからテレコムセンターまでの経路を調べて
+Shibuya to Odaiba route
+查询从浅草到台场的路线
+東京ビッグサイト までのバス停
+Oshima ferry from Tokyo
+```
+
 ### 🌐 マルチランゲージ
 日本語・英語・中国語を自動判定。ユーザーの入力言語に合わせてアドバイスを切り替え。
 
@@ -356,6 +368,18 @@ This server goes beyond simple route searching by integrating weather data and v
 - **Severe Weather Logic**: Automatically hides bike guidance during typhoons or flooding.
 - **LLM-Friendly JSON**: Outputs all errors in structured JSON.
 
+### 💬 Easy Search in Natural Language
+Station, bus stop, and port names are **automatically resolved by partial match, notation variance, and legacy names**, so exact input is not required. You can simply pass natural expressions in Japanese, English, or Chinese — such as "route from Skytree to Telecom Center", "Odaiba to Toyosu", or "bus to Tokyo Big Sight" — and the server will search routes, buses, and ferries directly.
+
+**Search examples**:
+```
+route from Skytree to Telecom Center
+Shibuya to Odaiba route
+查询从浅草到台场的路线
+bus stop near Tokyo Big Sight
+ferry to Oshima from Tokyo
+```
+
 ### 🌐 Multi-Language Support
 Automatically detects Japanese, English, and Chinese to switch advice output accordingly.
 
@@ -654,6 +678,18 @@ MIT License
 - **降级模式**: 外部 API 发生故障时仍保持部分功能可用。
 - **恶劣天气安全逻辑**: 台风或积水时自动隐藏共享单车引导。
 - **LLM 友好型 JSON**: 所有错误均以结构化 JSON 格式输出。
+
+### 💬 自然语言轻松搜索
+车站名、公交站名、港口名均支持**部分匹配、表记差异及旧名自动解析**，无需精确输入即可直观搜索。只需直接传入日语、英语或中文的自然表达，例如「从晴空塔到电信中心」「Odaiba 到 Toyosu」「到东京国际展览中心的巴士」，服务器即可直接检索路线、公交与轮渡。
+
+**搜索示例**:
+```
+从晴空塔到电信中心的路线
+Shibuya to Odaiba route
+查询从浅草到台场的路线
+东京国际展览中心附近的巴士站
+从东京前往大岛的渡轮
+```
 
 ### 🌐 多语言支持
 自动识别日语、英语和中文，根据用户的输入语言切换输出建议。
