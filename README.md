@@ -51,6 +51,8 @@ Shibuya to Odaiba route
 Oshima ferry from Tokyo
 ```
 
+> ⚠️ **ご注意**: 本サーバーは MCP クライアント（Claude Desktop / Hermes 等）上の LLM モデルを介して応答を表示します。モデルの違いにより、AIインテリジェントアドバイスや検索結果の**表示揺れ（表現の違い・省略の有無等）が若干発生する場合があります**。検索エンジン自体の出力（JSON）はモデルに依存せず一定ですが、最終的な文章化は利用するモデルに左右されます。
+
 ### 🌐 マルチランゲージ
 日本語・英語・中国語を自動判定。ユーザーの入力言語に合わせてアドバイスを切り替え。
 
@@ -380,6 +382,8 @@ bus stop near Tokyo Big Sight
 ferry to Oshima from Tokyo
 ```
 
+> ⚠️ **Note**: This server displays responses through an LLM model on the MCP client (Claude Desktop / Hermes, etc.). Depending on the model, **minor display variance (differences in wording, whether advice is omitted, etc.) may occur** for the AI Intelligent Advice and search results. The search engine's own JSON output is model-independent and consistent, but the final phrasing depends on the model in use.
+
 ### 🌐 Multi-Language Support
 Automatically detects Japanese, English, and Chinese to switch advice output accordingly.
 
@@ -690,6 +694,8 @@ Shibuya to Odaiba route
 东京国际展览中心附近的巴士站
 从东京前往大岛的渡轮
 ```
+
+> ⚠️ **注意**: 本服务器通过 MCP 客户端（Claude Desktop / Hermes 等）上的 LLM 模型显示回答。因模型不同，AI 智能建议与搜索结果的**显示可能存在细微差异（措辞不同、是否省略建议等）**。搜索引擎自身的 JSON 输出与模型无关且保持一致，但最终表述取决于所使用的模型。
 
 ### 🌐 多语言支持
 自动识别日语、英语和中文，根据用户的输入语言切换输出建议。
