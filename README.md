@@ -215,6 +215,7 @@ Check route from Asakusa to Shibuya -test typhoon
 | `浸水` | `flood` | `积水` / `淹水` / `浸水` | 駅周辺浸水・運転見合わせ |
 | `人身事故` | `accident` | `人身事故` / `人员伤亡` | 人身事故による運転見合わせ |
 | `火災` | `fire` | `火灾` / `火災` | 火災による運行停止 |
+| `車両故障` | `vehicle_failure` | `车辆故障` / `車輛故障` | 車両故障による運転見合わせ |
 | `停電` | `blackout` / `power_outage` | `停电` / `停電` | 停電による列車停止 |
 | `信号故障` | `signal_failure` | `信号故障` / `信號故障` | 信号故障による運行停止 |
 | `猛暑` | `heatwave` / `extreme_heat` | `酷暑` / `高温` | 熱中症注意 |
@@ -528,6 +529,7 @@ Check route from Asakusa to Shibuya -test earthquake
 | `flood` | `浸水` | `积水` / `淹水` / `浸水` | Station area flooding, service suspended |
 | `accident` | `人身事故` | `人身事故` / `人员伤亡` | Personal accident delay / service suspended |
 | `fire` | `火災` | `火灾` / `火災` | Fire incident service suspended |
+| `vehicle_failure` | `車両故障` | `车辆故障` / `車輛故障` | Train vehicle failure, service suspended |
 | `blackout` / `power_outage` | `停電` | `停电` / `停電` | Power outage train stoppage |
 | `signal_failure` | `信号故障` | `信号故障` / `信號故障` | Signal failure service suspended |
 | `heatwave` / `extreme_heat` | `猛暑` | `酷暑` / `高温` | Extreme heat / heatstroke warning |
@@ -842,6 +844,7 @@ search_ferry(from_port: "東京", to_port: "大島")
 | `积水` / `淹水` / `浸水` | `flood` | `浸水` | 车站周边积水、暂停运营 |
 | `人身事故` / `人员伤亡` | `accident` | `人身事故` | 人身事故导致暂停运营 |
 | `火灾` / `火災` | `fire` | `火災` | 火灾导致暂停运营 |
+| `车辆故障` / `車輛故障` | `vehicle_failure` | `車両故障` | 车辆故障导致暂停运营 |
 | `停电` / `停電` | `power_outage` / `blackout` | `停電` | 停电导致列车停运 |
 | `信号故障` / `信號故障` | `signal_failure` | `信号故障` | 信号故障导致暂停运营 |
 | `酷暑` / `高温` | `heatwave` | `猛暑` | 酷暑预警 |

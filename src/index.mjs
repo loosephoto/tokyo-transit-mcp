@@ -258,6 +258,12 @@ const FAILURE_TYPES = {
     keywords: { ja: ['津波'], en: ['tsunami'], zh: ['海啸', '海嘯', '津波'] },
     weatherText: { ja: "津波警報発表", en: "Tsunami warning issued", zh: "发布海啸预警" },
     delayMessage: { ja: "津波による運行停止", en: "Service suspended due to tsunami warning", zh: "因海啸预警暂停运行" }
+  },
+  'vehicle_failure': {
+    type: 'equipment', adviceKey: 'vehicle_failure', isTrainSuspended: true,
+    keywords: { ja: ['車両故障', '車両トラブル', '車両火災', 'ドア故障', 'ドア閉鎖不良'], en: ['vehicle_failure', 'vehicle_trouble', 'train_failure', 'rolling_stock_failure', 'door_failure'], zh: ['车辆故障', '車輛故障', '列车故障', '车门故障'] },
+    weatherText: { ja: "車両故障の発生", en: "Train vehicle failure occurred", zh: "发生车辆故障" },
+    delayMessage: { ja: "車両故障による運転見合わせ", en: "Service suspended due to train vehicle failure", zh: "因车辆故障暂停运行" }
   }
 };
 
@@ -678,9 +684,14 @@ const MULTILINGUAL_ADVICE = {
     zh: "🤖 【AI智能出行建议 (设备故障)】\n⚡ 信号或供电故障影响列车运行，请考虑其他路线。"
   },
   emergency: {
-    ja: "🤖 【AIからのインテリジェントアドバイス (緊急アラート)】\n🚨 重大な災害または交通機関の運行不能を検知しました。身の安全を最優先とし、以下のリンクから最寄りの指定緊急避難場所を確認してください。",
-    en: "🤖 [AI Intelligent Transit Advice (Emergency Alert)]\n🚨 Major disaster or transit suspension detected. Check the link for nearest evacuation shelters.",
-    zh: "🤖 【AI智能出行建议 (紧急避难)】\n🚨 检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (緊急アラート)】\\n🚨 重大な災害または交通機関の運行不能を検知しました。身の安全を最優先とし、以下のリンクから最寄りの指定緊急避難場所を確認してください。",
+    en: "🤖 [AI Intelligent Transit Advice (Emergency Alert)]\\n🚨 Major disaster or transit suspension detected. Check the link for nearest evacuation shelters.",
+    zh: "🤖 【AI智能出行建议 (紧急避难)】\\n🚨 检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
+  },
+  vehicle_failure: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (車両故障)】\\n🚃 車両故障の影響で一部列車が運転を見合わせています。復旧まで時間を要する場合があり、振替輸送や他社線・バスへの乗り継ぎが案内されることもあります。駅係員の案内に従い、お急ぎの方は代替ルートをご検討ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Vehicle Failure)]\\n🚃 Some trains are suspended due to a vehicle failure. Allow extra time; follow staff for substitute transport or consider alternative routes.",
+    zh: "🤖 【AI智能出行建议 (车辆故障)】\\n🚃 因车辆故障部分列车停运，恢复可能需要时间。请听从工作人员安排换乘，或考虑其他路线。"
   }
 };
 
