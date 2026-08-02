@@ -189,6 +189,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（�
 ### 6.5 `search_flight` — 空港フライト時刻・到着時刻表示 ✈️
 
 - **空港検索**: `airport`（羽田空港/成田空港/HND/NRT 等）で到着/出発フライトを検索
+- **空港名の表記揺れ対応**: "羽田"/"成田"/"Haneda"/"Narita" 等、末尾の「空港/Airport/机场」の有無や日英中表記を自動正規化（3か国語対応）。
 - **便名検索**: `flight_number`（NH001/JL000 等）で特定便を検索
 - **到着時の最適連携**: `destination`（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路（電車）を自動提案。**海外からの来客・帰省時に最適**
   - `destination` 未指定でも、到着時は主要アクセス駅（羽田: 東京駅/品川/浜松町、成田: 東京駅/日暮里/新宿）へのルートを自動表示（`access_routes`）。
@@ -537,6 +538,7 @@ search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(tr
 ### 6.5 `search_flight` — Airport Flight Times & Arrival Display ✈️
 
 - **Airport search**: `airport` (Haneda/Narita/HND/NRT etc.) lists arrival/departure flights
+- **Airport name normalization**: "Haneda"/"Narita"/"羽田"/"成田" etc. auto-normalized (trailing "Airport/空港/机场" stripped, ja/en/zh supported).
 - **Flight number search**: `flight_number` (NH001/JL000 etc.) for a specific flight
 - **Best for inbound/return travel**: specify `destination` (e.g. Tokyo Station) to auto-suggest the access route (train) from the arrival terminal. **Ideal for overseas guests & homecoming**
   - Without `destination`, arrival searches auto-show routes to major access stations (Haneda: Tokyo Stn/品川/Hamamatsucho, Narita: Tokyo Stn/Nippori/Shinjuku) via `access_routes`.
@@ -881,6 +883,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电�
 ### 6.5 `search_flight` — 机场航班时刻与到达时间显示 ✈️
 
 - **机场查询**: `airport`（羽田/成田/HND/NRT 等）列出到达/出发航班
+- **机场名称规范化**: "羽田"/"成田"/"Haneda"/"Narita" 等自动归一化（去除末尾"机场/Airport/空港"，支持日英中）。
 - **航班号查询**: `flight_number`（NH001/JL000 等）查询特定航班
 - **海外来客/归国最佳**: 指定 `destination`（如：东京站）自动建议从到达航站楼到目的地的接驳路线（电车）。**最适合海外来宾与归乡**
   - 未指定 `destination` 时，到达搜索自动显示至主要接驳车站的路线（羽田: 东京站/品川/浜松町，成田: 东京站/日暮里/新宿），通过 `access_routes`。

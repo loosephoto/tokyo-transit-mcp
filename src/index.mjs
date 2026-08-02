@@ -2785,15 +2785,20 @@ async function searchBus(args) {
 
 // 空港名（日本語/英語）→ IATA コード
 const AIRPORT_IATA = {
-  '羽田空港': 'HND', '羽田': 'HND', 'HND': 'HND', 'Haneda': 'HND', 'Haneda Airport': 'HND',
-  '成田空港': 'NRT', '成田': 'NRT', 'NRT': 'NRT', 'Narita': 'NRT', 'Narita Airport': 'NRT',
-  '茨城空港': 'IBR', 'IBR': 'IBR',
-  '東京国際空港': 'HND'
+  '羽田空港': 'HND', '羽田': 'HND', 'HND': 'HND', 'Haneda': 'HND', 'Haneda Airport': 'HND', '羽田机场': 'HND', '东京国际机场': 'HND', '东京国际': 'HND',
+  '成田空港': 'NRT', '成田': 'NRT', 'NRT': 'NRT', 'Narita': 'NRT', 'Narita Airport': 'NRT', '成田机场': 'NRT',
+  '茨城空港': 'IBR', 'IBR': 'IBR', '茨城机场': 'IBR'
 };
+// 空港名の正規化: 末尾の 空港/Airport/机场 サフィックスを除去（3か国語対応）
+function normalizeAirportQuery(name) {
+  if (!name) return name;
+  return name.replace(/(空港|Airport|机场)\s*$/i, '').trim();
+}
 // IATA → 日本語表示名（到着連携用の駅名マップ）
 const IATA_TO_TERMINAL_STATION = {
   HND: '羽田空港第1ターミナル', // 代表的ターミナル駅（実際はターミナル番号で上書き）
-  NRT: '成田空港'
+  NRT: '成田空港',
+  IBR: '茨城空港（小美玉）'
 };
 // 到着時、destination 未指定でも表示する主要アクセス駅（海外来客・帰省に最適）
 const DEFAULT_ACCESS_DESTINATIONS = {
@@ -2891,7 +2896,7 @@ async function searchFlight(args) {
     // フライト取得（キーなし時は null）
     let flights = null;
     if (FLIGHT_API_KEY) {
-      const iata = AIRPORT_IATA[airportRaw] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
+      const iata = AIRPORT_IATA[normalizeAirportQuery(airportRaw)] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
       const params = { limit: 20 };
       if (flightNumber) params.flight_iata = flightNumber.toUpperCase();
       else if (iata) params[direction === 'arrival' ? 'arr_iata' : 'dep_iata'] = iata;
@@ -2908,7 +2913,7 @@ async function searchFlight(args) {
 
     // キーなし / データなし → graceful degradation: 空港アクセス経路のみ
     if (!flights || flights.length === 0) {
-      const iata = AIRPORT_IATA[airportRaw] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
+      const iata = AIRPORT_IATA[normalizeAirportQuery(airportRaw)] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
       const stationName = iata ? (IATA_TO_TERMINAL_STATION[iata] || airportRaw) : airportRaw;
       const accessRoutes = [];
       // destination 指定時はそれのみ、なければ到着時は主要アクセス駅を複数表示
