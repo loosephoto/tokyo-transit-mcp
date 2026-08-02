@@ -271,9 +271,15 @@ const FAILURE_TYPES = {
   },
   'vehicle_failure': {
     type: 'equipment', adviceKey: 'vehicle_failure', isTrainSuspended: true,
-    keywords: { ja: ['車両故障', '車両トラブル', '車両火災', 'ドア故障', 'ドア閉鎖不良'], en: ['vehicle_failure', 'vehicle_trouble', 'train_failure', 'rolling_stock_failure', 'door_failure'], zh: ['车辆故障', '車輛故障', '列车故障', '车门故障'] },
-    weatherText: { ja: "車両故障の発生", en: "Train vehicle failure occurred", zh: "发生车辆故障" },
-    delayMessage: { ja: "車両故障による運転見合わせ", en: "Service suspended due to train vehicle failure", zh: "因车辆故障暂停运行" }
+    keywords: { ja: ['車両故障', '車両トラブル', '車両火災', 'ドア故障', 'ドア閉鎖不良', 'バス車両故障', 'バス故障', '機材故障', '航空機故障', '機体故障'], en: ['vehicle_failure', 'vehicle_trouble', 'train_failure', 'rolling_stock_failure', 'door_failure', 'bus_failure', 'aircraft_failure', 'equipment_failure'], zh: ['车辆故障', '車輛故障', '列车故障', '车门故障', '巴士故障', '公交故障', '飞机故障', '機材故障', '機體故障'] },
+    weatherText: { ja: "機材故障の発生", en: "Vehicle/equipment failure occurred", zh: "发生机材故障" },
+    delayMessage: { ja: "機材故障による運行見合わせ", en: "Service suspended due to equipment failure", zh: "因机材故障暂停运行" }
+  },
+  'gate_baggage_delay': {
+    type: 'airport', adviceKey: 'gate_baggage_delay', isTrainSuspended: false,
+    keywords: { ja: ['ゲート遅延', '手荷物遅延', '手荷物受取遅延', 'ゲート変更', '到着ゲート遅れ'], en: ['gate_delay', 'baggage_delay', 'gate_change', 'baggage_claim_delay', 'arrival_gate_delay'], zh: ['登机口延误', '行李延误', '行李领取延误', '登机口变更', '到达口延误'] },
+    weatherText: { ja: "ゲート・手荷物の遅延", en: "Gate/baggage delay", zh: "登机口/行李延误" },
+    delayMessage: { ja: "ゲート変更または手荷物受取の遅延が発生しています", en: "Gate change or baggage claim delay occurred", zh: "发生登机口变更或行李领取延误" }
   }
 };
 
@@ -699,9 +705,14 @@ const MULTILINGUAL_ADVICE = {
     zh: "🤖 【AI智能出行建议 (紧急避难)】\\n🚨 检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
   },
   vehicle_failure: {
-    ja: "🤖 【AIからのインテリジェントアドバイス (車両故障)】\\n🚃 車両故障の影響で一部列車が運転を見合わせています。復旧まで時間を要する場合があり、振替輸送や他社線・バスへの乗り継ぎが案内されることもあります。駅係員の案内に従い、お急ぎの方は代替ルートをご検討ください。",
-    en: "🤖 [AI Intelligent Transit Advice (Vehicle Failure)]\\n🚃 Some trains are suspended due to a vehicle failure. Allow extra time; follow staff for substitute transport or consider alternative routes.",
-    zh: "🤖 【AI智能出行建议 (车辆故障)】\\n🚃 因车辆故障部分列车停运，恢复可能需要时间。请听从工作人员安排换乘，或考虑其他路线。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (機材故障)】\n🚃 機材故障の影響で一部の運行が見合わせています（鉄道・バス・航空機を問いません）。復旧まで時間を要する場合があり、振替輸送や他社線・バス・他モードへの乗り継ぎが案内されることもあります。係員の案内に従い、お急ぎの方は代替ルートをご検討ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Equipment Failure)]\n🚃 Some services are suspended due to an equipment/vehicle failure (rail, bus, or aircraft). Allow extra time; follow staff for substitute transport or consider alternative routes.",
+    zh: "🤖 【AI智能出行建议 (机材故障)】\n🚃 因机材故障部分运行暂停（铁路、巴士、飞机均有可能）。恢复可能需要时间。请听从工作人员安排换乘，或考虑其他路线。"
+  },
+  gate_baggage_delay: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (ゲート・手荷物遅延)】\n✈ ゲート変更または手荷物受取の遅延が発生しています。搭乗ゲート・到着口の案内板をご確認ください。お急ぎの方は空港スタッフへお問い合わせください。",
+    en: "🤖 [AI Intelligent Transit Advice (Gate/Baggage Delay)]\n✈ A gate change or baggage claim delay has occurred. Check the gate/arrival display boards and ask airport staff if you are in a hurry.",
+    zh: "🤖 【AI智能出行建议 (登机口/行李延误)】\n✈ 发生登机口变更或行李领取延误。请查看登机口/到达口显示屏，如有急事请咨询机场工作人员。"
   }
 };
 
