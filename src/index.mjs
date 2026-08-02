@@ -2928,16 +2928,22 @@ async function searchFlight(args) {
           });
         }
       }
-      const note = FLIGHT_API_KEY
-        ? label('フライトが見つかりませんでした。', 'No flights found.', '未找到航班。')
-        : label('フライト時刻は設定されていません（APIキー未設定）。空港へのアクセス経路のみ表示します。',
-                'Flight times are unavailable (API key not set). Showing airport access route only.',
-                '航班时刻未设置（未配置API密钥）。仅显示机场接驳路线。');
+      // 便名のみ指定で空港が特定できない場合の案内
+      const isFlightNumberOnly = !airportRaw && !!flightNumber;
+      const note = isFlightNumberOnly
+        ? label('便名検索には FLIGHT_API_KEY の設定が必要です（到着空港を特定できません）。',
+                'Flight number search requires FLIGHT_API_KEY (cannot determine arrival airport).',
+                '按航班号查询需要配置 FLIGHT_API_KEY（无法确定到达机场）。')
+        : (FLIGHT_API_KEY
+          ? label('フライトが見つかりませんでした。', 'No flights found.', '未找到航班。')
+          : label('フライト時刻は設定されていません（APIキー未設定）。空港へのアクセス経路のみ表示します。',
+                  'Flight times are unavailable (API key not set). Showing airport access route only.',
+                  '航班时刻未设置（未配置API密钥）。仅显示机场接驳路线。'));
       return jsonResponse({
         status: 'SUCCESS',
         mode: 'graceful_degradation',
         message: note,
-        airport: airportRaw || flightNumber,
+        airport: isFlightNumberOnly ? `便名: ${flightNumber}` : (airportRaw || flightNumber),
         direction,
         access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
         access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
