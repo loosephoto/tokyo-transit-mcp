@@ -22,7 +22,7 @@ config();
 const API_BASE_URL = 'https://api.odpt.org/api/v4';
 const API_KEY = process.env.ODPT_API_KEY;
 const FLIGHT_API_KEY = process.env.FLIGHT_API_KEY; // AviationStack (optional)
-const FLIGHT_API_BASE = 'http://api.aviationstack.com/v1';
+const FLIGHT_API_BASE = 'https://api.aviationstack.com/v1';
 
 if (!API_KEY) {
   console.warn('Warning: ODPT_API_KEY is not set in .env file, proceeding without key');
