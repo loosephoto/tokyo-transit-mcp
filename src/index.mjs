@@ -515,7 +515,7 @@ const RAILWAY_NAME_MAP = {
   '都営大江戸線': 'oedo', '大江戸線': 'oedo', '大江戸': 'oedo',
   'りんかい線': 'rinkai', '臨海線': 'rinkai', 'りんかい': 'rinkai',
   'ゆりかもめ': 'yurikamome', '百合海鸥': 'yurikamome',
-  'つくbaエクスプレス': 'tsukuba', 'つくバエクスプレス': 'tsukuba', 'tx': 'tsukuba',
+  'つくばエクスプレス': 'tsukuba', 'つくバエクスプレス': 'tsukuba', 'つくbaエクスプレス': 'tsukuba', 'tx': 'tsukuba', 'TX': 'tsukuba', 'TsukubaExpress': 'tsukuba', 'tsukubaexpress': 'tsukuba',
   '東急東横線': 'toyoko', '東横線': 'toyoko', '東横': 'toyoko',
   '東急田園都市線': 'denentoshi', '田園都市線': 'denentoshi', '田園都市': 'denentoshi',
   '京王線': 'keio', '京王': 'keio',
@@ -637,7 +637,8 @@ const OPERATOR_MAP = {
   mir: 'MIR', twr: 'TWR', minatomirai: 'Minatomirai',
   odakyuhakone: 'OdakyuHakone', hokuso: 'Hokuso',
   saitamarailway: 'SaitamaRailway', toyorapid: 'ToyoRapid',
-  shibayama: 'Shibayama', jrcentral: 'JR-Central'
+  shibayama: 'Shibayama', jrcentral: 'JR-Central',
+  tsukuba: 'TsukubaExpress'
 };
 
 const NON_RAIL_OPERATORS = {
@@ -1890,8 +1891,11 @@ async function getOperatorRoutes(args) {
   const userLang = args?.language || 'ja'; const opKey = args.operator_name;
   if (!opKey) return jsonResponse(buildErrorResponse('INVALID_INPUT', 'operator_name を指定。', { userLang }));
   let opId, opMeta;
+  const normKey = RAILWAY_NAME_MAP[opKey] || opKey;
   if (NON_RAIL_OPERATORS[opKey]) { opMeta = NON_RAIL_OPERATORS[opKey]; opId = opMeta.id; }
   else if (OPERATOR_MAP[opKey]) { opId = OPERATOR_MAP[opKey]; opMeta = { type: 'rail' }; }
+  else if (OPERATOR_MAP[normKey]) { opId = OPERATOR_MAP[normKey]; opMeta = { type: 'rail' }; }
+  else if (RAILWAY_NAME_MAP[opKey]) { const nk = RAILWAY_NAME_MAP[opKey]; if (OPERATOR_MAP[nk]) { opId = OPERATOR_MAP[nk]; opMeta = { type: 'rail' }; } }
   else return jsonResponse(buildErrorResponse('INVALID_INPUT', `不明: ${opKey}。list_transit_operators で確認。`, { userLang }));
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
