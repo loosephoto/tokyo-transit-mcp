@@ -77,6 +77,8 @@ npm install
 
 # ODPT API キーを設定（https://developer.odpt.org/ から取得）
 echo 'ODPT_API_KEY=your_api_key_here' > .env
+# フライト時刻を利用する場合のみ設定（AviationStack APIキー・任意）
+echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 ```
 
 ### MCP クライアント設定例（Claude Desktop / Hermes 等）
@@ -88,7 +90,8 @@ echo 'ODPT_API_KEY=your_api_key_here' > .env
       "command": "node",
       "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"],
       "env": {
-        "ODPT_API_KEY": "your_api_key_here"
+        "ODPT_API_KEY": "your_api_key_here",
+        "FLIGHT_API_KEY": "your_flight_api_key_here"
       }
     }
   }
@@ -440,6 +443,8 @@ npm install
 
 # Set your ODPT API key (Get one from https://developer.odpt.org/)
 echo 'ODPT_API_KEY=your_api_key_here' > .env
+# Only if using flight times: set AviationStack API key (optional)
+echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 ```
 
 ### MCP Client Configuration Example (Claude Desktop / Hermes, etc.)
@@ -451,7 +456,8 @@ echo 'ODPT_API_KEY=your_api_key_here' > .env
       "command": "node",
       "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"],
       "env": {
-        "ODPT_API_KEY": "your_api_key_here"
+        "ODPT_API_KEY": "your_api_key_here",
+        "FLIGHT_API_KEY": "your_flight_api_key_here"
       }
     }
   }
@@ -785,6 +791,8 @@ npm install
 
 # 设置 ODPT API 密钥（可从 https://developer.odpt.org/ 获取）
 echo 'ODPT_API_KEY=your_api_key_here' > .env
+# 仅在需要航班时刻时设置（AviationStack API 密钥・可选）
+echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 ```
 
 ### MCP 客户端配置示例（Claude Desktop / Hermes 等）
@@ -796,7 +804,8 @@ echo 'ODPT_API_KEY=your_api_key_here' > .env
       "command": "node",
       "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"],
       "env": {
-        "ODPT_API_KEY": "your_api_key_here"
+        "ODPT_API_KEY": "your_api_key_here",
+        "FLIGHT_API_KEY": "your_flight_api_key_here"
       }
     }
   }
