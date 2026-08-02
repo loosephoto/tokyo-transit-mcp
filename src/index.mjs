@@ -2802,7 +2802,7 @@ const DEFAULT_ACCESS_DESTINATIONS = {
   IBR: ['水戸']
 };
 
-// AviationStack からフライトを取得（キーなし時は null を返し graceful degradation）
+// AviationStack からフライトを取得（キーなし・エラー時は null を返し graceful degradation）
 async function fetchFlights(params) {
   if (!FLIGHT_API_KEY) return null;
   const qs = new URLSearchParams({ access_key: FLIGHT_API_KEY, limit: String(params.limit || 20) });
@@ -2813,12 +2813,24 @@ async function fetchFlights(params) {
   if (params.flight_date) qs.set('flight_date', params.flight_date);
   if (params.airline_iata) qs.set('airline_iata', params.airline_iata);
   const url = `${FLIGHT_API_BASE}/flights?${qs.toString()}`;
-  const cached = cache.get(cache.flightData.key + ':' + qs.toString());
+  const cacheKey = cache.flightData.key + ':' + qs.toString();
+  const cached = cache.get(cacheKey);
   if (cached) return cached;
-  const res = await axios.get(url, { timeout: 12000 });
-  const data = res.data && res.data.data ? res.data.data : [];
-  cache.set(cache.flightData.key + ':' + qs.toString(), data, cache.flightData.ttl);
-  return data;
+  try {
+    const res = await axios.get(url, { timeout: 12000 });
+    // AviationStack はエラー時 { error: { ... } } を返す（無効キー等）
+    if (res.data && res.data.error) {
+      console.warn('AviationStack error:', res.data.error.message || res.data.error.type);
+      return null;
+    }
+    const data = res.data && res.data.data ? res.data.data : [];
+    cache.set(cacheKey, data, cache.flightData.ttl);
+    return data;
+  } catch (err) {
+    // ネットワークエラー・401等: graceful degradation にフォールバック
+    console.warn('AviationStack fetch failed (fallback to access route only):', err.message);
+    return null;
+  }
 }
 
 // フライト1件を共通フォーマットに正規化
