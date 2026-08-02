@@ -19,6 +19,7 @@
 | 種別 | 対応事業者 |
 |:---|:---|
 | 🚃 鉄道 | JR東日本・東京メトロ・都営地下鉄・小田急・京王・西武・東武・京急・京成・相鉄・東急・横浜市営・**つくばエクスプレス(MIR)**・**りんかい線(TWR)**・**みなとみらい線**・**箱根登山線**・北総・埼玉高速・東葉高速・芝山鉄道・JR東海 |
+| 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT `odpt:Bus` から3事業者を並列マージ／バリアフリー案内付き） |
 | 🚡 AGT | ゆりかもめ・日暮里・舎人ライナー |
 | 🚝 モノレール | 東京モノレール・多摩モノレール |
 | 🚋 路面電車 | 都電荒川線（東京さくらトラム） |
@@ -165,10 +166,13 @@ search_fare(from: "渋谷", to: "新宿")
 get_timetable(station_name: "渋谷", railway: "山手線")
 ```
 
-### 6. `search_bus` — バス路線検索（都営バス）
+### 6. `search_bus` — バス路線検索（都営・西武・横浜市営バス）
+
+ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横浜市営バス）の3事業者を並列取得してマージ検索します。足の悪い方のため、各事業者のバリアフリー案内（車椅子対応・低床バス等はODPT非対応のため各社窓口リンクで案内）を結果に含めます。
 
 ```
 search_bus(busstop_name: "渋谷駅")
+search_bus(busstop_name: "桜木町")   # 横浜市営バスも日本語で検索可
 ```
 
 ### 7. `list_transit_operators` — 交通事業者一覧
@@ -485,9 +489,13 @@ search_fare(from: "Shibuya", to: "Shinjuku")
 get_timetable(station_name: "Shibuya", railway: "Yamanote Line")
 ```
 
-### 6. `search_bus` — Bus Route Search (Toei Bus)
+### 6. `search_bus` — Bus Route Search (Toei / Seibu / Yokohama City Bus)
+
+Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged in parallel from ODPT `odpt:Bus`. For users with limited mobility, the result includes barrier-free guidance links (wheelchair/low-floor info is not provided by ODPT, so each operator's contact page is linked).
+
 ```
 search_bus(busstop_name: "Shibuya Station")
+search_bus(busstop_name: "Sakuragicho")   # Yokohama City Bus searchable in Japanese too
 ```
 
 ### 7. `list_transit_operators` — Transit Operators List
@@ -800,9 +808,13 @@ search_fare(from: "渋谷", to: "新宿")
 get_timetable(station_name: "渋谷", railway: "山手線")
 ```
 
-### 6. `search_bus` — 公交路线查询（都营公交）
+### 6. `search_bus` — 公交路线查询（都营/西武/横滨市营公交）
+
+从 ODPT 的 `odpt:Bus` 并行获取并合并都营公交、西武公交、横滨市交通局（横滨市营公交）3 家运营商的数据。为行动不便的乘客，结果中附有无障碍出行指引（ODPT 不提供轮椅/低地板车辆信息，因此链接至各公司咨询页面）。
+
 ```
 search_bus(busstop_name: "渋谷駅")
+search_bus(busstop_name: "桜木町")   # 横滨市营公交也支持日文检索
 ```
 
 ### 7. `list_transit_operators` — 交通运营商列表

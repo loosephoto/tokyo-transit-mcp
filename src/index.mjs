@@ -1982,34 +1982,155 @@ async function getTimetable(args) {
 // ==========================================
 // 🚌 バス路線検索（都営バス）
 // ==========================================
+// 🚌 バス事業者マップ（odpt:Bus エンドポイントで実データが取得可能な事業者のみ）
+// 調査実績（2026-08-02, ODPT本番API）：
+//   Toei(都営バス)=425件 / SeibuBus(西武バス)=271件 / YokohamaMunicipal(横浜市交通局)=296件  → odpt:Bus で取得可
+//   KeioBus/OdakyuBus/TokyuBus/SotetsuBus/NishiTokyoBus = 0件（GTFS形式等で別提供）
+//   JRバス関東 = ODPT未登録（JR-East/JR-Central のみ）
+// 足の悪いユーザー向け：これら3社で近郊バス網をカバー。マージは Promise.allSettled で並列取得。
+const BUS_OPERATORS = [
+  { id: 'Toei', label: '都営バス', labelEn: 'Toei Bus', labelZh: '都营公交', website: 'https://www.kotsu.metro.tokyo.jp/bus/' },
+  { id: 'SeibuBus', label: '西武バス', labelEn: 'Seibu Bus', labelZh: '西武公交', website: 'https://www.seibubus.co.jp/' },
+  { id: 'YokohamaMunicipal', label: '横浜市交通局（横浜市営バス）', labelEn: 'Yokohama City Bus', labelZh: '横滨市营公交', website: 'https://www.city.yokohama.lg.jp/kotsu/' }
+];
+
+// 横浜市営バスは odpt:note が null で、バス停名がローマ字ID（例: SakuragichoStation）しかない。
+// ローマ字駅名→日本語の最小マップ（主要ターミナル＋観光地）を付与し、日本語入力でも検索可能にする。
+// ODPTには全バス停の日本語名が無いため、網羅ではなく主要駅に限定。
+const BUSSTOP_ROMAN_TO_JA = {
+  YokohamaStation: '横浜駅', YokohamaShiyakushoMae: '横浜市役所前', SakuragichoStation: '桜木町駅',
+  YokohamaStadiumMae: '横浜スタジアム前', KannaiStationKitaguchi: '関内駅北口', ChikatetsuKannaiStation: '地下鉄関内駅',
+  ShinYokohamaStation: '新横浜駅', MinatoMirai: 'みなとみらい', Bashamichi: '馬車道', NihonOdoriStationKenchoMae: '日本大通り駅県庁前',
+  YokohamaStationWestEntrance: '横浜駅西口', YokohamaStationKaisatsuguchiMae: '横浜駅改札口前',
+  KamiookaStation: '上大岡駅', TobeStation: '戸部駅', HinodechoStation: '日ノ出町駅', YamateStation: '山手駅',
+  IsogoStation: '磯子駅', IsogoShakoMae: '磯子車庫前', HodogayaStationHigashiguchi: '保土ヶ谷駅東口', HodogayaStationNishiguchi: '保土ヶ谷駅西口',
+  KikunaStation: '菊名駅', TsurumiStation: '鶴見駅', TsurumiStationNishiguchi: '鶴見駅西口', ShinKoyasuStation: '新子安駅',
+  NakayamaStation: '中山駅', NakamachidaiStation: '中川駅', CenterMinamiStation: 'センター北駅', TsuzukiFureaiNoOkaStation: '都筑ふれあいの丘駅',
+  NagatsutaStation: '長津田駅', IchigaoStation: '市が尾駅', EdaStation: '江田駅', HigashiYamataStation: '東山田駅',
+  ShinTsunashimaSta: '新綱島', TsunashimaStationIriguchi: '綱島駅入口', OkurayamaStation: '大倉山駅',
+  YokodaiStation: '洋光台駅', SugitaTsubonomiChuo: '杉田中央', ShinSugitaStation: '新杉田駅',
+  KonandaiStation: '港南台駅', KamiSugetaCho: '上菅田町', OnoeCho: '尾上町', NogeOdori: '野毛大通り',
+  Motomachi: '元町', YamashitaCho: '山下町', Honmoku: '本牧', Sankeien: '三溪園', SankeienIriguchi: '三溪園入口',
+  Hammerhead: 'ハンマーヘッド', LalaPortYokohamaNishi: 'ららぽーと横浜', MitsuiOutletParkYokohama: '三井アウトレットパーク横浜',
+  NegishiStation: '根岸駅', IdogayaStation: '井戸ヶ谷駅', Gumyoji: '弘明寺', Kominato: '小湊',
+  Fujidana: '富士見台', YokohamaSatoNoFurusato: '横浜里のふるさと'
+};
+
+// 事業者ID→ラベル逆引き（レコードの odpt:operator から表示名を出す）
+const BUS_OPERATOR_LABEL = {};
+for (const o of BUS_OPERATORS) {
+  BUS_OPERATOR_LABEL[`odpt.Operator:${o.id}`] = o;
+}
+
+// BusstopPole ID（例: odpt.BusstopPole:YokohamaMunicipal.SakuragichoStation.2014.2）
+// から駅名相当（SakuragichoStation）を抽出。ODPTには日本語バス停名が無い事業者（横浜市営等）向け。
+function poleIdSeg(poleRef) {
+  if (!poleRef) return null;
+  const last = String(poleRef).split(':').pop(); // YokohamaMunicipal.SakuragichoStation.2014.2
+  return last.replace(/^[A-Za-z]+\./, '').replace(/\.\d+\.\d+$/, ''); // SakuragichoStation
+}
+
+async function fetchAllBuses(userLang) {
+  // 全バス事業者を並列取得してマージ（1社でも失敗しても他社は維持）
+  const results = await Promise.allSettled(
+    BUS_OPERATORS.map(op =>
+      axios.get(`${API_BASE_URL}/odpt:Bus`, { params: getParams(op.id), timeout: 5000 })
+    )
+  );
+  const merged = [];
+  let okCount = 0, failCount = 0;
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && Array.isArray(res.value.data)) {
+      okCount++;
+      for (const b of res.value.data) {
+        const opMeta = BUS_OPERATORS[i];
+        // 検索用キーを構築（note が無い事業者も BusstopPole ID から駅名相当を拾う）
+        const note = b['odpt:note'] || '';
+        const segs = [poleIdSeg(b['odpt:startingBusstopPole']), poleIdSeg(b['odpt:terminalBusstopPole'])].filter(Boolean);
+        // ローマ字駅名→日本語を付与（横浜市営等 note=null 事業者の日本語検索用）
+        const segJa = segs.map(s => BUSSTOP_ROMAN_TO_JA[s] || null).filter(Boolean);
+        const searchKeys = [note, ...segs, ...segJa].filter(Boolean);
+        // 表示用 note（note が null の横浜市営等は 起点→終点 を 日本語優先で表示）
+        const dispSeg = segs.map(s => BUSSTOP_ROMAN_TO_JA[s] || s);
+        const displayNote = note || (dispSeg.length ? `${dispSeg[0]} → ${dispSeg[1] || dispSeg[0]}` : (b['odpt:busroute'] || ''));
+        merged.push({ ...b, _operatorId: opMeta.id, _operatorLabel: opMeta, _searchKeys: searchKeys, _displayNote: displayNote });
+      }
+    } else {
+      failCount++;
+    }
+  });
+  return { merged, okCount, failCount };
+}
+
 async function searchBus(args) {
   const busstopName = (args.busstop_name || '').trim();
   const userLang = detectLanguage(busstopName) || 'ja';
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
     const cached = cache.get(cache.busData.key);
-    let buses;
-    if (cached) { buses = cached; odptBreaker.onSuccess(); }
-    else {
-      const res = await axios.get(`${API_BASE_URL}/odpt:Bus`, { params: getParams('Toei'), timeout: 5000 });
-      buses = res.data;
-      cache.set(cache.busData.key, buses, cache.busData.ttl);
+    let buses, okCount, failCount;
+    if (cached) {
+      buses = cached.merged; okCount = cached.okCount; failCount = cached.failCount;
+      odptBreaker.onSuccess();
+    } else {
+      const r = await fetchAllBuses(userLang);
+      buses = r.merged; okCount = r.okCount; failCount = r.failCount;
+      cache.set(cache.busData.key, r, cache.busData.ttl);
+      odptBreaker.onSuccess();
     }
-    odptBreaker.onSuccess();
+    // 取得できた事業者ラベル
+    const operatorSumm = BUS_OPERATORS.map(o => ({
+      operator: o.id,
+      label: userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label,
+      website: o.website
+    }));
+    const dataSourceNote = `ODPT Bus (${okCount}/${BUS_OPERATORS.length} 事業者取得成功)` + (failCount > 0 ? ` / ${failCount}社取得失敗` : '');
+
+    // 🔴 足の悪いユーザー向けバリアフリー注意喚起（odpt:Bus に車椅子/低床情報は無いため案内のみ）
+    const barrierFreeNote = userLang === 'en'
+      ? 'Note: ODPT bus data does not include wheelchair/low-floor info. Please check the operator website or contact the bus office for step-free / priority-seat availability.'
+      : userLang === 'zh'
+        ? '注意：ODPT 公交数据不含轮椅/低地板车辆信息。无障碍乘车（有无台阶、优先座位）请在各公司官网或致电营业所确认。'
+        : 'ご案内：ODPTのバスデータには車椅子対応・低床バス等の情報は含まれません。段差の有無や優先席の利用は、各事業者ウェブサイトまたは営業所へお問い合わせください。';
+
     if (!busstopName) {
-      return jsonResponse({ status: "SUCCESS", detected_language: userLang, total: buses.length, bus_routes: buses.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
+      return jsonResponse({
+        status: "SUCCESS", detected_language: userLang,
+        total: buses.length,
+        operators: operatorSumm,
+        bus_routes: buses.slice(0, 20).map(b => ({
+          note: b['odpt:note'] || b._displayNote, route: b['odpt:busroute'], number: b['odpt:busNumber'],
+          operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label
+        })),
+        barrier_free_note: barrierFreeNote,
+        data_source: dataSourceNote,
+        fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/"
+      });
     }
     const matched = buses.filter(b => {
-      const note = b['odpt:note'] || '';
       const norm = normalizeStationName(busstopName);
-      // 入力（および正規化後）の両方で部分一致。suffix（停留所/バス停）も除去して比較
+      // 入力（および正規化後）の両方で部分一致。suffix（停留所/バス停）も除去。
+      // 検索対象は note + BusstopPole ID 由来の駅名相当（横浜市営等 note=null 事業者対応）
       const variants = [busstopName, norm].filter((v, i, a) => a.indexOf(v) === i);
       return variants.some(v => {
         const stripped = v.replace(/(停留所|バス停|駅)$/, '');
-        return note.includes(v) || (stripped !== v && note.includes(stripped));
+        return b._searchKeys.some(k => k.includes(v) || (stripped !== v && k.includes(stripped)));
       });
     });
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, busstop: busstopName, total: matched.length, bus_routes: matched.slice(0, 20).map(b => ({ note: b['odpt:note'], route: b['odpt:busroute'], number: b['odpt:busNumber'], frequency: b['odpt:frequency'] })), data_source: "ODPT Bus (Toei)", fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/" });
+    return jsonResponse({
+      status: "SUCCESS", detected_language: userLang,
+      busstop: busstopName,
+      total: matched.length,
+      operators: operatorSumm,
+      bus_routes: matched.slice(0, 20).map(b => ({
+        note: b['odpt:note'] || b._displayNote, route: b['odpt:busroute'], number: b['odpt:busNumber'],
+        frequency: b['odpt:frequency'],
+        operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label
+      })),
+      barrier_free_note: barrierFreeNote,
+      data_source: dataSourceNote,
+      fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/"
+    });
   } catch (error) {
     odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });
