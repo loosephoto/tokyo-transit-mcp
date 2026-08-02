@@ -20,6 +20,7 @@
 |:---|:---|
 | 🚃 鉄道 | JR東日本・東京メトロ・都営地下鉄・小田急・京王・西武・東武・京急・京成・相鉄・東急・横浜市営・**つくばエクスプレス(MIR)**・**りんかい線(TWR)**・**みなとみらい線**・**箱根登山線**・北総・埼玉高速・東葉高速・芝山鉄道・JR東海 |
 | 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT `odpt:Bus` から3事業者を並列マージ）＋ JRバス関東・都内コミュニティバス（GTFS-JP個別取得パス）／バス停検索＋乗り継ぎ探索（`odpt:BusroutePattern`）＋**バス電車バス横断乗り継ぎ**（駅・バス停を緯度経度で紐付け）＋ノンステップバス表示（`isNonStepBus`）｜
+| ✈️ フライト | 羽田(HND)・成田(NRT)等の到着/出発フライト時刻（AviationStack `FLIGHT_API_KEY`）＋到着時の空港→目的地アクセス経路連携（既存 search_route）／キー未設定時は空港アクセス経路のみ（graceful degradation）｜
 | 🚡 AGT | ゆりかもめ・日暮里・舎人ライナー |
 | 🚝 モノレール | 東京モノレール・多摩モノレール |
 | 🚋 路面電車 | 都電荒川線（東京さくらトラム） |
@@ -183,6 +184,23 @@ search_bus(from: "渋谷駅前", to: "新橋駅前")            # バス→電�
 search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（電車）→川崎 横断乗り継ぎ
 ```
 
+
+
+### 6.5 `search_flight` — 空港フライト時刻・到着時刻表示 ✈️
+
+- **空港検索**: `airport`（羽田空港/成田空港/HND/NRT 等）で到着/出発フライトを検索
+- **便名検索**: `flight_number`（NH001/JL000 等）で特定便を検索
+- **到着時の最適連携**: `destination`（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路（電車）を自動提案。**海外からの来客・帰省時に最適**
+- **表示項目**: 便名・航空会社・ステータス（予定/運航中/到着済/欠航）・ターミナル・ゲート・予定時刻・実際時刻・遅延（分）
+- **Graceful degradation**: `FLIGHT_API_KEY` 未設定時はフライト時刻なしで、空港へのアクセス経路のみ表示
+
+※ フライト時刻は AviationStack API（`FLIGHT_API_KEY`）が必要。未設定時は空港アクセス経路のみ。
+
+```
+search_flight(airport: "羽田空港", direction: "arrival")              # 羽田着フライト一覧
+search_flight(airport: "成田空港", direction: "arrival", destination: "東京駅")  # 成田着→東京駅へのアクセス経路付き
+search_flight(flight_number: "NH001", direction: "arrival")          # 便名指定
+```
 ### 7. `list_transit_operators` — 交通事業者一覧
 
 ```
@@ -514,6 +532,22 @@ search_bus(from: "Shibuya Station", to: "Shimbashi Station")   # bus→train→b
 search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(train)→Kawasaki cross-modal
 ```
 
+
+### 6.5 `search_flight` — Airport Flight Times & Arrival Display ✈️
+
+- **Airport search**: `airport` (Haneda/Narita/HND/NRT etc.) lists arrival/departure flights
+- **Flight number search**: `flight_number` (NH001/JL000 etc.) for a specific flight
+- **Best for inbound/return travel**: specify `destination` (e.g. Tokyo Station) to auto-suggest the access route (train) from the arrival terminal. **Ideal for overseas guests & homecoming**
+- **Fields**: flight no., airline, status (scheduled/active/landed/cancelled), terminal, gate, scheduled/actual time, delay (min)
+- **Graceful degradation**: without `FLIGHT_API_KEY`, shows airport access route only (no flight times)
+
+Note: flight times require AviationStack API (`FLIGHT_API_KEY`). Without it, only airport access routes are shown.
+
+```
+search_flight(airport: "Haneda Airport", direction: "arrival")                    # Haneda arrivals
+search_flight(airport: "Narita Airport", direction: "arrival", destination: "Tokyo Station")  # Narita→Tokyo access route
+search_flight(flight_number: "NH001", direction: "arrival")                       # by flight no.
+```
 ### 7. `list_transit_operators` — Transit Operators List
 ```
 list_transit_operators(language: "en", type_filter: "all")
@@ -841,6 +875,22 @@ search_bus(from: "渋谷駅前", to: "新橋駅前")            # 公交→电�
 search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电车)→川崎 跨方式换乘
 ```
 
+
+### 6.5 `search_flight` — 机场航班时刻与到达时间显示 ✈️
+
+- **机场查询**: `airport`（羽田/成田/HND/NRT 等）列出到达/出发航班
+- **航班号查询**: `flight_number`（NH001/JL000 等）查询特定航班
+- **海外来客/归国最佳**: 指定 `destination`（如：东京站）自动建议从到达航站楼到目的地的接驳路线（电车）。**最适合海外来宾与归乡**
+- **显示项**: 航班号、航空公司、状态（准点/飞行中/已到达/取消）、航站楼、登机口、计划时间、实际时间、延误（分钟）
+- **优雅降级**: 未配置 `FLIGHT_API_KEY` 时仅显示机场接驳路线（无航班时刻）
+
+注: 航班时刻需要 AviationStack API（`FLIGHT_API_KEY`）。未配置时仅显示机场接驳路线。
+
+```
+search_flight(airport: "羽田空港", direction: "arrival")                        # 羽田到达航班
+search_flight(airport: "成田空港", direction: "arrival", destination: "東京駅")  # 成田→东京接驳路线
+search_flight(flight_number: "NH001", direction: "arrival")                    # 按航班号查询
+```
 ### 7. `list_transit_operators` — 交通运营商列表
 ```
 list_transit_operators(language: "zh", type_filter: "all")

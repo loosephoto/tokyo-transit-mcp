@@ -21,9 +21,14 @@ config();
 
 const API_BASE_URL = 'https://api.odpt.org/api/v4';
 const API_KEY = process.env.ODPT_API_KEY;
+const FLIGHT_API_KEY = process.env.FLIGHT_API_KEY; // AviationStack (optional)
+const FLIGHT_API_BASE = 'http://api.aviationstack.com/v1';
 
 if (!API_KEY) {
   console.warn('Warning: ODPT_API_KEY is not set in .env file, proceeding without key');
+}
+if (!FLIGHT_API_KEY) {
+  console.warn('Warning: FLIGHT_API_KEY is not set; flight status will be unavailable (graceful degradation to airport access routes only)');
 }
 
 // ==========================================
@@ -101,7 +106,8 @@ const cache = {
   busTimetable: { key: 'bus_timetable', ttl: 600000 },
   busGraph: { key: 'bus_graph', ttl: 600000 },
   busStopGeo: { key: 'bus_stop_geo', ttl: 600000 },
-  stationGeo: { key: 'station_geo', ttl: 600000 }
+  stationGeo: { key: 'station_geo', ttl: 600000 },
+  flightData: { key: 'flight_data', ttl: 60000 } // リアルタイム性重視（60s）
 };
 
 // ローマ字駅ID → 日本語駅名 の逆引きマップ（ODPT odpt:Station から動的構築）
@@ -1213,6 +1219,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: '事業者別路線一覧 - 指定事業者の全路線と駅を表示（例: tokyometro, jreast, mir, twr, yurikamome, toden）。',
       inputSchema: { type: 'object', properties: { operator_name: { type: 'string', description: '事業者キー' }, language: { type: 'string', enum: ['ja', 'en', 'zh'] } }, required: ['operator_name'] }
     },
+    { name: 'search_flight',
+      description: '✈️ 空港フライト時刻・到着時刻表示 - 羽田(HND)/成田(NRT)等の空港または便名で到着/出発フライトを検索。海外からの来客・帰省時に最適: 到着フライト検索時に destination（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路を自動提案。FLIGHT_API_KEY 未設定時はフライト時刻なしで空港アクセス経路のみ表示（graceful degradation）。',
+      inputSchema: { type: 'object', properties: { airport: { type: 'string', description: '空港名またはIATAコード（例: 羽田空港, 成田空港, HND, NRT）' }, flight_number: { type: 'string', description: '便名（例: NH001, JL000）' }, direction: { type: 'string', enum: ['arrival', 'departure'], description: '到着(arrival)または出発(departure)。省略時は到着。' }, flight_date: { type: 'string', description: 'フライト日付 YYYY-MM-DD（省略時は当日）' }, airline: { type: 'string', description: '航空会社IATAコード（任意・絞り込み）' }, destination: { type: 'string', description: '到着時の連携先（例: 東京駅）。指定すると到着ターミナル→目的地のアクセス経路を提案。' } }, required: [] } },
     { name: 'search_fare',
       description: '🚃 運賃検索 - 2駅間の運賃をODPTデータから検索します（東京メトロ・都営対応）。サーバー内で運賃を直接返すためYahoo依存不要。',
       inputSchema: { type: 'object', properties: { from: { type: 'string', description: '出発駅' }, to: { type: 'string', description: '到着駅' } }, required: ['from', 'to'] }
@@ -1243,6 +1252,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'search_fare': return await searchFare(args);
       case 'get_timetable': return await getTimetable(args);
       case 'search_bus': return await searchBus(args);
+      case 'search_flight': return await searchFlight(args);
       default: return jsonResponse(buildErrorResponse('INVALID_INPUT', `Unknown tool: ${name}`, { userLang }));
     }
   } catch (error) {
@@ -2769,7 +2779,188 @@ async function searchBus(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, parseTestMode, computeRoutes, findShortestPath, resolveStation };
+// ============================================================
+// ✈️ 空港フライト時刻・到着時刻表示（AviationStack）
+// ============================================================
+
+// 空港名（日本語/英語）→ IATA コード
+const AIRPORT_IATA = {
+  '羽田空港': 'HND', '羽田': 'HND', 'HND': 'HND', 'Haneda': 'HND', 'Haneda Airport': 'HND',
+  '成田空港': 'NRT', '成田': 'NRT', 'NRT': 'NRT', 'Narita': 'NRT', 'Narita Airport': 'NRT',
+  '茨城空港': 'IBR', 'IBR': 'IBR',
+  '東京国際空港': 'HND'
+};
+// IATA → 日本語表示名（到着連携用の駅名マップ）
+const IATA_TO_TERMINAL_STATION = {
+  HND: '羽田空港第1ターミナル', // 代表的ターミナル駅（実際はターミナル番号で上書き）
+  NRT: '成田空港'
+};
+
+// AviationStack からフライトを取得（キーなし時は null を返し graceful degradation）
+async function fetchFlights(params) {
+  if (!FLIGHT_API_KEY) return null;
+  const qs = new URLSearchParams({ access_key: FLIGHT_API_KEY, limit: String(params.limit || 20) });
+  if (params.flight_iata) qs.set('flight_iata', params.flight_iata);
+  else if (params.arr_iata) qs.set('arr_iata', params.arr_iata);
+  else if (params.dep_iata) qs.set('dep_iata', params.dep_iata);
+  if (params.flight_status) qs.set('flight_status', params.flight_status);
+  if (params.flight_date) qs.set('flight_date', params.flight_date);
+  if (params.airline_iata) qs.set('airline_iata', params.airline_iata);
+  const url = `${FLIGHT_API_BASE}/flights?${qs.toString()}`;
+  const cached = cache.get(cache.flightData.key + ':' + qs.toString());
+  if (cached) return cached;
+  const res = await axios.get(url, { timeout: 12000 });
+  const data = res.data && res.data.data ? res.data.data : [];
+  cache.set(cache.flightData.key + ':' + qs.toString(), data, cache.flightData.ttl);
+  return data;
+}
+
+// フライト1件を共通フォーマットに正規化
+function normalizeFlight(f, direction, userLang) {
+  const dep = f.departure || {};
+  const arr = f.arrival || {};
+  const end = direction === 'departure' ? dep : arr; // 着目側（到着なら到着側、出発なら出発側）
+  const sched = end.scheduled ? new Date(end.scheduled) : null;
+  const actual = end.actual ? new Date(end.actual) : null;
+  const est = end.estimated ? new Date(end.estimated) : null;
+  const delayMin = typeof end.delay === 'number' ? end.delay : null;
+  const fmt = (d) => d ? d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: end.timezone || 'Asia/Tokyo' }) : null;
+  const statusMap = { scheduled: '予定通り', active: '運航中', landed: '到着済', cancelled: '欠航', diverted: 'ダイバート', incident: 'トラブル' };
+  const statusMapEn = { scheduled: 'On schedule', active: 'In flight', landed: 'Landed', cancelled: 'Cancelled', diverted: 'Diverted', incident: 'Incident' };
+  const statusMapZh = { scheduled: '准点', active: '飞行中', landed: '已到达', cancelled: '取消', diverted: '备降', incident: '异常' };
+  const statusText = userLang === 'en' ? (statusMapEn[f.flight_status] || f.flight_status)
+    : userLang === 'zh' ? (statusMapZh[f.flight_status] || f.flight_status)
+    : (statusMap[f.flight_status] || f.flight_status);
+  // 他端（出発側なら到着空港、到着側なら出発空港）
+  const other = direction === 'departure' ? arr : dep;
+  return {
+    flight_iata: f.flight?.iata || f.flight_iata || null,
+    airline: f.airline?.name || null,
+    status: f.flight_status,
+    status_text: statusText,
+    terminal: end.terminal || null,
+    gate: end.gate || null,
+    baggage: end.baggage || null,
+    scheduled_time: sched ? fmt(sched) : null,
+    actual_time: actual ? fmt(actual) : null,
+    estimated_time: est ? fmt(est) : null,
+    delay_minutes: delayMin,
+    airport_name: end.airport || null,
+    airport_iata: end.iata || null,
+    other_airport_name: other.airport || null,
+    other_airport_iata: other.iata || null
+  };
+}
+
+async function searchFlight(args) {
+  const airportRaw = args?.airport || args?.airport_name || '';
+  const flightNumber = args?.flight_number || args?.flight_iata || '';
+  const direction = (args?.direction === 'departure') ? 'departure' : 'arrival';
+  const flightDate = args?.flight_date || null;
+  const airlineIata = args?.airline || null;
+  const destination = args?.destination || null; // 到着時の連携先（例: 東京駅）
+  const userLang = detectLanguage(airportRaw) || detectLanguage(flightNumber) || 'ja';
+
+  const label = (ja, en, zh) => userLang === 'en' ? en : userLang === 'zh' ? zh : ja;
+
+  try {
+    // 入力検証: 空港名または便名のいずれか必須
+    if (!airportRaw && !flightNumber) {
+      return jsonResponse(buildErrorResponse('INVALID_INPUT',
+        label('空港名または便名を指定してください。', 'Specify an airport name or flight number.', '请指定机场名或航班号。'),
+        { userLang }));
+    }
+    // フライト取得（キーなし時は null）
+    let flights = null;
+    if (FLIGHT_API_KEY) {
+      const iata = AIRPORT_IATA[airportRaw] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
+      const params = { limit: 20 };
+      if (flightNumber) params.flight_iata = flightNumber.toUpperCase();
+      else if (iata) params[direction === 'arrival' ? 'arr_iata' : 'dep_iata'] = iata;
+      else {
+        return jsonResponse(buildErrorResponse('INVALID_INPUT',
+          label('空港名または便名を指定してください。', 'Specify an airport name or flight number.', '请指定机场名或航班号。'),
+          { userLang }));
+      }
+      if (flightDate) params.flight_date = flightDate;
+      if (airlineIata) params.airline_iata = airlineIata.toUpperCase();
+      params.flight_status = direction === 'arrival' ? 'landed,scheduled,active' : 'scheduled,active';
+      flights = await fetchFlights(params);
+    }
+
+    // キーなし / データなし → graceful degradation: 空港アクセス経路のみ
+    if (!flights || flights.length === 0) {
+      const iata = AIRPORT_IATA[airportRaw] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
+      const stationName = iata ? (IATA_TO_TERMINAL_STATION[iata] || airportRaw) : airportRaw;
+      let accessRoute = null;
+      if (destination) {
+        const rr = computeRoutes(stationName, destination);
+        if (rr && rr.routes) {
+          const route = rr.routes[0];
+          accessRoute = {
+            from: stationName, to: destination,
+            transfers: route.summary.transfers,
+            estimated_minutes: route.summary.estimated_minutes,
+            main_line: route.summary.main_line,
+            segments: route.segments
+          };
+        }
+      }
+      const note = FLIGHT_API_KEY
+        ? label('フライトが見つかりませんでした。', 'No flights found.', '未找到航班。')
+        : label('フライト時刻は設定されていません（APIキー未設定）。空港へのアクセス経路のみ表示します。',
+                'Flight times are unavailable (API key not set). Showing airport access route only.',
+                '航班时刻未设置（未配置API密钥）。仅显示机场接驳路线。');
+      return jsonResponse({
+        status: 'SUCCESS',
+        mode: 'graceful_degradation',
+        message: note,
+        airport: airportRaw || flightNumber,
+        direction,
+        access_route: accessRoute,
+        flight_api_configured: !!FLIGHT_API_KEY
+      });
+    }
+
+    // 正規化
+    const normalized = flights.map(f => normalizeFlight(f, direction, userLang)).filter(Boolean);
+
+    // 到着時の連携: 最も関連性の高いフライト（最初の1件）から空港→目的地ルート
+    let accessRoute = null;
+    if (direction === 'arrival' && destination && normalized.length > 0) {
+      const top = normalized[0];
+      const stationName = top.terminal
+        ? (top.airport_iata === 'HND' ? `羽田空港第${top.terminal}ターミナル` : top.airport_iata === 'NRT' ? `成田空港第${top.terminal}ターミナル` : (IATA_TO_TERMINAL_STATION[top.airport_iata] || top.airport_name))
+        : (IATA_TO_TERMINAL_STATION[top.airport_iata] || top.airport_name);
+      const rr = computeRoutes(stationName, destination);
+      if (rr && rr.routes) {
+        const route = rr.routes[0];
+        accessRoute = {
+          from: stationName, to: destination,
+          transfers: route.summary.transfers,
+          estimated_minutes: route.summary.estimated_minutes,
+          main_line: route.summary.main_line,
+          segments: route.segments
+        };
+      }
+    }
+
+    return jsonResponse({
+      status: 'SUCCESS',
+      mode: 'flight_info',
+      airport: airportRaw || flightNumber,
+      direction,
+      flight_count: normalized.length,
+      flights: normalized.slice(0, 20),
+      access_route: accessRoute,
+      flight_api_configured: !!FLIGHT_API_KEY
+    });
+  } catch (error) {
+    return handleApiError(error, { userLang });
+  }
+}
+
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight };
 
 async function main() {
   const transport = new StdioServerTransport();
