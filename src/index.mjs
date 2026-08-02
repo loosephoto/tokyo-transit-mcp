@@ -1618,12 +1618,10 @@ async function getStationInfo(args) {
 // ==========================================
 // ☀️ 天気情報（高温・降水検出対応）
 // ==========================================
-async function getWeather(args) {
-  const rawArea = args.area_name || '';
-  const userLang = detectLanguage(rawArea) || 'ja';
-  let areaCode = '130000', areaName = rawArea || "東京";
-  if (rawArea && JMA_AREA_MAP[rawArea]) areaCode = JMA_AREA_MAP[rawArea];
-  if (!jmaBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, area: areaName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
+// 天候から AIインテリジェントアドバイスを生成（getWeather と searchFlight で共有）
+// 戻り値: { advice: string(ai_transit_advice), weather: string, isRainy, isHot, maxTemp }
+async function getWeatherAdvice(userLang, areaCode = '130000') {
+  if (!jmaBreaker.canExecute()) return { advice: null, weather: null };
   try {
     const cached = cache.get(cache.jmaWeather.key);
     let weather, isRainy = false, isHot = false, maxTemp = 0;
@@ -1639,27 +1637,38 @@ async function getWeather(args) {
       jmaBreaker.onSuccess();
     }
     const adviceKey = isHot ? 'hot' : (isRainy ? 'rainy' : 'fair');
-    const displayArea = userLang === 'en' ? 'Tokyo Area' : userLang === 'zh' ? '东京地区' : areaName;
-    return jsonResponse({
-      status: "SUCCESS",
-      // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
-      ai_transit_advice: MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja,
-      detected_language: userLang,
-      area: displayArea,
-      weather,
-      max_temp: maxTemp || undefined,
-      heat_alert: isHot || undefined,
-      gov_facility_search_support: {
-        note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
-              userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
-              "🏛️ 【現在地周辺の公的機関の検索】",
-        link: GOV_FACILITY_SEARCH_URL
-      }
-    });
+    const advice = (MULTILINGUAL_ADVICE[adviceKey] && (MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja)) || '';
+    return { advice, weather, isRainy, isHot, maxTemp: maxTemp || undefined };
   } catch (error) {
     jmaBreaker.onFailure(error);
-    return handleApiError(error, { userLang, area: areaName, api: 'JMA' });
+    return { advice: null, weather: null };
   }
+}
+
+async function getWeather(args) {
+  const rawArea = args.area_name || '';
+  const userLang = detectLanguage(rawArea) || 'ja';
+  let areaCode = '130000', areaName = rawArea || "東京";
+  if (rawArea && JMA_AREA_MAP[rawArea]) areaCode = JMA_AREA_MAP[rawArea];
+  if (!jmaBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, area: areaName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
+  const { advice, weather, isHot, maxTemp } = await getWeatherAdvice(userLang, areaCode);
+  const displayArea = userLang === 'en' ? 'Tokyo Area' : userLang === 'zh' ? '东京地区' : areaName;
+  return jsonResponse({
+    status: "SUCCESS",
+    // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
+    ai_transit_advice: advice,
+    detected_language: userLang,
+    area: displayArea,
+    weather,
+    max_temp: maxTemp,
+    heat_alert: isHot || undefined,
+    gov_facility_search_support: {
+      note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
+          userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
+          "🏛️ 【現在地周辺の公的機関の検索】",
+      link: GOV_FACILITY_SEARCH_URL
+    }
+  });
 }
 
 // ==========================================
@@ -2789,6 +2798,12 @@ const AIRPORT_IATA = {
   '成田空港': 'NRT', '成田': 'NRT', 'NRT': 'NRT', 'Narita': 'NRT', 'Narita Airport': 'NRT', '成田机场': 'NRT',
   '茨城空港': 'IBR', 'IBR': 'IBR', '茨城机场': 'IBR'
 };
+// 空港 IATA → 天候取得用の気象庁地域コード（到着時の AI アドバイス用）
+const AIRPORT_WEATHER_AREA = {
+  HND: '130000', // 東京
+  NRT: '120000', // 千葉
+  IBR: '080000'  // 茨城
+};
 // 空港名の正規化: 末尾の 空港/Airport/机场 サフィックスを除去（3か国語対応）
 function normalizeAirportQuery(name) {
   if (!name) return name;
@@ -2893,10 +2908,18 @@ async function searchFlight(args) {
         label('空港名または便名を指定してください。', 'Specify an airport name or flight number.', '请指定机场名或航班号。'),
         { userLang }));
     }
+    // 空港 IATA を解決（両モードで共有）
+    const iata = AIRPORT_IATA[normalizeAirportQuery(airportRaw)] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
+    // 到着時の AI インテリジェントアドバイス（天候連動・3か国語）
+    let aiAdvice = null;
+    const weatherArea = iata ? (AIRPORT_WEATHER_AREA[iata] || '130000') : '130000';
+    try {
+      const wa = await getWeatherAdvice(userLang, weatherArea);
+      aiAdvice = wa.advice || null;
+    } catch (_) { aiAdvice = null; }
     // フライト取得（キーなし時は null）
     let flights = null;
     if (FLIGHT_API_KEY) {
-      const iata = AIRPORT_IATA[normalizeAirportQuery(airportRaw)] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
       const params = { limit: 20 };
       if (flightNumber) params.flight_iata = flightNumber.toUpperCase();
       else if (iata) params[direction === 'arrival' ? 'arr_iata' : 'dep_iata'] = iata;
@@ -2913,7 +2936,6 @@ async function searchFlight(args) {
 
     // キーなし / データなし → graceful degradation: 空港アクセス経路のみ
     if (!flights || flights.length === 0) {
-      const iata = AIRPORT_IATA[normalizeAirportQuery(airportRaw)] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
       const stationName = iata ? (IATA_TO_TERMINAL_STATION[iata] || airportRaw) : airportRaw;
       const accessRoutes = [];
       // destination 指定時はそれのみ、なければ到着時は主要アクセス駅を複数表示
@@ -2950,6 +2972,7 @@ async function searchFlight(args) {
         message: note,
         airport: isFlightNumberOnly ? `便名: ${flightNumber}` : (airportRaw || flightNumber),
         direction,
+        ai_transit_advice: aiAdvice,
         access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
         access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
         flight_api_configured: !!FLIGHT_API_KEY
@@ -2989,6 +3012,7 @@ async function searchFlight(args) {
       mode: 'flight_info',
       airport: airportRaw || flightNumber,
       direction,
+      ai_transit_advice: aiAdvice,
       flight_count: normalized.length,
       flights: normalized.slice(0, 20),
       access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
