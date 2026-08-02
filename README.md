@@ -19,7 +19,7 @@
 | 種別 | 対応事業者 |
 |:---|:---|
 | 🚃 鉄道 | JR東日本・東京メトロ・都営地下鉄・小田急・京王・西武・東武・京急・京成・相鉄・東急・横浜市営・**つくばエクスプレス(MIR)**・**りんかい線(TWR)**・**みなとみらい線**・**箱根登山線**・北総・埼玉高速・東葉高速・芝山鉄道・JR東海 |
-| 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT `odpt:Bus` から3事業者を並列マージ）＋ JRバス関東・都内コミュニティバス（GTFS-JP個別取得パス／バリアフリー案内付き） |
+| 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT `odpt:Bus` から3事業者を並列マージ）＋ JRバス関東・都内コミュニティバス（GTFS-JP個別取得パス）／バス停検索＋乗り継ぎ探索（`odpt:BusroutePattern`）＋ノンステップバス表示（`isNonStepBus`）｜
 | 🚡 AGT | ゆりかもめ・日暮里・舎人ライナー |
 | 🚝 モノレール | 東京モノレール・多摩モノレール |
 | 🚋 路面電車 | 都電荒川線（東京さくらトラム） |
@@ -166,14 +166,20 @@ search_fare(from: "渋谷", to: "新宿")
 get_timetable(station_name: "渋谷", railway: "山手線")
 ```
 
-### 6. `search_bus` — バス路線検索（都営・西武・横浜市営＋JRバス関東・コミュニティバス）
+### 6. `search_bus` — バス路線・乗り継ぎ検索（都営・西武・横浜市営＋JRバス関東・コミュニティバス）
 
-ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横浜市営バス）の3事業者を並列取得してマージし、さらに **GTFS-JP 個別取得パス** で JRバス関東・都内コミュニティバス（ちぃばす・ハチ公バス等）を追加します。足の悪い方のため、各事業者のバリアフリー案内（車椅子対応・低床バス等はODPT非対応のため各社窓口リンクで案内）を結果に含めます。
+ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横浜市営バス）の3事業者を並列取得し、GTFS-JP 個別取得パスで JRバス関東・都内コミュニティバス（ちぃばす・ハチ公バス等）を追加します。
+
+- **バス停検索**: `busstop_name` でバス停・系統を検索
+- **乗り継ぎ探索**: `from` + `to` で `odpt:BusroutePattern` の停留所順序から最短乗り継ぎ経路を探索（案B: 異系統・異事業者間の乗り継ぎ対応）
+- **バリアフリー**: `odpt:BusTimetable.isNonStepBus`（ノンステップバス・段差なし）を系統ごとに表示
+
+※ 乗り継ぎは都営・西武・横浜市営バスのみ対象（JRバス関東・コミュニティバスは停留所順序データがないため対象外）。運賃はODPT非対応のため検索不可。
 
 ```
-search_bus(busstop_name: "渋谷駅")
-search_bus(busstop_name: "桜木町")   # 横浜市営バスも日本語で検索可
-search_bus(busstop_name: "河口湖駅") # JRバス関東も検索可
+search_bus(busstop_name: "渋谷駅前")                    # バス停検索
+search_bus(from: "渋谷駅前", to: "新橋駅前")            # 乗り継ぎ探索（都営バス内）
+search_bus(from: "横浜駅前", to: "桜木町駅前")          # 乗り継ぎ探索（横浜市営バス内）
 ```
 
 ### 7. `list_transit_operators` — 交通事業者一覧
@@ -490,14 +496,20 @@ search_fare(from: "Shibuya", to: "Shinjuku")
 get_timetable(station_name: "Shibuya", railway: "Yamanote Line")
 ```
 
-### 6. `search_bus` — Bus Route Search (Toei / Seibu / Yokohama City + JR Bus Kanto / Community Bus)
+### 6. `search_bus` — Bus Route & Transfer Search (Toei / Seibu / Yokohama City + JR Bus Kanto / Community Bus)
 
-Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged in parallel from ODPT `odpt:Bus`, plus a **GTFS-JP individual-feed path** that adds JR Bus Kanto and Tokyo community buses (Chii-bus, Hachiko-bus, etc.). For users with limited mobility, the result includes barrier-free guidance links (wheelchair/low-floor info is not provided by ODPT, so each operator's contact page is linked).
+Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged in parallel from ODPT `odpt:Bus`, plus a **GTFS-JP individual-feed path** that adds JR Bus Kanto and Tokyo community buses (Chii-bus, Hachiko-bus, etc.).
+
+- **Stop search**: `busstop_name` to find stops / routes
+- **Transfer search**: `from` + `to` builds shortest transfer routes from `odpt:BusroutePattern` stop order (Plan B: cross-route / cross-operator transfers)
+- **Barrier-free**: `odpt:BusTimetable.isNonStepBus` (step-free / non-step buses) shown per route
+
+Note: transfers cover Toei/Seibu/Yokohama City Bus only (JR Bus Kanto & community buses lack stop-order data, so excluded). Fares are not available via ODPT.
 
 ```
 search_bus(busstop_name: "Shibuya Station")
-search_bus(busstop_name: "Sakuragicho")   # Yokohama City Bus searchable in Japanese too
-search_bus(busstop_name: "Kawaguchiko")   # JR Bus Kanto searchable too
+search_bus(from: "Shibuya Station", to: "Shimbashi Station")   # transfer (Toei)
+search_bus(from: "Yokohama Station", to: "Sakuragicho Station") # transfer (Yokohama City)
 ```
 
 ### 7. `list_transit_operators` — Transit Operators List
@@ -810,14 +822,20 @@ search_fare(from: "渋谷", to: "新宿")
 get_timetable(station_name: "渋谷", railway: "山手線")
 ```
 
-### 6. `search_bus` — 公交路线查询（都营/西武/横滨市营 + JR巴士关东/社区公交）
+### 6. `search_bus` — 公交路线与换乘查询（都营/西武/横滨市营 + JR巴士关东/社区公交）
 
-从 ODPT 的 `odpt:Bus` 并行获取并合并都营公交、西武公交、横滨市交通局（横滨市营公交）3 家运营商的数据，并通过 **GTFS-JP 单独数据源路径** 追加 JR 巴士关东和东京社区公交（ちぃばす、ハチ公バス等）。为行动不便的乘客，结果中附有无障碍出行指引（ODPT 不提供轮椅/低地板车辆信息，因此链接至各公司咨询页面）。
+从 ODPT 的 `odpt:Bus` 并行获取并合并都营公交、西武公交、横滨市交通局（横滨市营公交）3 家运营商的数据，并通过 **GTFS-JP 单独数据源路径** 追加 JR 巴士关东和东京社区公交（ちぃばす、ハチ公バス等）。
+
+- **公交站查询**: `busstop_name` 搜索公交站/线路
+- **换乘搜索**: `from` + `to` 基于 `odpt:BusroutePattern` 的站点顺序构建最短换乘路线（方案B: 跨线路/跨运营商换乘）
+- **无障碍**: `odpt:BusTimetable.isNonStepBus`（无障碍低地板/无台阶巴士）按线路显示
+
+注: 换乘仅覆盖都营/西武/横滨市营公交（JR巴士关东与社区公交无站点顺序数据，故不包含）。ODPT 不提供公交票价数据。
 
 ```
-search_bus(busstop_name: "渋谷駅")
-search_bus(busstop_name: "桜木町")   # 横滨市营公交也支持日文检索
-search_bus(busstop_name: "河口湖駅") # JR巴士关东也支持检索
+search_bus(busstop_name: "渋谷駅前")                      # 公交站查询
+search_bus(from: "渋谷駅前", to: "新橋駅前")            # 换乘（都营内）
+search_bus(from: "横浜駅前", to: "桜木町駅前")          # 换乘（横滨市营内）
 ```
 
 ### 7. `list_transit_operators` — 交通运营商列表

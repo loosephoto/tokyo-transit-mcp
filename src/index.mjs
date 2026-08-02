@@ -97,7 +97,9 @@ const cache = {
   railwayFare: { key: 'railway_fare', ttl: 86400000 },
   stationRomanToJa: { key: 'station_roman_to_ja', ttl: 86400000 },
   trainTimetable: { key: 'train_timetable', ttl: 3600000 },
-  busData: { key: 'bus_data', ttl: 600000 }
+  busData: { key: 'bus_data', ttl: 600000 },
+  busTimetable: { key: 'bus_timetable', ttl: 600000 },
+  busGraph: { key: 'bus_graph', ttl: 600000 }
 };
 
 // ローマ字駅ID → 日本語駅名 の逆引きマップ（ODPT odpt:Station から動的構築）
@@ -1218,8 +1220,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: { station_name: { type: 'string', description: '駅名' }, railway: { type: 'string', description: '路線名（省略可）' } }, required: ['station_name'] }
     },
     { name: 'search_bus',
-      description: '🚌 バス路線検索 - 都営バスの路線・バス停情報をODPTデータから検索します。',
-      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致）' } }, required: [] }
+      description: '🚌 バス路線・乗り継ぎ検索 - 都営・西武・横浜市営バス（ODPT）。busstop_name でバス停/系統を検索、from+to で乗り継ぎ経路を探索（案B: 異系統・異事業者間の最短経路）。足の悪い方へノンステップバス情報を含む。JRバス関東・コミュニティバスは乗り継ぎ対象外。',
+      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' } }, required: [] }
     }
   ]
 }));
@@ -2161,8 +2163,283 @@ async function fetchAllBuses(userLang) {
   return { merged, okCount, failCount, hcCount };
 }
 
+// ============================================================
+// 🚌 バス乗り継ぎ（Transfer）経路探索 — 案B
+// ------------------------------------------------------------
+// データソース: ODPT odpt:BusroutePattern.busstopPoleOrder（停留所順序）
+// バリアフリー: odpt:BusTimetable.busTimetableObject[].isNonStepBus（ノンステップバス）
+// 対象: BUS_OPERATORS（ODPT実データ3社: 都営/西武/横浜市営）のみ。
+//       hardCodedソース（JRバス関東・コミュニティバス）は停留所順序データが
+//       無いため乗り継ぎグラフから除外（直達検索も不可）。
+// ============================================================
+
+// バス停名の簡易正規化（駅名マップに依存しない）: trim のみ。
+// 注意: 「駅前」「駅」等の suffix は除去しない（バス停の正規名は「○○駅前」のまま）。
+// グラフ構築と検索で同一正規化を使うことでノード名一致を担保する。
+function normalizeBusStop(name) {
+  return String(name || '').trim();
+}
+
+// odpt:BusroutePattern から (operator, routePatternId, [orderedStopNames]) を取得
+async function fetchBusGraph() {
+  const cached = cache.get(cache.busGraph.key);
+  if (cached) return cached;
+  if (!odptBreaker.canExecute()) throw new Error('ODPT API is currently offline (Circuit Breaker is OPEN)');
+  const patterns = []; // { operator, patternId, stops: [{name, poleId}] }
+  const results = await Promise.allSettled(
+    BUS_OPERATORS.map(op =>
+      axios.get(`${API_BASE_URL}/odpt:BusroutePattern`, { params: getParams(op.id), timeout: 8000 })
+    )
+  );
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && Array.isArray(res.value.data)) {
+      const opId = BUS_OPERATORS[i].id;
+      for (const p of res.value.data) {
+        const order = p['odpt:busstopPoleOrder'];
+        if (!Array.isArray(order) || !order.length) continue;
+        const stops = order
+          .sort((a, b) => (a['odpt:index'] || 0) - (b['odpt:index'] || 0))
+          .map(o => ({ name: o['odpt:note'] || '', poleId: o['odpt:busstopPole'] || '' }))
+          .filter(s => s.name);
+        if (stops.length >= 2) patterns.push({ operator: opId, patternId: p['owl:sameAs'] || p['@id'], stops });
+      }
+      odptBreaker.onSuccess();
+    } else {
+      odptBreaker.onFailure(res.reason || new Error('BusroutePattern fetch failed'));
+    }
+  });
+  const data = { patterns };
+  cache.set(cache.busGraph.key, data, cache.busGraph.ttl);
+  return data;
+}
+
+// odpt:BusTimetable から (patternId → 各停留所の isNonStepBus) および
+// (stopName → isNonStepBus) を取得。stopName マップは patternId 不一致を回避するためのフォールバック。
+async function fetchBusTimetable() {
+  const cached = cache.get(cache.busTimetable.key);
+  if (cached) return cached;
+  if (!odptBreaker.canExecute()) throw new Error('ODPT API is currently offline (Circuit Breaker is OPEN)');
+  const nonStepByPattern = {}; // patternId -> { stopName: bool }
+  const nonStepByStop = {};     // stopName -> bool（patternId 不一致のフォールバック）
+  const results = await Promise.allSettled(
+    BUS_OPERATORS.map(op =>
+      axios.get(`${API_BASE_URL}/odpt:BusTimetable`, { params: getParams(op.id), timeout: 8000 })
+    )
+  );
+  results.forEach((res) => {
+    if (res.status === 'fulfilled' && Array.isArray(res.value.data)) {
+      for (const t of res.value.data) {
+        const pid = t['odpt:busroutePattern'];
+        if (!pid) continue;
+        const objs = t['odpt:busTimetableObject'] || [];
+        if (!nonStepByPattern[pid]) nonStepByPattern[pid] = {};
+        for (const o of objs) {
+          // odpt:note は "早大正門:839:7" 形式（停留所名:数字:数字）のため、
+          // ":" 以降を除去して busstopPoleOrder の停留所名（"早大正門"）と一致させる
+          const raw = (o['odpt:note'] || '').split(':')[0].trim();
+          const name = normalizeBusStop(raw);
+          if (name && typeof o['odpt:isNonStepBus'] === 'boolean') {
+            // 一つでもノンステップ便があれば true（系統レベルで「運行あり」とする）
+            nonStepByPattern[pid][name] = nonStepByPattern[pid][name] || o['odpt:isNonStepBus'];
+            nonStepByStop[name] = nonStepByStop[name] || o['odpt:isNonStepBus'];
+          }
+        }
+      }
+      odptBreaker.onSuccess();
+    } else {
+      odptBreaker.onFailure(res.reason || new Error('BusTimetable fetch failed'));
+    }
+  });
+  const data = { nonStepByPattern, nonStepByStop };
+  cache.set(cache.busTimetable.key, data, cache.busTimetable.ttl);
+  return data;
+}
+
+// 乗り継ぎグラフ構築: ノード=バス停(正規化済), エッジ=同一路線の隣接停留所
+// 共有バス停を乗り継ぎ点とする。重みは停留所数（1エッジ=1停留所）。
+// 一貫性のため、stopToPatterns の stops は normalizeBusStop 済みの文字列配列を保存。
+function buildTransferGraph(patterns) {
+  const adj = new Map(); // stopName -> Set(neighborStopName)
+  const stopToPatterns = new Map(); // stopName -> [{operator, patternId, stops: [normName,...]}]
+  const addEdge = (a, b) => {
+    // 有向エッジ: 路線の進行方向（a→b）のみ。無向にすると逆走区間を提案してしまう。
+    if (!adj.has(a)) adj.set(a, new Set());
+    if (!adj.has(b)) adj.set(b, new Set());
+    adj.get(a).add(b);
+  };
+  for (const p of patterns) {
+    // 停留所名を正規化。空文字（odpt:note 欠損等）はスキップし、前の有効停留所から
+    // 次の有効停留所へエッジを張る（中間欠損による「飛び越し隣接」を防ぐ）。
+    let prevValid = null;
+    for (const raw of p.stops) {
+      const s = normalizeBusStop(raw.name);
+      if (!s) continue; // 空名称はスキップ
+      if (!stopToPatterns.has(s)) stopToPatterns.set(s, []);
+      stopToPatterns.get(s).push({ operator: p.operator, patternId: p.patternId, stops: p.stops.map(x => normalizeBusStop(x.name)).filter(Boolean) });
+      if (prevValid) addEdge(prevValid, s);
+      prevValid = s;
+    }
+  }
+  return { adj, stopToPatterns };
+}
+
+// BFS で from→to の最短乗り継ぎ経路（エッジ数=停留所移動最小）を探索
+// 手順: 1) BFSで最短ノード列を求める / 2) 連続するノードを同一路線パターンで
+//        グループ化し、1系統＝1乗車セグメントにまとめる
+function findTransferPath(graph, fromStop, toStop, nonStepByPattern, nonStepByStop) {
+  const { adj, stopToPatterns } = graph;
+  if (!adj.has(fromStop) || !adj.has(toStop)) return null;
+  // BFS（各ノードに到達するまでの親情報を保持）
+  const prev = new Map(); // stop -> parentStop
+  const q = [fromStop];
+  prev.set(fromStop, null);
+  while (q.length) {
+    const cur = q.shift();
+    if (cur === toStop) break;
+    for (const nb of (adj.get(cur) || [])) {
+      if (!prev.has(nb)) {
+        prev.set(nb, cur);
+        q.push(nb);
+      }
+    }
+  }
+  if (!prev.has(toStop)) return null;
+  // 最短ノード列を逆順に復元
+  const nodePath = [];
+  let cur = toStop;
+  while (cur !== null) {
+    nodePath.unshift(cur);
+    cur = prev.get(cur);
+  }
+  // 連続するノードを同一路線パターンでグループ化 → 1系統＝1セグメント
+  const segments = [];
+  let i = 0;
+  while (i < nodePath.length - 1) {
+    const a = nodePath[i], b = nodePath[i + 1];
+    // a→b をカバーする路線パターンを探す（aの次がbであるもの）
+    // 注意: buildTransferGraph で stops は normalizeBusStop 済み文字列配列に統一済み
+    const via = (stopToPatterns.get(a) || []).find(p =>
+      p.stops.some((s, idx) => idx < p.stops.length - 1 &&
+        s === a && p.stops[idx + 1] === b)
+    ) || (stopToPatterns.get(a) || []).find(p =>
+      p.stops.some((s, idx) => idx < p.stops.length - 1 &&
+        normalizeBusStop(s) === a && normalizeBusStop(p.stops[idx + 1]) === b)
+    );
+    if (!via) { i++; continue; }
+    // このパターンで進めるだけ進む（連続区間を1セグメントに）
+    const stops = via.stops.map(s => normalizeBusStop(s));
+    let end = i + 1;
+    while (end < nodePath.length - 1) {
+      const c = nodePath[end], d = nodePath[end + 1];
+      const ci = stops.indexOf(c), di = stops.indexOf(d);
+      if (ci >= 0 && di === ci + 1) end++;
+      else break;
+    }
+    const segStops = nodePath.slice(i, end + 1);
+    const nonStepMap = nonStepByPattern[via.patternId] || {};
+    // ノンステップ判定: その系統で「情報が得られた停留所のうち全てがノンステップ」なら true
+    // （timetable カバレッジ不足で undefined の停留所は無視。一部でも非ノンステップがあれば false）
+    const nonStep = segStops.every(s => {
+      let v = nonStepMap[s];
+      if (v === undefined && nonStepByStop) v = nonStepByStop[s];
+      return v === true; // undefined / false は false 扱い
+    });
+    segments.push({
+      operator: via.operator, patternId: via.patternId,
+      fromStop: segStops[0], toStop: segStops[segStops.length - 1],
+      stops: segStops,
+      nonStep
+    });
+    i = end;
+  }
+  return segments.length ? segments : null;
+}
+
+async function searchBusTransfer(fromInput, toInput) {
+  const from = normalizeBusStop(fromInput);
+  const to = normalizeBusStop(toInput);
+  const { patterns } = await fetchBusGraph();
+  const { nonStepByPattern, nonStepByStop } = await fetchBusTimetable();
+  const graph = buildTransferGraph(patterns);
+  // 部分一致でノードを特定（優先順位: 完全一致 > 入力を含むノード > 入力がノードを含む）
+  const resolve = (name) => {
+    if (graph.adj.has(name)) return name;
+    for (const n of graph.adj.keys()) {
+      if (n.includes(name)) return n;
+    }
+    for (const n of graph.adj.keys()) {
+      if (name.includes(n)) return n;
+    }
+    return null;
+  };
+  const fNode = resolve(from);
+  const tNode = resolve(to);
+  if (!fNode || !tNode) {
+    return { found: false, fromNode: fNode, toNode: tNode };
+  }
+  const segments = findTransferPath(graph, fNode, tNode, nonStepByPattern, nonStepByStop);
+  return { found: !!segments, fromNode: fNode, toNode: tNode, segments };
+}
 async function searchBus(args) {
   const busstopName = (args.busstop_name || '').trim();
+  const fromInput = (args.from || '').trim();
+  const toInput = (args.to || '').trim();
+  // 乗り継ぎ探索モード（from + to 指定時）。案B: 異系統・異事業者間の最短経路。
+  if (fromInput && toInput) {
+    const userLang = detectLanguage(fromInput) || detectLanguage(toInput) || 'ja';
+    if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
+    try {
+      const result = await searchBusTransfer(fromInput, toInput);
+      if (!result.found) {
+        return jsonResponse({
+          status: 'NOT_FOUND', detected_language: userLang,
+          message: userLang === 'en' ? `No bus transfer route found from "${fromInput}" to "${toInput}".`
+            : userLang === 'zh' ? `未找到从「${fromInput}」到「${toInput}」的公交换乘路线。`
+            : `「${fromInput}」から「${toInput}」への乗り継ぎ経路が見つかりませんでした。`,
+          note: userLang === 'en' ? 'Transfer covers Toei/Seibu/Yokohama City Bus only (ODPT BusroutePattern data). JR Bus Kanto & community buses are not included.'
+            : userLang === 'zh' ? '换乘仅覆盖都营/西武/横滨市营公交（ODPT BusroutePattern 数据）。JR巴士关东与社区公交不包含在内。'
+            : '乗り継ぎは都営・西武・横浜市営バスのみ対象（ODPT BusroutePattern データ）。JRバス関東・コミュニティバスは対象外です。',
+          data_source: 'ODPT BusroutePattern + BusTimetable'
+        });
+      }
+      const opLabel = (opId) => {
+        const o = BUS_OPERATORS.find(x => x.id === opId);
+        return o ? (userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label) : opId;
+      };
+      const segments = result.segments.map((s, i) => ({
+        step: i + 1,
+        operator: opLabel(s.operator),
+        from: s.fromStop, to: s.toStop,
+        stops: s.stops,
+        non_step_bus: s.nonStep // ノンステップバス（段差なし）運行の有無
+      }));
+      // バリアフリー総評: 全セグメントでノンステップ対応なら true
+      const allNonStep = segments.every(s => s.non_step_bus);
+      const barrierFreeNote = userLang === 'en'
+        ? (allNonStep
+          ? 'All segments operate non-step (step-free) buses — easier boarding for users with limited mobility.'
+          : 'Some segments may not operate non-step buses. Please check with the operator or look for non-step designated services.')
+        : userLang === 'zh'
+          ? (allNonStep
+            ? '所有区段均运行无障碍低地板（无台阶）巴士——便于行动不便者乘车。'
+            : '部分区段可能未运行无障碍巴士。请向运营商确认或选择无障碍指定班次。')
+          : (allNonStep
+            ? '全区間でノンステップバス（段差なし）が運行されています。足の悪い方の乗車が容易です。'
+            : '一部区間でノンステップバスが運行されていない可能性があります。各事業者へご確認いただくか、ノンステップ指定便をご利用ください。');
+      return jsonResponse({
+        status: 'SUCCESS', detected_language: userLang,
+        transfer: true,
+        from: result.fromNode, to: result.toNode,
+        transfers: segments.length - 1,
+        route: segments,
+        barrier_free_note: barrierFreeNote,
+        data_source: 'ODPT BusroutePattern + BusTimetable (Toei/Seibu/Yokohama City Bus)'
+      });
+    } catch (error) {
+      odptBreaker.onFailure(error);
+      return handleApiError(error, { userLang });
+    }
+  }
   const userLang = detectLanguage(busstopName) || 'ja';
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
