@@ -191,6 +191,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（�
 - **空港検索**: `airport`（羽田空港/成田空港/HND/NRT 等）で到着/出発フライトを検索
 - **便名検索**: `flight_number`（NH001/JL000 等）で特定便を検索
 - **到着時の最適連携**: `destination`（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路（電車）を自動提案。**海外からの来客・帰省時に最適**
+  - `destination` 未指定でも、到着時は主要アクセス駅（羽田: 東京駅/品川/浜松町、成田: 東京駅/日暮里/新宿）へのルートを自動表示（`access_routes`）。
 - **表示項目**: 便名・航空会社・ステータス（予定/運航中/到着済/欠航）・ターミナル・ゲート・予定時刻・実際時刻・遅延（分）
 - **Graceful degradation**: `FLIGHT_API_KEY` 未設定時はフライト時刻なしで、空港へのアクセス経路のみ表示
 
@@ -538,6 +539,7 @@ search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(tr
 - **Airport search**: `airport` (Haneda/Narita/HND/NRT etc.) lists arrival/departure flights
 - **Flight number search**: `flight_number` (NH001/JL000 etc.) for a specific flight
 - **Best for inbound/return travel**: specify `destination` (e.g. Tokyo Station) to auto-suggest the access route (train) from the arrival terminal. **Ideal for overseas guests & homecoming**
+  - Without `destination`, arrival searches auto-show routes to major access stations (Haneda: Tokyo Stn/品川/Hamamatsucho, Narita: Tokyo Stn/Nippori/Shinjuku) via `access_routes`.
 - **Fields**: flight no., airline, status (scheduled/active/landed/cancelled), terminal, gate, scheduled/actual time, delay (min)
 - **Graceful degradation**: without `FLIGHT_API_KEY`, shows airport access route only (no flight times)
 
@@ -881,6 +883,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电�
 - **机场查询**: `airport`（羽田/成田/HND/NRT 等）列出到达/出发航班
 - **航班号查询**: `flight_number`（NH001/JL000 等）查询特定航班
 - **海外来客/归国最佳**: 指定 `destination`（如：东京站）自动建议从到达航站楼到目的地的接驳路线（电车）。**最适合海外来宾与归乡**
+  - 未指定 `destination` 时，到达搜索自动显示至主要接驳车站的路线（羽田: 东京站/品川/浜松町，成田: 东京站/日暮里/新宿），通过 `access_routes`。
 - **显示项**: 航班号、航空公司、状态（准点/飞行中/已到达/取消）、航站楼、登机口、计划时间、实际时间、延误（分钟）
 - **优雅降级**: 未配置 `FLIGHT_API_KEY` 时仅显示机场接驳路线（无航班时刻）
 

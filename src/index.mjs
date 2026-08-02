@@ -2795,6 +2795,12 @@ const IATA_TO_TERMINAL_STATION = {
   HND: '羽田空港第1ターミナル', // 代表的ターミナル駅（実際はターミナル番号で上書き）
   NRT: '成田空港'
 };
+// 到着時、destination 未指定でも表示する主要アクセス駅（海外来客・帰省に最適）
+const DEFAULT_ACCESS_DESTINATIONS = {
+  HND: ['東京駅', '品川', '浜松町'],
+  NRT: ['東京駅', '日暮里', '新宿'],
+  IBR: ['水戸']
+};
 
 // AviationStack からフライトを取得（キーなし時は null を返し graceful degradation）
 async function fetchFlights(params) {
@@ -2892,18 +2898,22 @@ async function searchFlight(args) {
     if (!flights || flights.length === 0) {
       const iata = AIRPORT_IATA[airportRaw] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
       const stationName = iata ? (IATA_TO_TERMINAL_STATION[iata] || airportRaw) : airportRaw;
-      let accessRoute = null;
-      if (destination) {
-        const rr = computeRoutes(stationName, destination);
+      const accessRoutes = [];
+      // destination 指定時はそれのみ、なければ到着時は主要アクセス駅を複数表示
+      const destList = destination ? [destination]
+        : (direction === 'arrival' && iata && DEFAULT_ACCESS_DESTINATIONS[iata]) ? DEFAULT_ACCESS_DESTINATIONS[iata]
+        : [];
+      for (const dest of destList) {
+        const rr = computeRoutes(stationName, dest);
         if (rr && rr.routes) {
           const route = rr.routes[0];
-          accessRoute = {
-            from: stationName, to: destination,
+          accessRoutes.push({
+            from: stationName, to: dest,
             transfers: route.summary.transfers,
             estimated_minutes: route.summary.estimated_minutes,
             main_line: route.summary.main_line,
             segments: route.segments
-          };
+          });
         }
       }
       const note = FLIGHT_API_KEY
@@ -2917,7 +2927,8 @@ async function searchFlight(args) {
         message: note,
         airport: airportRaw || flightNumber,
         direction,
-        access_route: accessRoute,
+        access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
+        access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
         flight_api_configured: !!FLIGHT_API_KEY
       });
     }
@@ -2926,22 +2937,27 @@ async function searchFlight(args) {
     const normalized = flights.map(f => normalizeFlight(f, direction, userLang)).filter(Boolean);
 
     // 到着時の連携: 最も関連性の高いフライト（最初の1件）から空港→目的地ルート
-    let accessRoute = null;
-    if (direction === 'arrival' && destination && normalized.length > 0) {
+    const accessRoutes = [];
+    if (direction === 'arrival' && normalized.length > 0) {
       const top = normalized[0];
       const stationName = top.terminal
         ? (top.airport_iata === 'HND' ? `羽田空港第${top.terminal}ターミナル` : top.airport_iata === 'NRT' ? `成田空港第${top.terminal}ターミナル` : (IATA_TO_TERMINAL_STATION[top.airport_iata] || top.airport_name))
         : (IATA_TO_TERMINAL_STATION[top.airport_iata] || top.airport_name);
-      const rr = computeRoutes(stationName, destination);
-      if (rr && rr.routes) {
-        const route = rr.routes[0];
-        accessRoute = {
-          from: stationName, to: destination,
-          transfers: route.summary.transfers,
-          estimated_minutes: route.summary.estimated_minutes,
-          main_line: route.summary.main_line,
-          segments: route.segments
-        };
+      const destList = destination ? [destination]
+        : (top.airport_iata && DEFAULT_ACCESS_DESTINATIONS[top.airport_iata]) ? DEFAULT_ACCESS_DESTINATIONS[top.airport_iata]
+        : [];
+      for (const dest of destList) {
+        const rr = computeRoutes(stationName, dest);
+        if (rr && rr.routes) {
+          const route = rr.routes[0];
+          accessRoutes.push({
+            from: stationName, to: dest,
+            transfers: route.summary.transfers,
+            estimated_minutes: route.summary.estimated_minutes,
+            main_line: route.summary.main_line,
+            segments: route.segments
+          });
+        }
       }
     }
 
@@ -2952,7 +2968,8 @@ async function searchFlight(args) {
       direction,
       flight_count: normalized.length,
       flights: normalized.slice(0, 20),
-      access_route: accessRoute,
+      access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
+      access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
       flight_api_configured: !!FLIGHT_API_KEY
     });
   } catch (error) {
