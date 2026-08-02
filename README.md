@@ -186,7 +186,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（�
 
 
 
-### 6.5 `search_flight` — 空港フライト時刻・到着時刻表示 ✈️
+### 7. `search_flight` — 空港フライト時刻・到着時刻表示 ✈️
 
 - **空港検索**: `airport`（羽田空港/成田空港/HND/NRT 等）で到着/出発フライトを検索
 - **空港名の表記揺れ対応**: "羽田"/"成田"/"Haneda"/"Narita" 等、末尾の「空港/Airport/机场」の有無や日英中表記を自動正規化（3か国語対応）。
@@ -203,19 +203,19 @@ search_flight(airport: "羽田空港", direction: "arrival")              # 羽�
 search_flight(airport: "成田空港", direction: "arrival", destination: "東京駅")  # 成田着→東京駅へのアクセス経路付き
 search_flight(flight_number: "NH001", direction: "arrival")          # 便名指定
 ```
-### 7. `list_transit_operators` — 交通事業者一覧
+### 8. `list_transit_operators` — 交通事業者一覧
 
 ```
 list_transit_operators(language: "ja", type_filter: "all")
 ```
 
-### 8. `get_operator_routes` — 事業者別路線一覧
+### 9. `get_operator_routes` — 事業者別路線一覧
 
 ```
 get_operator_routes(operator_name: "yurikamome")
 ```
 
-### 9. `list_ferry_ports` — フェリー/水上バス港一覧
+### 10. `list_ferry_ports` — フェリー/水上バス港一覧
 
 ```
 list_ferry_ports(language: "ja")
@@ -536,7 +536,7 @@ search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(tr
 ```
 
 
-### 6.5 `search_flight` — Airport Flight Times & Arrival Display ✈️
+### 7. `search_flight` — Airport Flight Times & Arrival Display ✈️
 
 - **Airport search**: `airport` (Haneda/Narita/HND/NRT etc.) lists arrival/departure flights
 - **Airport name normalization**: "Haneda"/"Narita"/"羽田"/"成田" etc. auto-normalized (trailing "Airport/空港/机场" stripped, ja/en/zh supported).
@@ -553,17 +553,17 @@ search_flight(airport: "Haneda Airport", direction: "arrival")                  
 search_flight(airport: "Narita Airport", direction: "arrival", destination: "Tokyo Station")  # Narita→Tokyo access route
 search_flight(flight_number: "NH001", direction: "arrival")                       # by flight no.
 ```
-### 7. `list_transit_operators` — Transit Operators List
+### 8. `list_transit_operators` — Transit Operators List
 ```
 list_transit_operators(language: "en", type_filter: "all")
 ```
 
-### 8. `get_operator_routes` — Routes by Operator
+### 9. `get_operator_routes` — Routes by Operator
 ```
 get_operator_routes(operator_name: "yurikamome")
 ```
 
-### 9. `list_ferry_ports` — Ferry / Water Bus Ports List
+### 10. `list_ferry_ports` — Ferry / Water Bus Ports List
 ```
 list_ferry_ports(language: "en")
 ```
@@ -882,7 +882,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电�
 ```
 
 
-### 6.5 `search_flight` — 机场航班时刻与到达时间显示 ✈️
+### 7. `search_flight` — 机场航班时刻与到达时间显示 ✈️
 
 - **机场查询**: `airport`（羽田/成田/HND/NRT 等）列出到达/出发航班
 - **机场名称规范化**: "羽田"/"成田"/"Haneda"/"Narita" 等自动归一化（去除末尾"机场/Airport/空港"，支持日英中）。
@@ -899,17 +899,17 @@ search_flight(airport: "羽田空港", direction: "arrival")                    
 search_flight(airport: "成田空港", direction: "arrival", destination: "東京駅")  # 成田→东京接驳路线
 search_flight(flight_number: "NH001", direction: "arrival")                    # 按航班号查询
 ```
-### 7. `list_transit_operators` — 交通运营商列表
+### 8. `list_transit_operators` — 交通运营商列表
 ```
 list_transit_operators(language: "zh", type_filter: "all")
 ```
 
-### 8. `get_operator_routes` — 按运营商列出路线
+### 9. `get_operator_routes` — 按运营商列出路线
 ```
 get_operator_routes(operator_name: "yurikamome")
 ```
 
-### 9. `list_ferry_ports` — 轮渡/水上巴士港口列表
+### 10. `list_ferry_ports` — 轮渡/水上巴士港口列表
 ```
 list_ferry_ports(language: "zh")
 ```
