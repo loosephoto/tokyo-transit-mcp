@@ -1994,6 +1994,95 @@ const BUS_OPERATORS = [
   { id: 'YokohamaMunicipal', label: '横浜市交通局（横浜市営バス）', labelEn: 'Yokohama City Bus', labelZh: '横滨市营公交', website: 'https://www.city.yokohama.lg.jp/kotsu/' }
 ];
 
+// ============================================================
+// 🚌 GTFS-JP 個別取得パス（JRバス・コミュニティバス等）
+// ------------------------------------------------------------
+// 背景: ODPT の odpt:Bus（REST）には 都営/西武/横浜市営 の3社のみ。
+// 京王・東急・小田急等は ODPT GTFS エンドポイント（files/odpt/...）が
+// 2026年時点で全事業者 404/500（バグK）。各社公式GTFSはURL不安定（日々更新・
+// ファイル名不定）。JRバス関東は ODPT 未登録。
+// → 安定取得が不可能なため、hardCoded フォールバックで主要バス停・系統を
+//   定義し検索可能にする（フェリーの FERRY_GTFS_SOURCES と同設計）。
+//   将来的に安定URLが確定したら { url, date } ソースとして追加可能。
+// ============================================================
+const BUS_GTFS_SOURCES = [
+  // JRバス関東: 主要ターミナル・系統（ODPT未登録のためハードコード）
+  {
+    name: 'JRバス関東', operatorId: 'JRBKanto',
+    label: 'JRバス関東', labelEn: 'JR Bus Kanto', labelZh: 'JR巴士关东',
+    website: 'https://www.jrbuskanto.co.jp/',
+    hardCoded: true,
+    stops: [
+      '東京駅', '新宿駅', '池袋駅', '渋谷駅', '品川駅', '東京ドームシティ',
+      '横浜駅', '川崎駅', '立川駅', '八王子駅', '町田駅', '相模原駅',
+      '千葉駅', '柏駅', '水戸駅', '宇都宮駅', '高崎駅', '前橋市',
+      '河口湖駅', '御殿場駅', '箱根湯本駅', '茨城空港（小美玉）', '成田空港', '羽田空港'
+    ],
+    // 主要系統（東京～各拠点）。実GTFS未取得のため代表系統のみ。
+    routes: [
+      ['東京駅', '河口湖駅'], ['新宿駅', '河口湖駅'], ['東京駅', '箱根湯本駅'],
+      ['横浜駅', '箱根湯本駅'], ['東京駅', '水戸駅'], ['東京駅', '宇都宮駅'],
+      ['東京駅', '高崎駅'], ['東京駅', '千葉駅'], ['東京駅', '成田空港'],
+      ['東京駅', '羽田空港'], ['新宿駅', '立川駅'], ['新宿駅', '八王子駅']
+    ]
+  },
+  // 東京都内コミュニティバス（代表例: 23区＋多摩地域の主要コミュニティバス）
+  {
+    name: '東京都コミュニティバス', operatorId: 'TokyoCommunity',
+    label: '都内コミュニティバス', labelEn: 'Tokyo Community Bus', labelZh: '东京都社区公交',
+    website: 'https://www.metro.tokyo.lg.jp/',
+    hardCoded: true,
+    stops: [
+      '港区役所（ちぃばす）', '新宿駅西口（新宿WEバス）', '渋谷駅（ハチ公バス）',
+      '千代田区役所（風ぐるま）', '中央区役所（江戸バス）', '品川駅（すいすい館山）',
+      '王子駅（王子・飛鳥山循環）', '立川駅（くるりんバス）', '八王子駅（はちバス）',
+      '町田駅（まちっこ）', '府中駅（ちゅうバス）', '調布駅（ぶんバス）',
+      '国立駅（くにっこ）', '武蔵野市役所（むーばす）', '三鷹駅（みたかシティバス）'
+    ],
+    routes: [
+      ['渋谷駅（ハチ公バス）', '渋谷駅'], ['新宿駅西口（新宿WEバス）', '新宿駅'],
+      ['港区役所（ちぃばす）', '六本木駅'], ['立川駅（くるりんバス）', '立川駅'],
+      ['八王子駅（はちバス）', '八王子駅'], ['調布駅（ぶんバス）', '調布駅']
+    ]
+  }
+];
+
+// hardCoded バスソースから {merged} 形式のレコードを合成
+function buildHardCodedBusRecords(src) {
+  const recs = [];
+  for (const stop of src.stops) {
+    recs.push({
+      'odpt:note': stop,
+      'odpt:busroute': `${src.operatorId}:stop`,
+      'odpt:busNumber': '',
+      'odpt:frequency': '',
+      'odpt:operator': `odpt.Operator:${src.operatorId}`,
+      _operatorId: src.operatorId,
+      _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
+      _searchKeys: [stop],
+      _displayNote: stop,
+      _hardCoded: true
+    });
+  }
+  // 系統（route）も検索対象に: "起点 → 終点" の note を合成
+  for (const [from, to] of (src.routes || [])) {
+    const note = `${from} → ${to}`;
+    recs.push({
+      'odpt:note': note,
+      'odpt:busroute': `${src.operatorId}:route`,
+      'odpt:busNumber': '',
+      'odpt:frequency': '',
+      'odpt:operator': `odpt.Operator:${src.operatorId}`,
+      _operatorId: src.operatorId,
+      _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
+      _searchKeys: [from, to, note],
+      _displayNote: note,
+      _hardCoded: true
+    });
+  }
+  return recs;
+}
+
 // 横浜市営バスは odpt:note が null で、バス停名がローマ字ID（例: SakuragichoStation）しかない。
 // ローマ字駅名→日本語の最小マップ（主要ターミナル＋観光地）を付与し、日本語入力でも検索可能にする。
 // ODPTには全バス停の日本語名が無いため、網羅ではなく主要駅に限定。
@@ -2059,7 +2148,17 @@ async function fetchAllBuses(userLang) {
       failCount++;
     }
   });
-  return { merged, okCount, failCount };
+  // GTFS-JP 個別取得パス: hardCoded ソース（JRバス関東・コミュニティバス等）をマージ
+  let hcCount = 0;
+  for (const src of BUS_GTFS_SOURCES) {
+    if (src.hardCoded) {
+      const hcRecs = buildHardCodedBusRecords(src);
+      for (const r of hcRecs) merged.push(r);
+      hcCount++;
+    }
+    // 将来的に { url, date } ソースが追加されたらここで axios.get + zip展開（フェリーと同様）
+  }
+  return { merged, okCount, failCount, hcCount };
 }
 
 async function searchBus(args) {
@@ -2068,23 +2167,22 @@ async function searchBus(args) {
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
     const cached = cache.get(cache.busData.key);
-    let buses, okCount, failCount;
+    let buses, okCount, failCount, hcCount;
     if (cached) {
-      buses = cached.merged; okCount = cached.okCount; failCount = cached.failCount;
+      buses = cached.merged; okCount = cached.okCount; failCount = cached.failCount; hcCount = cached.hcCount || 0;
       odptBreaker.onSuccess();
     } else {
       const r = await fetchAllBuses(userLang);
-      buses = r.merged; okCount = r.okCount; failCount = r.failCount;
+      buses = r.merged; okCount = r.okCount; failCount = r.failCount; hcCount = r.hcCount || 0;
       cache.set(cache.busData.key, r, cache.busData.ttl);
       odptBreaker.onSuccess();
     }
-    // 取得できた事業者ラベル
-    const operatorSumm = BUS_OPERATORS.map(o => ({
-      operator: o.id,
-      label: userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label,
-      website: o.website
-    }));
-    const dataSourceNote = `ODPT Bus (${okCount}/${BUS_OPERATORS.length} 事業者取得成功)` + (failCount > 0 ? ` / ${failCount}社取得失敗` : '');
+    // 取得できた事業者ラベル（ODPT 3社 + hardCoded GTFSソース）
+    const operatorSumm = [
+      ...BUS_OPERATORS.map(o => ({ operator: o.id, label: userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label, website: o.website })),
+      ...BUS_GTFS_SOURCES.filter(s => s.hardCoded).map(s => ({ operator: s.operatorId, label: userLang === 'en' ? s.labelEn : userLang === 'zh' ? s.labelZh : s.label, website: s.website, hardcoded: true }))
+    ];
+    const dataSourceNote = `ODPT Bus (${okCount}/${BUS_OPERATORS.length} 事業者取得成功)` + (failCount > 0 ? ` / ${failCount}社取得失敗` : '') + (hcCount > 0 ? ` + GTFS個別(${hcCount}ソース: JRバス関東・都内コミュニティバス等)` : '');
 
     // 🔴 足の悪いユーザー向けバリアフリー注意喚起（odpt:Bus に車椅子/低床情報は無いため案内のみ）
     const barrierFreeNote = userLang === 'en'
