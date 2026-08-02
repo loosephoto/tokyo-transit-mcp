@@ -1204,7 +1204,7 @@ async function fetchFerryData() {
       const safeParse = (entryName) => { const e = zip.getEntry(entryName); return e ? parseCsv(e.getData().toString('utf8')) : []; };
       for (const s of safeParse('stops.txt')) { if (!seenStopIds.has(s.stop_id)) { allStops.push(s); seenStopIds.add(s.stop_id); } }
       for (const r of safeParse('routes.txt')) { const rid = src.name + ':' + r.route_id; if (!seenRouteIds.has(rid)) { allRoutes.push({ ...r, route_id: rid, _source: src.name }); seenRouteIds.add(rid); } }
-      for (const t of safeParse('trips.txt')) allTrips.push({ ...t, _source: src.name });
+      for (const t of safeParse('trips.txt')) allTrips.push({ ...t, route_id: src.name + ':' + t.route_id, _source: src.name });
       for (const st of safeParse('stop_times.txt')) allStopTimes.push({ ...st, _source: src.name });
       console.log(`[Ferry] ${src.name}: loaded`); odptBreaker.onSuccess();
     } catch (e) { console.log(`[Ferry] ${src.name}: skip (${e.message})`); odptBreaker.onFailure(e); }
