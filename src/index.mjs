@@ -280,6 +280,18 @@ const FAILURE_TYPES = {
     keywords: { ja: ['ゲート遅延', '手荷物遅延', '手荷物受取遅延', 'ゲート変更', '到着ゲート遅れ'], en: ['gate_delay', 'baggage_delay', 'gate_change', 'baggage_claim_delay', 'arrival_gate_delay'], zh: ['登机口延误', '行李延误', '行李领取延误', '登机口变更', '到达口延误'] },
     weatherText: { ja: "ゲート・手荷物の遅延", en: "Gate/baggage delay", zh: "登机口/行李延误" },
     delayMessage: { ja: "ゲート変更または手荷物受取の遅延が発生しています", en: "Gate change or baggage claim delay occurred", zh: "发生登机口变更或行李领取延误" }
+  },
+  'bus_traffic_jam': {
+    type: 'bus', adviceKey: 'bus_traffic_jam', isTrainSuspended: false,
+    keywords: { ja: ['渋滞', 'バス渋滞', '道路渋滞', '交通渋滞'], en: ['traffic_jam', 'bus_traffic_jam', 'congestion', 'road_congestion'], zh: ['堵车', '巴士拥堵', '公交拥堵', '交通拥堵', '道路拥堵'] },
+    weatherText: { ja: "渋滞によるバス遅延", en: "Bus delay due to traffic congestion", zh: "因交通拥堵导致公交延误" },
+    delayMessage: { ja: "道路渋滞によるバス遅延が発生しています", en: "Bus delays due to road congestion", zh: "因道路拥堵发生公交延误" }
+  },
+  'ferry_rough_seas': {
+    type: 'ferry', adviceKey: 'ferry_rough_seas', isTrainSuspended: false,
+    keywords: { ja: ['荒天', '高波', '強風', 'フェリー欠航', '船舶トラブル', '機関故障'], en: ['rough_seas', 'high_waves', 'ferry_cancelled', 'ferry_suspended', 'vessel_trouble'], zh: ['风浪', '大浪', '大风', '渡轮停航', '船舶故障'] },
+    weatherText: { ja: "荒天・高波によるフェリー欠航", en: "Ferry cancellation due to rough seas", zh: "因风浪导致渡轮停航" },
+    delayMessage: { ja: "荒天・高波によりフェリー・水上バスが欠航しています", en: "Ferries and water buses suspended due to rough seas", zh: "因风浪渡轮及水上巴士停航" }
   }
 };
 
@@ -323,6 +335,24 @@ function detectFailureType(failureText, userLang = 'ja') {
     isTrainSuspended: true,
     weatherText: userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知",
     delayMessage: fallbackMsg[userLang] || fallbackMsg.ja
+  };
+}
+
+// -test シミュレーション用: 障害テキストから AIアドバイス + メタデータを構築（全ツール共通）
+function buildTestAdvice(simulatedFailure, userLang = 'ja') {
+  if (!simulatedFailure) return { aiAdvice: null, testMode: false, failureType: null, failureAdviceKey: null };
+  const fc = detectFailureType(simulatedFailure, userLang);
+  const adviceKey = fc ? (fc.adviceKey || null) : null;
+  let aiAdvice = null;
+  if (adviceKey && MULTILINGUAL_ADVICE[adviceKey]) {
+    aiAdvice = MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja || null;
+  }
+  return {
+    aiAdvice,
+    testMode: true,
+    failureType: simulatedFailure,
+    failureAdviceKey: adviceKey,
+    fc
   };
 }
 
@@ -713,6 +743,16 @@ const MULTILINGUAL_ADVICE = {
     ja: "🤖 【AIからのインテリジェントアドバイス (ゲート・手荷物遅延)】\n✈ ゲート変更または手荷物受取の遅延が発生しています。搭乗ゲート・到着口の案内板をご確認ください。お急ぎの方は空港スタッフへお問い合わせください。",
     en: "🤖 [AI Intelligent Transit Advice (Gate/Baggage Delay)]\n✈ A gate change or baggage claim delay has occurred. Check the gate/arrival display boards and ask airport staff if you are in a hurry.",
     zh: "🤖 【AI智能出行建议 (登机口/行李延误)】\n✈ 发生登机口变更或行李领取延误。请查看登机口/到达口显示屏，如有急事请咨询机场工作人员。"
+  },
+  bus_traffic_jam: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (バス渋滞遅延)】\n🚌 道路渋滞の影響でバスが大幅に遅延しています。時間に余裕を持ってご移動ください。急ぐ場合は、並行する鉄道路線や徒歩・シェアサイクルの利用をご検討ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Bus Traffic Delay)]\n🚌 Buses are significantly delayed due to road congestion. Allow extra time; consider parallel train lines, walking, or bike-share if you are in a hurry.",
+    zh: "🤖 【AI智能出行建议 (公交拥堵延误)】\n🚌 因道路拥堵公交大幅延误。请预留充足时间；若着急可考虑平行铁路线、步行或共享单车。"
+  },
+  ferry_rough_seas: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (フェリー・水上バス欠航)】\n⛴ 荒天・高波のためフェリーおよび水上バスが欠航しています。離島方面へは翌日の運航状況をご確認ください。陸路（鉄道・高速バス）への切り替えをご検討ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Ferry/Water Bus Suspension)]\n⛴ Ferries and water buses are suspended due to rough seas. Check next-day operations for island routes and consider land alternatives (train/express bus).",
+    zh: "🤖 【AI智能出行建议 (渡轮/水上巴士停航)】\n⛴ 因风浪渡轮及水上巴士停航。离岛方向请确认次日运航情况，并考虑改走陆路（铁路/高速巴士）。"
   }
 };
 
@@ -1735,6 +1775,8 @@ async function searchFerry(args) {
   const fromLang = detectLanguage(rawFrom);
   const toLang = detectLanguage(rawTo);
   const userLang = fromLang !== 'ja' ? fromLang : (toLang !== 'ja' ? toLang : 'ja');
+  const parsedTest = parseTestMode({ from: rawFrom, to: rawTo, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
+  const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
   if (!fromPort || !toPort) {
     const errMsg = userLang === 'en' ? 'Please specify both origin and destination ports.' :
                    userLang === 'zh' ? '请同时指定出发港口和到达港口。' :
@@ -1796,7 +1838,10 @@ async function searchFerry(args) {
         message: msg,
         operator: operatorName,
         official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/',
-        all_ports: data.stops.map(s => s.stop_name)
+        all_ports: data.stops.map(s => s.stop_name),
+        ai_transit_advice: testAdv.aiAdvice,
+        test_mode: testAdv.testMode,
+        simulated_failure_type: testAdv.failureType || undefined
       });
     }
 
@@ -1808,7 +1853,10 @@ async function searchFerry(args) {
       routes: relevantRoutes,
       total_routes: relevantRoutes.length,
       operator: operatorName,
-      official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/'
+      official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/',
+      ai_transit_advice: testAdv.aiAdvice,
+      test_mode: testAdv.testMode,
+      simulated_failure_type: testAdv.failureType || undefined
     });
   } catch (error) {
     const errMsg = error.message || String(error);
@@ -2668,6 +2716,8 @@ async function searchBus(args) {
   // 乗り継ぎ探索モード（from + to 指定時）。案B: 異系統・異事業者間の最短経路。
   if (fromInput && toInput) {
     const userLang = detectLanguage(fromInput) || detectLanguage(toInput) || 'ja';
+    const parsedTest = parseTestMode({ from: fromInput, to: toInput, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
+    const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
     if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
     try {
       const result = await searchBusTransfer(fromInput, toInput);
@@ -2680,8 +2730,11 @@ async function searchBus(args) {
           note: userLang === 'en' ? 'Transfer covers Toei/Seibu/Yokohama City Bus only (ODPT BusroutePattern data). JR Bus Kanto & community buses are not included.'
             : userLang === 'zh' ? '换乘仅覆盖都营/西武/横滨市营公交（ODPT BusroutePattern 数据）。JR巴士关东与社区公交不包含在内。'
             : '乗り継ぎは都営・西武・横浜市営バスのみ対象（ODPT BusroutePattern データ）。JRバス関東・コミュニティバスは対象外です。',
-          data_source: 'ODPT BusroutePattern + BusTimetable'
-        });
+            data_source: 'ODPT BusroutePattern + BusTimetable',
+            ai_transit_advice: testAdv.aiAdvice,
+            test_mode: testAdv.testMode,
+            simulated_failure_type: testAdv.failureType || undefined
+            });
       }
       const opLabel = (opId) => {
         const o = BUS_OPERATORS.find(x => x.id === opId);
@@ -2720,7 +2773,10 @@ async function searchBus(args) {
         route: segments,
         barrier_free_note: barrierFreeNote,
         note: crossModal || undefined,
-        data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link)'
+        data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link)',
+        ai_transit_advice: testAdv.aiAdvice,
+        test_mode: testAdv.testMode,
+        simulated_failure_type: testAdv.failureType || undefined
       });
     } catch (error) {
       odptBreaker.onFailure(error);
@@ -2728,6 +2784,8 @@ async function searchBus(args) {
     }
   }
   const userLang = detectLanguage(busstopName) || 'ja';
+  const parsedTest = parseTestMode({ from: busstopName, to: '', '-test': args['-test'], test: args.test, test_mode: args.test_mode });
+  const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
     const cached = cache.get(cache.busData.key);
@@ -2766,7 +2824,10 @@ async function searchBus(args) {
         })),
         barrier_free_note: barrierFreeNote,
         data_source: dataSourceNote,
-        fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/"
+        fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/",
+        ai_transit_advice: testAdv.aiAdvice,
+        test_mode: testAdv.testMode,
+        simulated_failure_type: testAdv.failureType || undefined
       });
     }
     const matched = buses.filter(b => {
@@ -2791,7 +2852,10 @@ async function searchBus(args) {
       })),
       barrier_free_note: barrierFreeNote,
       data_source: dataSourceNote,
-      fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/"
+      fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/",
+      ai_transit_advice: testAdv.aiAdvice,
+      test_mode: testAdv.testMode,
+      simulated_failure_type: testAdv.failureType || undefined
     });
   } catch (error) {
     odptBreaker.onFailure(error);
@@ -2909,6 +2973,8 @@ async function searchFlight(args) {
   const airlineIata = args?.airline || null;
   const destination = args?.destination || null; // 到着時の連携先（例: 東京駅）
   const userLang = detectLanguage(airportRaw) || detectLanguage(flightNumber) || 'ja';
+  const parsedTest = parseTestMode({ from: airportRaw, to: destination || '', '-test': args['-test'], test: args.test, test_mode: args.test_mode });
+  const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
 
   const label = (ja, en, zh) => userLang === 'en' ? en : userLang === 'zh' ? zh : ja;
 
@@ -2922,12 +2988,15 @@ async function searchFlight(args) {
     // 空港 IATA を解決（両モードで共有）
     const iata = AIRPORT_IATA[normalizeAirportQuery(airportRaw)] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
     // 到着時の AI インテリジェントアドバイス（天候連動・3か国語）
-    let aiAdvice = null;
+    // -test 障害シミュレーション指定時は障害アドバイスを優先
+    let aiAdvice = testAdv.aiAdvice || null;
     const weatherArea = iata ? (AIRPORT_WEATHER_AREA[iata] || '130000') : '130000';
-    try {
-      const wa = await getWeatherAdvice(userLang, weatherArea);
-      aiAdvice = wa.advice || null;
-    } catch (_) { aiAdvice = null; }
+    if (!aiAdvice) {
+      try {
+        const wa = await getWeatherAdvice(userLang, weatherArea);
+        aiAdvice = wa.advice || null;
+      } catch (_) { aiAdvice = null; }
+    }
     // フライト取得（キーなし時は null）
     let flights = null;
     if (FLIGHT_API_KEY) {
@@ -2986,7 +3055,9 @@ async function searchFlight(args) {
         ai_transit_advice: aiAdvice,
         access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
         access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
-        flight_api_configured: !!FLIGHT_API_KEY
+        flight_api_configured: !!FLIGHT_API_KEY,
+        test_mode: testAdv.testMode,
+        simulated_failure_type: testAdv.failureType || undefined
       });
     }
 
@@ -3028,7 +3099,9 @@ async function searchFlight(args) {
       flights: normalized.slice(0, 20),
       access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
       access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
-      flight_api_configured: !!FLIGHT_API_KEY
+      flight_api_configured: !!FLIGHT_API_KEY,
+      test_mode: testAdv.testMode,
+      simulated_failure_type: testAdv.failureType || undefined
     });
   } catch (error) {
     return handleApiError(error, { userLang });
