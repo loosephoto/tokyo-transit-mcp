@@ -99,7 +99,9 @@ const cache = {
   trainTimetable: { key: 'train_timetable', ttl: 3600000 },
   busData: { key: 'bus_data', ttl: 600000 },
   busTimetable: { key: 'bus_timetable', ttl: 600000 },
-  busGraph: { key: 'bus_graph', ttl: 600000 }
+  busGraph: { key: 'bus_graph', ttl: 600000 },
+  busStopGeo: { key: 'bus_stop_geo', ttl: 600000 },
+  stationGeo: { key: 'station_geo', ttl: 600000 }
 };
 
 // ローマ字駅ID → 日本語駅名 の逆引きマップ（ODPT odpt:Station から動的構築）
@@ -803,7 +805,7 @@ const RAILWAY_LINES = {
   'JR東海道線': ['東京','品川','川崎','横浜','戸塚','大船','藤沢','茅ヶ崎','平塚','小田原','熱海'],
   // ===== 東京メトロ（残り5路線）=====
   '東京メトロ東西線': ['中野','落合南長崎','西落合','神楽坂','飯田橋','九段下','竹橋','大手町','日本橋','茅場町','門前仲町','木場','東陽町','南砂町','西葛西','葛西','浦安','南行徳','行徳','妙典','原木中山','西船橋'],
-  '東京メトロ千代田線': ['代々木上原','明治神宮前','表参道','乃木坂','赤坂','国会議事堂前','霞ケ関','日比谷','二重橋前','大手町','新御茶ノ水','湯島','千駄木','根津','西日暮里','町屋','綾瀬','北綾瀬'],
+  '東京メトロ千代田線': ['代々木上原','明治神宮前','表参道','乃木坂','赤坂','国会議事堂前','霞ケ関','日比谷','内幸町','二重橋前','大手町','新御茶ノ水','湯島','千駄木','根津','西日暮里','町屋','綾瀬','北綾瀬'],
   '東京メトロ半蔵門線': ['渋谷','表参道','青山一丁目','永田町','半蔵門','九段下','神保町','大手町','三越前','水天宮前','清澄白河','住吉','錦糸町','押上'],
   '東京メトロ有楽町線': ['和光市','平和台','氷川台','小竹向原','千川','要町','池袋','東池袋','護国寺','江戸川橋','飯田橋','市ヶ谷','麹町','永田町','桜田門','有楽町','銀座一丁目','新富町','月島','豊洲','辰巳','新木場'],
   '東京メトロ副都心線': ['和光市','平和台','氷川台','小竹向原','千川','要町','池袋','雑司が谷','西早稲田','東新宿','新宿三丁目','北参道','明治神宮前','渋谷'],
@@ -1220,9 +1222,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: { station_name: { type: 'string', description: '駅名' }, railway: { type: 'string', description: '路線名（省略可）' } }, required: ['station_name'] }
     },
     { name: 'search_bus',
-      description: '🚌 バス路線・乗り継ぎ検索 - 都営・西武・横浜市営バス（ODPT）。busstop_name でバス停/系統を検索、from+to で乗り継ぎ経路を探索（案B: 異系統・異事業者間の最短経路）。足の悪い方へノンステップバス情報を含む。JRバス関東・コミュニティバスは乗り継ぎ対象外。',
-      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' } }, required: [] }
-    }
+      description: '🚌🚃 バス路線・乗り継ぎ・横断乗り継ぎ検索 - 都営・西武・横浜市営バス（ODPT）。busstop_name でバス停/系統を検索、from+to で乗り継ぎ経路（バス内のみならず、バス→電車→バスの横断乗り継ぎも対応）を探索。足の悪い方へノンステップバス情報を含む。JRバス関東・コミュニティバスは乗り継ぎ対象外。',
+      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定・バス→電車→バスも可）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' } }, required: [] } }
   ]
 }));
 
@@ -2283,7 +2284,151 @@ function buildTransferGraph(patterns) {
   return { adj, stopToPatterns };
 }
 
-// BFS で from→to の最短乗り継ぎ経路（エッジ数=停留所移動最小）を探索
+// ============================================================
+// 🚌🚃 バス⇔電車 横断乗り継ぎ（bus→train→bus）
+// ============================================================
+
+// 電車駅名レベル隣接グラフ（RAILWAY_LINES から構築）。重みは駅数ベース（1）。
+// 同一駅に複数路線が来る場合、路線間乗換を自動結合（駅名レベルで全隣接をマージ）。
+function buildTrainNameGraph() {
+  const adj = new Map(); // stationName -> Set(neighborStationName)
+  const add = (a, b) => {
+    if (!adj.has(a)) adj.set(a, new Set());
+    if (!adj.has(b)) adj.set(b, new Set());
+    adj.get(a).add(b);
+    adj.get(b).add(a);
+  };
+  for (const stations of Object.values(RAILWAY_LINES)) {
+    for (let i = 0; i < stations.length - 1; i++) add(stations[i], stations[i + 1]);
+  }
+  // 路線間乗換: 同一駅名に複数路線が来る場合、それらの隣接を駅名レベルで統合
+  // （例: 内幸町は千代田線・半蔵門線等にあるため、各路線の隣接をマージ）
+  const stationToLines = {};
+  for (const [line, stations] of Object.entries(RAILWAY_LINES)) {
+    for (const st of stations) {
+      if (!stationToLines[st]) stationToLines[st] = [];
+      stationToLines[st].push(line);
+    }
+  }
+  // 同一駅に2路線以上来る場合、その駅の全隣接を互いに結ぶ（乗換エッジ）
+  for (const [st, lines] of Object.entries(stationToLines)) {
+    if (lines.length >= 2) {
+      // この駅を通る全路線の隣接駅を集約
+      const neighbors = new Set();
+      for (const line of lines) {
+        const arr = RAILWAY_LINES[line];
+        const idx = arr.indexOf(st);
+        if (idx > 0) neighbors.add(arr[idx - 1]);
+        if (idx < arr.length - 1) neighbors.add(arr[idx + 1]);
+      }
+      neighbors.delete(st);
+      for (const n of neighbors) add(st, n);
+    }
+  }
+  return adj;
+}
+
+// odpt:BusstopPole から { バス停名(正規化) -> {lat, lon, operator} } を取得（geo 付き）
+async function fetchBusStopGeo() {
+  const cached = cache.get(cache.busStopGeo.key);
+  if (cached) return cached;
+  if (!odptBreaker.canExecute()) return {};
+  const map = {};
+  const results = await Promise.allSettled(
+    BUS_OPERATORS.map(op =>
+      axios.get(`${API_BASE_URL}/odpt:BusstopPole`, { params: getParams(op.id), timeout: 8000 })
+    )
+  );
+  results.forEach((res) => {
+    if (res.status === 'fulfilled' && Array.isArray(res.value.data)) {
+      for (const p of res.value.data) {
+        const name = normalizeBusStop(getDisplayBusstopName(p));
+        const lat = p['geo:lat'], lon = p['geo:long'];
+        if (name && typeof lat === 'number' && typeof lon === 'number') {
+          // 重複時は最初のものを保持（同一バス停は複数路線で出現しうる）
+          if (!map[name]) map[name] = { lat, lon, operator: opIdOf(p) };
+        }
+      }
+      odptBreaker.onSuccess();
+    } else {
+      odptBreaker.onFailure(res.reason || new Error('BusstopPole fetch failed'));
+    }
+  });
+  cache.set(cache.busStopGeo.key, map, cache.busStopGeo.ttl);
+  return map;
+}
+
+// odpt:Station から { 駅名(正規化) -> {lat, lon} } を取得（geo 付き）
+async function fetchStationGeo() {
+  const cached = cache.get(cache.stationGeo.key);
+  if (cached) return cached;
+  if (!odptBreaker.canExecute()) return {};
+  const map = {};
+  const ops = ['TokyoMetro', 'Toei', 'JR-East', 'YokohamaMunicipal', 'Keio', 'Keikyu', 'Odakyu', 'Seibu', 'Tobu', 'TWR', 'MIR', 'Minatomirai'];
+  const results = await Promise.allSettled(
+    ops.map(op =>
+      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 8000 })
+    )
+  );
+  results.forEach((res) => {
+    if (res.status === 'fulfilled' && Array.isArray(res.value.data)) {
+      for (const s of res.value.data) {
+        const name = normalizeStationName(s['dc:title'] || s['odpt:stationTitle'] || '');
+        const lat = s['geo:lat'], lon = s['geo:long'];
+        if (name && typeof lat === 'number' && typeof lon === 'number') {
+          if (!map[name]) map[name] = { lat, lon };
+        }
+      }
+    }
+  });
+  cache.set(cache.stationGeo.key, map, cache.stationGeo.ttl);
+  return map;
+}
+
+// 緯度経度から距離（m）を計算（簡易ヘイバーサイン近似）
+function haversineM(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// バス停→最寄り駅 の紐付けマップ（近接閾値以内の駅を結ぶ）
+async function fetchBusStopStationLinks(thresholdM = 500) {
+  const busGeo = await fetchBusStopGeo();
+  const stGeo = await fetchStationGeo();
+  const links = {}; // バス停名 -> 駅名
+  for (const [bName, b] of Object.entries(busGeo)) {
+    let best = null, bestD = Infinity;
+    for (const [sName, s] of Object.entries(stGeo)) {
+      const d = haversineM(b.lat, b.lon, s.lat, s.lon);
+      if (d < bestD) { bestD = d; best = sName; }
+    }
+    if (best && bestD <= thresholdM) links[bName] = best;
+  }
+  return links;
+}
+
+// BusstopPole レコードから表示バス停名を取得（title 優先、なければ note/owl:sameAs）
+function getDisplayBusstopName(p) {
+  if (p['dc:title']) return p['dc:title'];
+  if (p['title'] && typeof p['title'] === 'string') return p['title'];
+  if (p['odpt:note']) return p['odpt:note'];
+  if (p['owl:sameAs']) {
+    const seg = String(p['owl:sameAs']).split('.');
+    return seg[seg.length - 1];
+  }
+  return '';
+}
+
+// BusstopPole レコードから operator ショートID を取得
+function opIdOf(p) {
+  const op = Array.isArray(p['odpt:operator']) ? p['odpt:operator'][0] : p['odpt:operator'];
+  if (!op) return '';
+  const seg = String(op).split(':');
+  return seg[seg.length - 1];
+}
 // 手順: 1) BFSで最短ノード列を求める / 2) 連続するノードを同一路線パターンで
 //        グループ化し、1系統＝1乗車セグメントにまとめる
 function findTransferPath(graph, fromStop, toStop, nonStepByPattern, nonStepByStop) {
@@ -2355,20 +2500,73 @@ function findTransferPath(graph, fromStop, toStop, nonStepByPattern, nonStepBySt
   return segments.length ? segments : null;
 }
 
+// 単一バス区間（a→b）のセグメント化（nonStep 付与）。searchBusTransfer の統合グラフから呼ぶ。
+function findBusSegment(busGraph, a, b, nonStepByPattern, nonStepByStop) {
+  const { stopToPatterns } = busGraph;
+  const via = (stopToPatterns.get(a) || []).find(p =>
+    p.stops.some((s, idx) => idx < p.stops.length - 1 && s === a && p.stops[idx + 1] === b)
+  ) || (stopToPatterns.get(a) || []).find(p =>
+    p.stops.some((s, idx) => idx < p.stops.length - 1 && normalizeBusStop(s) === a && normalizeBusStop(p.stops[idx + 1]) === b)
+  );
+  if (!via) return null;
+  const stops = via.stops.map(s => normalizeBusStop(s));
+  const nonStepMap = nonStepByPattern[via.patternId] || {};
+  const nonStep = stops.every(s => {
+    let v = nonStepMap[s];
+    if (v === undefined && nonStepByStop) v = nonStepByStop[s];
+    return v === true;
+  });
+  return {
+    operator: via.operator, patternId: via.patternId,
+    fromStop: a, toStop: b, stops: [a, b], non_step_bus: nonStep
+  };
+}
+
 async function searchBusTransfer(fromInput, toInput) {
   const from = normalizeBusStop(fromInput);
   const to = normalizeBusStop(toInput);
   const { patterns } = await fetchBusGraph();
   const { nonStepByPattern, nonStepByStop } = await fetchBusTimetable();
-  const graph = buildTransferGraph(patterns);
-  // 部分一致でノードを特定（優先順位: 完全一致 > 入力を含むノード > 入力がノードを含む）
-  const resolve = (name) => {
-    if (graph.adj.has(name)) return name;
-    for (const n of graph.adj.keys()) {
-      if (n.includes(name)) return n;
+  const busGraph = buildTransferGraph(patterns);
+  const trainAdj = buildTrainNameGraph();
+  const links = await fetchBusStopStationLinks();
+  // 駅ノードを trainAdj に確保（RAILWAY_LINES にない駅でも link エッジを張れるよう）
+  const stationGeo = await fetchStationGeo();
+  for (const stName of Object.keys(stationGeo)) {
+    if (!trainAdj.has(stName)) trainAdj.set(stName, new Set());
+  }
+  // 統合グラフ: bus停ノード + 駅ノード + link(バス停→駅 徒歩乗り継ぎ) エッジ
+  const adj = new Map();
+  const addEdge = (a, b, type) => {
+    if (!adj.has(a)) adj.set(a, []);
+    adj.get(a).push({ to: b, type });
+  };
+  // バス内エッジ
+  for (const [s, neighbors] of busGraph.adj) {
+    for (const n of neighbors) addEdge(s, n, 'bus');
+  }
+  // 電車内エッジ
+  for (const [s, neighbors] of trainAdj) {
+    for (const n of neighbors) addEdge(s, n, 'train');
+  }
+  // バス停→駅 の link エッジ（バス停と同一名の駅があれば結ぶ）
+  for (const [busStop, station] of Object.entries(links)) {
+    if (busGraph.adj.has(busStop) && trainAdj.has(station)) {
+      addEdge(busStop, station, 'link');
+      addEdge(station, busStop, 'link');
     }
-    for (const n of graph.adj.keys()) {
-      if (name.includes(n)) return n;
+  }
+  // 部分一致でノードを特定（バス停優先、次に駅）
+  const allNodes = new Set([...busGraph.adj.keys(), ...trainAdj.keys()]);
+  const resolve = (name) => {
+    if (allNodes.has(name)) return name;
+    // バス停として部分一致
+    for (const n of busGraph.adj.keys()) {
+      if (n.includes(name) || name.includes(n)) return n;
+    }
+    // 駅として部分一致
+    for (const n of trainAdj.keys()) {
+      if (n.includes(name) || name.includes(n)) return n;
     }
     return null;
   };
@@ -2377,8 +2575,61 @@ async function searchBusTransfer(fromInput, toInput) {
   if (!fNode || !tNode) {
     return { found: false, fromNode: fNode, toNode: tNode };
   }
-  const segments = findTransferPath(graph, fNode, tNode, nonStepByPattern, nonStepByStop);
-  return { found: !!segments, fromNode: fNode, toNode: tNode, segments };
+  // BFS（最初に到達した親を固定。重み無視＝最小エッジ数優先）
+  const prev = new Map();
+  const q = [fNode];
+  prev.set(fNode, null);
+  while (q.length) {
+    const cur = q.shift();
+    if (cur === tNode) break;
+    for (const e of (adj.get(cur) || [])) {
+      if (!prev.has(e.to)) {
+        prev.set(e.to, cur);
+        q.push(e.to);
+      }
+    }
+  }
+  if (!prev.has(tNode)) return { found: false, fromNode: fNode, toNode: tNode };
+  // 最短ノード列を復元
+  const nodePath = [];
+  let cur = tNode;
+  while (cur !== null) { nodePath.unshift(cur); cur = prev.get(cur); }
+  // セグメント化: bus区間 / train区間 / link(徒歩)
+  const segments = [];
+  let i = 0;
+  while (i < nodePath.length - 1) {
+    const a = nodePath[i], b = nodePath[i + 1];
+    const edge = (adj.get(a) || []).find(e => e.to === b);
+    const type = edge ? edge.type : 'bus';
+    if (type === 'link') {
+      segments.push({ mode: 'transfer', fromStop: a, toStop: b, note: '徒歩乗り継ぎ' });
+      i++;
+    } else if (type === 'train') {
+      // 連続する駅を1電車セグメントにまとめる（最後の要素も含む）
+      let end = i + 1;
+      while (end < nodePath.length - 1) {
+        const c = nodePath[end], d = nodePath[end + 1];
+        const e2 = (adj.get(c) || []).find(x => x.to === d);
+        if (e2 && (e2.type === 'train' || end + 1 === nodePath.length - 1)) end++;
+        else break;
+      }
+      const stops = nodePath.slice(i, end + 1);
+      segments.push({ mode: 'train', fromStop: stops[0], toStop: stops[stops.length - 1], stops });
+      i = end + 1;
+    } else {
+      // bus区間: 既存 findTransferPath ロジックで nonStep 付与
+      const busSeg = findBusSegment(busGraph, a, b, nonStepByPattern, nonStepByStop);
+      if (busSeg) {
+        segments.push({ mode: 'bus', ...busSeg });
+        i++;
+      } else {
+        // bus エッジだが stopToPatterns にない場合（例: 入力自体が駅でlinkを飛ばした等）
+        segments.push({ mode: 'bus', fromStop: a, toStop: b, stops: [a, b], non_step_bus: null });
+        i++;
+      }
+    }
+  }
+  return { found: true, fromNode: fNode, toNode: tNode, segments, isCrossModal: segments.some(s => s.mode === 'train') };
 }
 async function searchBus(args) {
   const busstopName = (args.busstop_name || '').trim();
@@ -2406,34 +2657,40 @@ async function searchBus(args) {
         const o = BUS_OPERATORS.find(x => x.id === opId);
         return o ? (userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label) : opId;
       };
-      const segments = result.segments.map((s, i) => ({
-        step: i + 1,
-        operator: opLabel(s.operator),
-        from: s.fromStop, to: s.toStop,
-        stops: s.stops,
-        non_step_bus: s.nonStep // ノンステップバス（段差なし）運行の有無
-      }));
-      // バリアフリー総評: 全セグメントでノンステップ対応なら true
-      const allNonStep = segments.every(s => s.non_step_bus);
+      const modeLabel = (m) => userLang === 'en' ? (m === 'train' ? 'Train' : m === 'transfer' ? 'Walk transfer' : 'Bus')
+        : userLang === 'zh' ? (m === 'train' ? '电车' : m === 'transfer' ? '步行换乘' : '公交') : (m === 'train' ? '電車' : m === 'transfer' ? '徒歩乗り継ぎ' : 'バス');
+      const segments = result.segments.map((s, i) => {
+        const base = { step: i + 1, mode: s.mode, mode_label: modeLabel(s.mode), from: s.fromStop, to: s.toStop, stops: s.stops || [s.fromStop, s.toStop] };
+        if (s.mode === 'bus') { base.operator = opLabel(s.operator); base.non_step_bus = s.non_step_bus; }
+        else if (s.mode === 'train') { base.operator = '鉄道'; }
+        else if (s.mode === 'transfer') { base.note = s.note; }
+        return base;
+      });
+      // バリアフリー総評: バスセグメントのみ評価（電車は別途要確認）
+      const busSegs = segments.filter(s => s.mode === 'bus');
+      const allNonStep = busSegs.length > 0 && busSegs.every(s => s.non_step_bus);
       const barrierFreeNote = userLang === 'en'
         ? (allNonStep
-          ? 'All segments operate non-step (step-free) buses — easier boarding for users with limited mobility.'
-          : 'Some segments may not operate non-step buses. Please check with the operator or look for non-step designated services.')
+          ? 'All bus segments operate non-step (step-free) buses — easier boarding for users with limited mobility.'
+          : 'Some bus segments may not operate non-step buses. Please check with the operator or look for non-step designated services.')
         : userLang === 'zh'
           ? (allNonStep
-            ? '所有区段均运行无障碍低地板（无台阶）巴士——便于行动不便者乘车。'
-            : '部分区段可能未运行无障碍巴士。请向运营商确认或选择无障碍指定班次。')
+            ? '所有公交区段均运行无障碍低地板（无台阶）巴士——便于行动不便者乘车。'
+            : '部分公交区段可能未运行无障碍巴士。请向运营商确认或选择无障碍指定班次。')
           : (allNonStep
             ? '全区間でノンステップバス（段差なし）が運行されています。足の悪い方の乗車が容易です。'
             : '一部区間でノンステップバスが運行されていない可能性があります。各事業者へご確認いただくか、ノンステップ指定便をご利用ください。');
+      const crossModal = result.isCrossModal ? (userLang === 'en' ? ' (bus→train→bus cross-modal)' : userLang === 'zh' ? '（公交→电车→公交 跨方式换乘）' : '（バス→電車→バスの横断乗り継ぎ）') : '';
       return jsonResponse({
         status: 'SUCCESS', detected_language: userLang,
         transfer: true,
+        cross_modal: result.isCrossModal || false,
         from: result.fromNode, to: result.toNode,
         transfers: segments.length - 1,
         route: segments,
         barrier_free_note: barrierFreeNote,
-        data_source: 'ODPT BusroutePattern + BusTimetable (Toei/Seibu/Yokohama City Bus)'
+        note: crossModal || undefined,
+        data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link)'
       });
     } catch (error) {
       odptBreaker.onFailure(error);

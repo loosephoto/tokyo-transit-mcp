@@ -19,7 +19,7 @@
 | 種別 | 対応事業者 |
 |:---|:---|
 | 🚃 鉄道 | JR東日本・東京メトロ・都営地下鉄・小田急・京王・西武・東武・京急・京成・相鉄・東急・横浜市営・**つくばエクスプレス(MIR)**・**りんかい線(TWR)**・**みなとみらい線**・**箱根登山線**・北総・埼玉高速・東葉高速・芝山鉄道・JR東海 |
-| 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT `odpt:Bus` から3事業者を並列マージ）＋ JRバス関東・都内コミュニティバス（GTFS-JP個別取得パス）／バス停検索＋乗り継ぎ探索（`odpt:BusroutePattern`）＋ノンステップバス表示（`isNonStepBus`）｜
+| 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT `odpt:Bus` から3事業者を並列マージ）＋ JRバス関東・都内コミュニティバス（GTFS-JP個別取得パス）／バス停検索＋乗り継ぎ探索（`odpt:BusroutePattern`）＋**バス電車バス横断乗り継ぎ**（駅・バス停を緯度経度で紐付け）＋ノンステップバス表示（`isNonStepBus`）｜
 | 🚡 AGT | ゆりかもめ・日暮里・舎人ライナー |
 | 🚝 モノレール | 東京モノレール・多摩モノレール |
 | 🚋 路面電車 | 都電荒川線（東京さくらトラム） |
@@ -172,14 +172,15 @@ ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横
 
 - **バス停検索**: `busstop_name` でバス停・系統を検索
 - **乗り継ぎ探索**: `from` + `to` で `odpt:BusroutePattern` の停留所順序から最短乗り継ぎ経路を探索（案B: 異系統・異事業者間の乗り継ぎ対応）
+- **横断乗り継ぎ**: バス停と駅を緯度経度で紐付け、`odpt:Station`（電車）グラフと統合。バス→電車→バスの横断ルートも探索（例: 渋谷駅前→（徒歩）→渋谷→（電車）→新橋駅前）
 - **バリアフリー**: `odpt:BusTimetable.isNonStepBus`（ノンステップバス・段差なし）を系統ごとに表示
 
 ※ 乗り継ぎは都営・西武・横浜市営バスのみ対象（JRバス関東・コミュニティバスは停留所順序データがないため対象外）。運賃はODPT非対応のため検索不可。
 
 ```
 search_bus(busstop_name: "渋谷駅前")                    # バス停検索
-search_bus(from: "渋谷駅前", to: "新橋駅前")            # 乗り継ぎ探索（都営バス内）
-search_bus(from: "横浜駅前", to: "桜木町駅前")          # 乗り継ぎ探索（横浜市営バス内）
+search_bus(from: "渋谷駅前", to: "新橋駅前")            # バス→電車→バス 横断乗り継ぎ
+search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（電車）→川崎 横断乗り継ぎ
 ```
 
 ### 7. `list_transit_operators` — 交通事業者一覧
@@ -502,14 +503,15 @@ Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged 
 
 - **Stop search**: `busstop_name` to find stops / routes
 - **Transfer search**: `from` + `to` builds shortest transfer routes from `odpt:BusroutePattern` stop order (Plan B: cross-route / cross-operator transfers)
+- **Cross-modal transfer**: bus stops and stations are linked by geo-coordinates and merged with the `odpt:Station` (train) graph, enabling bus→train→bus routes (e.g. Shibuya Station →(walk)→ Shibuya →(train)→ Shimbashi Station)
 - **Barrier-free**: `odpt:BusTimetable.isNonStepBus` (step-free / non-step buses) shown per route
 
 Note: transfers cover Toei/Seibu/Yokohama City Bus only (JR Bus Kanto & community buses lack stop-order data, so excluded). Fares are not available via ODPT.
 
 ```
 search_bus(busstop_name: "Shibuya Station")
-search_bus(from: "Shibuya Station", to: "Shimbashi Station")   # transfer (Toei)
-search_bus(from: "Yokohama Station", to: "Sakuragicho Station") # transfer (Yokohama City)
+search_bus(from: "Shibuya Station", to: "Shimbashi Station")   # bus→train→bus cross-modal
+search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(train)→Kawasaki cross-modal
 ```
 
 ### 7. `list_transit_operators` — Transit Operators List
@@ -828,14 +830,15 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 
 - **公交站查询**: `busstop_name` 搜索公交站/线路
 - **换乘搜索**: `from` + `to` 基于 `odpt:BusroutePattern` 的站点顺序构建最短换乘路线（方案B: 跨线路/跨运营商换乘）
+- **跨方式换乘**: 公交站与车站通过经纬度关联，并与 `odpt:Station`（铁路）图合并，支持公交→电车→公交路线（例: 渋谷站前→(步行)→渋谷→(电车)→新桥站前）
 - **无障碍**: `odpt:BusTimetable.isNonStepBus`（无障碍低地板/无台阶巴士）按线路显示
 
 注: 换乘仅覆盖都营/西武/横滨市营公交（JR巴士关东与社区公交无站点顺序数据，故不包含）。ODPT 不提供公交票价数据。
 
 ```
 search_bus(busstop_name: "渋谷駅前")                      # 公交站查询
-search_bus(from: "渋谷駅前", to: "新橋駅前")            # 换乘（都营内）
-search_bus(from: "横浜駅前", to: "桜木町駅前")          # 换乘（横滨市营内）
+search_bus(from: "渋谷駅前", to: "新橋駅前")            # 公交→电车→公交 跨方式换乘
+search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电车)→川崎 跨方式换乘
 ```
 
 ### 7. `list_transit_operators` — 交通运营商列表
