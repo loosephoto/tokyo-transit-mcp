@@ -93,7 +93,7 @@ npm install
 
 # ODPT API キーを設定（https://developer.odpt.org/ から取得）
 echo 'ODPT_API_KEY=your_api_key_here' > .env
-# フライト時刻を利用する場合のみ設定（AviationStack APIキー・任意）
+# フライト時刻を利用する場合のみ設定（AviationStack APIキー・任意: https://aviationstack.com/）
 echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 ```
 
@@ -227,7 +227,7 @@ search_bus(from: "渋谷駅前", to: "新橋駅前")            # バス→電�
 search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（電車）→川崎 横断乗り継ぎ
 ```
 
-### 7. `search_flight` — 空港フライト時刻・到着時刻表示 ✈️
+### 7. `search_flight` — 空港フライト時刻・到着時刻表示
 
 - **空港検索** — `airport`（羽田空港/成田空港/HND/NRT 等）で到着/出発フライトを検索
 - **空港名の表記揺れ対応** — 「羽田」/「成田」/「Haneda」/「Narita」等、末尾の「空港/Airport/机场」の有無や日英中表記を自動正規化
@@ -236,7 +236,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（�
 - **表示項目** — 便名・航空会社・ステータス（予定/運航中/到着済/欠航）・ターミナル・ゲート・予定時刻・実際時刻・遅延（分）
 - **Graceful degradation** — `FLIGHT_API_KEY` 未設定時はフライト時刻なしで、空港へのアクセス経路のみ表示
 
-※ フライト時刻は AviationStack API（`FLIGHT_API_KEY`）が必要です。未設定時は空港アクセス経路のみ表示します。
+※ フライト時刻は [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）が必要です。未設定時は空港アクセス経路のみ表示します。
 
 ```
 search_flight(airport: "羽田空港", direction: "arrival")              # 羽田着フライト一覧
@@ -393,7 +393,7 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 | 変数 | 必須 | 説明 |
 |:---|---:|:---|
 | `ODPT_API_KEY` | ✅ | https://developer.odpt.org/ から取得 |
-| `FLIGHT_API_KEY` | ⚪ | フライト時刻取得用（AviationStack）。未設定時は空港アクセス経路のみ（graceful degradation） |
+| `FLIGHT_API_KEY` | ⚪ | フライト時刻取得用（[AviationStack](https://aviationstack.com/)）。未設定時は空港アクセス経路のみ（graceful degradation） |
 
 ---
 
@@ -517,7 +517,7 @@ npm install
 
 # Set your ODPT API key (Get one from https://developer.odpt.org/)
 echo 'ODPT_API_KEY=your_api_key_here' > .env
-# Only if using flight times: set AviationStack API key (optional)
+# Only if using flight times: set AviationStack API key (optional: https://aviationstack.com/)
 echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 ```
 
@@ -650,7 +650,7 @@ search_bus(from: "Shibuya Station", to: "Shimbashi Station")   # bus→train→b
 search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(train)→Kawasaki cross-modal
 ```
 
-### 7. `search_flight` — Airport Flight Times & Arrival Display ✈️
+### 7. `search_flight` — Airport Flight Times & Arrival Display
 
 - **Airport search** — `airport` (Haneda/Narita/HND/NRT etc.) lists arrival/departure flights
 - **Airport name normalization** — "Haneda"/"Narita"/"羽田"/"成田" etc. auto-normalized (trailing "Airport/空港/机场" stripped, ja/en/zh supported)
@@ -659,7 +659,7 @@ search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(tr
 - **Fields** — flight no., airline, status (scheduled/active/landed/cancelled), terminal, gate, scheduled/actual time, delay (min)
 - **Graceful degradation** — without `FLIGHT_API_KEY`, shows airport access routes only (no flight times)
 
-Note: flight times require the AviationStack API (`FLIGHT_API_KEY`). Without it, only airport access routes are shown.
+Note: flight times require the [AviationStack](https://aviationstack.com/) API (`FLIGHT_API_KEY`). Without it, only airport access routes are shown.
 
 ```
 search_flight(airport: "Haneda Airport", direction: "arrival")                    # Haneda arrivals
@@ -816,7 +816,7 @@ Integrating with ODPT (Open Data Center for Public Transportation) requires the 
 | Variable | Required | Description |
 |:---|---:|:---|
 | `ODPT_API_KEY` | ✅ | Obtained from https://developer.odpt.org/ |
-| `FLIGHT_API_KEY` | ⚪ | For flight times (AviationStack). Without it, only airport access routes are shown (graceful degradation) |
+| `FLIGHT_API_KEY` | ⚪ | For flight times ([AviationStack](https://aviationstack.com/)). Without it, only airport access routes are shown (graceful degradation) |
 
 ---
 
@@ -940,7 +940,7 @@ npm install
 
 # 设置 ODPT API 密钥（可从 https://developer.odpt.org/ 获取）
 echo 'ODPT_API_KEY=your_api_key_here' > .env
-# 仅在需要航班时刻时设置（AviationStack API 密钥・可选）
+# 仅在需要航班时刻时设置（AviationStack API 密钥・可选: https://aviationstack.com/）
 echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 ```
 
@@ -1073,7 +1073,7 @@ search_bus(from: "渋谷駅前", to: "新橋駅前")            # 公交→电�
 search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电车)→川崎 跨方式换乘
 ```
 
-### 7. `search_flight` — 机场航班时刻与到达时间显示 ✈️
+### 7. `search_flight` — 机场航班时刻与到达时间显示
 
 - **机场查询** — `airport`（羽田/成田/HND/NRT 等）列出到达/出发航班
 - **机场名称规范化** — 「羽田」「成田」「Haneda」「Narita」等自动归一化（去除末尾「机场/Airport/空港」，支持日英中）
@@ -1082,7 +1082,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电�
 - **显示项** — 航班号、航空公司、状态（准点/飞行中/已到达/取消）、航站楼、登机口、计划时间、实际时间、延误（分钟）
 - **优雅降级** — 未配置 `FLIGHT_API_KEY` 时仅显示机场接驳路线（无航班时刻）
 
-注：航班时刻需要 AviationStack API（`FLIGHT_API_KEY`）。未配置时仅显示机场接驳路线。
+注：航班时刻需要 [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）。未配置时仅显示机场接驳路线。
 
 ```
 search_flight(airport: "羽田空港", direction: "arrival")                        # 羽田到达航班
@@ -1239,7 +1239,7 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 | 变量 | 必需 | 说明 |
 |:---|---:|:---|
 | `ODPT_API_KEY` | ✅ | 可从 https://developer.odpt.org/ 获取 |
-| `FLIGHT_API_KEY` | ⚪ | 航班时刻获取用（AviationStack）。未配置时仅显示机场接驳路线（优雅降级） |
+| `FLIGHT_API_KEY` | ⚪ | 航班时刻获取用（[AviationStack](https://aviationstack.com/)）。未配置时仅显示机场接驳路线（优雅降级） |
 
 ---
 
