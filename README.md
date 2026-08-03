@@ -393,7 +393,7 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 
 | 変数 | 必須 | 説明 |
 |:---|---:|:---|
-| `ODPT_API_KEY` | ✅ | https://developer.odpt.org/ から取得 |
+| `ODPT_API_KEY` | ✅ | 必須（[ODPT](https://developer.odpt.org/) から取得） |
 | `FLIGHT_API_KEY` | ⚪ | フライト時刻取得用（[AviationStack](https://aviationstack.com/)）。未設定時は空港アクセス経路のみ（graceful degradation） |
 
 ---
@@ -823,7 +823,7 @@ Integrating with ODPT (Open Data Center for Public Transportation) requires the 
 
 | Variable | Required | Description |
 |:---|---:|:---|
-| `ODPT_API_KEY` | ✅ | Obtained from https://developer.odpt.org/ |
+| `ODPT_API_KEY` | ✅ | Required (obtained from [ODPT](https://developer.odpt.org/)) |
 | `FLIGHT_API_KEY` | ⚪ | For flight times ([AviationStack](https://aviationstack.com/)). Without it, only airport access routes are shown (graceful degradation) |
 
 ---
@@ -1253,7 +1253,7 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 
 | 变量 | 必需 | 说明 |
 |:---|---:|:---|
-| `ODPT_API_KEY` | ✅ | 可从 https://developer.odpt.org/ 获取 |
+| `ODPT_API_KEY` | ✅ | 必需（可从 [ODPT](https://developer.odpt.org/) 获取） |
 | `FLIGHT_API_KEY` | ⚪ | 航班时刻获取用（[AviationStack](https://aviationstack.com/)）。未配置时仅显示机场接驳路线（优雅降级） |
 
 ---
