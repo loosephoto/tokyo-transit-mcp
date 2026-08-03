@@ -405,9 +405,15 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 tokyo-transit-mcp/
 ├── src/
 │   └── index.mjs       # メインサーバー（全ロジック）
+├── docs/
+│   ├── bus-transfer-design.md    # バス乗り継ぎ・横断乗り継ぎ 設計/実装記録
+│   └── flight-info-design.md     # 空港フライト 設計/実装記録
 ├── package.json
 ├── README.md
-└── .env                # APIキー（gitignore推奨）
+├── SKILL.md             # プロジェクトスキル定義（v2.17.0）
+├── mcp.json             # MCPクライアント設定例
+├── .env.example         # 環境変数サンプル
+└── .env                 # APIキー（gitignore推奨）
 ```
 
 ---
@@ -828,9 +834,15 @@ Directory layout and key files of this project.
 tokyo-transit-mcp/
 ├── src/
 │   └── index.mjs       # Main server script
+├── docs/
+│   ├── bus-transfer-design.md    # Bus transfer / cross-modal design & impl record
+│   └── flight-info-design.md     # Airport flight design & impl record
 ├── package.json
 ├── README.md
-└── .env                # API Keys
+├── SKILL.md             # Project skill definition (v2.17.0)
+├── mcp.json             # MCP client configuration example
+├── .env.example         # Environment variables sample
+└── .env                 # API Keys
 ```
 
 ---
@@ -1251,9 +1263,15 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 tokyo-transit-mcp/
 ├── src/
 │   └── index.mjs       # 主服务器文件
+├── docs/
+│   ├── bus-transfer-design.md    # 公交换乘/跨方式换乘 设计及实现记录
+│   └── flight-info-design.md     # 机场航班 设计及实现记录
 ├── package.json
 ├── README.md
-└── .env                # API 密钥
+├── SKILL.md             # 项目技能定义（v2.17.0）
+├── mcp.json             # MCP 客户端配置示例
+├── .env.example         # 环境变量示例
+└── .env                 # API 密钥
 ```
 
 ---

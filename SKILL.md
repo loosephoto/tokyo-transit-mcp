@@ -1,25 +1,25 @@
 ---
 name: tokyo-transit-mcp
-description: 公共交通オープンデータセンター（ODPT） API を利用した東京乗り換えMCPサーバー。東京メトロ、都営地下鉄、JR東日本、都営バス等をサポート。有料サービス（駅すぱあと、NAVITIME等）は除外。
+description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.3.0
+version: 2.17.0
 ---
 
-# Tokyo Transit MCP
+# Tokyo Transit MCP Server
 
 ## 目的
 
-公共交通オープンデータセンター（ODPT）から提供される**無料APIのみ**を利用した、東京圏の公共交通情報をスマートに扱うMCPサーバーです。
+公共交通オープンデータセンター（ODPT）・気象庁（JMA）・GBFS などの**無料APIのみ**を利用した、東京圏の公共交通情報をスマートに扱うMCPサーバーです。天候・運行情報を加味したAIインテリジェントアドバイスを日本語・英語・中国語で自動生成します。
 
 ## 対象サービス
 
 ### 利用可能（無料）
-- 東京メトロ（9路線）
-- 都営地下鉄・バス
-- JR東日本（関東エリア在来線）
-- ゆりかもめ
-- 小田急・京王・西武・東武電鉄
-- 都営・東武・西武バス
+- 鉄道: 東京メトロ・都営地下鉄・JR東日本（関東在来線）・小田急・京王・西武・東武・京急・京成・相鉄・東急・横浜市営・つくばエクスプレス(MIR)・りんかい線(TWR)・みなとみらい線・箱根登山線・北総・埼玉高速・東葉高速・芝山鉄道・JR東海
+- AGT・モノレール・路面電車: ゆりかもめ・日暮里舎人ライナー・東京モノレール・多摩モノレール・都電荒川線
+- バス: 都営・西武・横浜市営（ODPT）＋ JRバス関東・東京都コミュニティバス41自治体（GTFS-JP個別取得）
+- フェリー・水上バス: 東海汽船（伊豆諸島・小笠原航路）・東京クルーズ
+- シェアサイクル: ドコモ・バイクシェア（GBFS・1,878ポート）
+- フライト: 羽田(HND)・成田(NRT) 到着/出発（AviationStack・任意）
 
 ### 除外（有料）
 - 駅すぱあとAPI
@@ -30,16 +30,25 @@ version: 2.3.0
 
 | ツール | 説明 |
 |-------|------|
-| `search_route` | 乗り換えルート検索（未収録駅自動Webフォールバック機能付き） |
+| `search_route` | 乗り換えルート検索（天気・AIアドバイス・多言語対応・コミュニティバス駅接続付き） |
 | `get_station_info` | 指定駅の基本情報を取得 |
-| `get_timetable` | 指定駅の時刻表情報を取得 |
 | `get_weather` | 指定地域の天気予報＆運行影響アドバイスを取得 |
+| `search_fare` | 2駅間の運賃を検索（東京メトロ・都営） |
+| `get_timetable` | 指定駅の時刻表情報を取得 |
+| `search_bus` | バス停/系統検索・乗り継ぎ・バス⇔電車⇔バス横断乗り継ぎ・コミュニティバス駅接続 |
+| `search_flight` | 空港フライト時刻・到着時刻表示（空港アクセス経路連携） |
+| `list_transit_operators` | 交通事業者一覧（種別フィルタ付き） |
+| `get_operator_routes` | 事業者別の路線・駅一覧 |
+| `list_ferry_ports` | フェリー/水上バス港一覧 |
+| `search_ferry` | 港間の航路・時刻表検索 |
+| `list_community_buses` | 東京都コミュニティバス一覧（41自治体） |
 
 ## 使い方
 
 ### 1. APIキーの準備
 
-https://developer.odpt.org/signup で登録し、APIキーを取得してください。
+- ODPT: https://developer.odpt.org/signup で登録し、APIキーを取得（必須）
+- AviationStack: https://aviationstack.com/ で取得（任意・フライト時刻用。無料プランは当日分のみ）
 
 ### 2. 環境変数の設定
 
@@ -47,6 +56,7 @@ https://developer.odpt.org/signup で登録し、APIキーを取得してくだ�
 
 ```
 ODPT_API_KEY=取得したAPIキー
+FLIGHT_API_KEY=取得したAPIキー（任意）
 ```
 
 ### 3. 実行
@@ -55,29 +65,39 @@ ODPT_API_KEY=取得したAPIキー
 npm start
 ```
 
+### 4. MCPクライアント設定
+
+`mcp.json`（または Claude Desktop / Hermes の設定）に `node src/index.mjs` を登録し、`ODPT_API_KEY`（必須）と `FLIGHT_API_KEY`（任意）を env に指定します。
+
 ## 使用例
 
-### 駅情報の取得
-```json
-{
-  "station_name": "新宿",
-  "operator": "tokyometro"
-}
+### 乗り換え検索（多言語）
+```
+search_route(from: "渋谷", to: "新宿")
+search_route(from: "Shibuya", to: "Odaiba")   # 英語入力→英語で応答
+search_route(from: "涩谷", to: "台场")         # 中国語入力→中国語で応答
 ```
 
-### 乗り換え検索
-```json
-{
-  "from": "秋葉原",
-  "to": "梅島"
-}
+### バス横断乗り継ぎ
+```
+search_bus(from: "渋谷駅前", to: "新橋駅前")   # バス→電車→バス
+search_bus(from: "渋谷駅東口", to: "恵比寿駅前") # コミュニティバス（ハチ公バス）
+```
+
+### フェリー・水上バス
+```
+search_ferry(from_port: "東京", to_port: "大島")
+search_ferry(from_port: "浅草", to_port: "お台場海浜公園")
+```
+
+### 空港フライト
+```
+search_flight(airport: "羽田空港", direction: "arrival", destination: "東京駅")
 ```
 
 ### 天気と運行影響アドバイス
-```json
-{
-  "area_name": "東京"
-}
+```
+get_weather(area_name: "東京")
 ```
 
 ## データ構造
@@ -96,11 +116,15 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 注意事項
 
-1. **インテリジェント・フォールバック**: ODPTオープンデータ未収録の一般駅については、自動的にWebダイレクト検索URLリンクを生成し、ユーザーに確実な移動手段を保証します。
-2. **運行影響アドバイス**: 気象庁JMA APIからリアルタイムに予報を抽出し、乗り換えに特化した（滑りやすさ、強風での徐行など）アドバイスを自動マージします。
+1. **多言語自動判定（i18n）**: 入力言語（日/英/中）を自動判定し、応答全体（駅名・路線名・天気・エラー・AIアドバイス）をローカライズします。
+2. **サーキットブレイカー**: ODPT 3回連続失敗で60秒クールダウン。障害時もハードコードデータ（コミュニティバス等）で部分稼働を継続します。
+3. **荒天時安全ロジック**: 台風・浸水時は自転車案内を自動非表示にし、避難所リンクを表示します。
+4. **コミュニティバス**: 41自治体ディレクトリ＋主要10件の駅接続データ（バリアフリー案内）。時刻表・路線の詳細は各自治体公式サイトで確認してください。
+5. **コード変更後の検証**: `node --check src/index.mjs` → 検証プローブ（全ツール×3言語）→ `npm run build` の順で確認してください。MCPツール経由の確認にはサーバー再起動が必要です（詳細は mcp-transit-server スキル参照）。
 
 ## 参考リンク
 
 - ODPT公式: https://www.odpt.org/
 - CKANデータカタログ: https://ckan.odpt.org/
 - APIドキュメント: https://developer.odpt.org/
+- AviationStack: https://aviationstack.com/
