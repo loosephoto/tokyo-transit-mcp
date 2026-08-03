@@ -146,6 +146,7 @@ search_route(from: "渋谷", to: "新宿")
 **パラメータ**:
 - `from` (string) — 出発駅名
 - `to` (string) — 到着駅名
+- `language` (string, 任意) — 応答言語の強制指定 `ja` / `en` / `zh`。省略時は駅名から自動判定しますが、ユーザーのクエリ言語に合わせて指定すると確実にその言語で応答します（例: 英語で質問したのに駅名が日本語の場合に `language: "en"` を渡すと英語で返答）
 - `user_location` (object, 任意) — 利用者の現在位置 `{ lat: number, lon: number }`。指定時は運転見合わせ時のシェアサイクル案内を現在地基準で表示（未指定時は出発駅基準）
 
 **レスポンス例**:
@@ -410,7 +411,7 @@ tokyo-transit-mcp/
 │   └── flight-info-design.md     # 空港フライト 設計/実装記録
 ├── package.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.17.0）
+├── SKILL.md             # プロジェクトスキル定義（v2.19.0）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -576,6 +577,7 @@ search_route(from: "Shibuya", to: "Shinjuku")
 **Parameters**:
 - `from` (string) — Departure station name
 - `to` (string) — Arrival station name
+- `language` (string, optional) — Force response language `ja` / `en` / `zh`. When omitted, the language is auto-detected from the station names; pass the user's query language to guarantee the response language (e.g. pass `language: "en"` when the user asked in English even if the station names are Japanese)
 - `user_location` (object, optional) — User's current location `{ lat: number, lon: number }`. When provided, bike-share guidance during service suspensions is based on the current location (otherwise on the departure station)
 
 **Response Example**:
@@ -839,7 +841,7 @@ tokyo-transit-mcp/
 │   └── flight-info-design.md     # Airport flight design & impl record
 ├── package.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.17.0)
+├── SKILL.md             # Project skill definition (v2.19.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1005,6 +1007,7 @@ search_route(from: "渋谷", to: "新宿")
 **参数**:
 - `from` (string) — 出发车站名称
 - `to` (string) — 到达车站名称
+- `language` (string, 可选) — 强制指定响应语言 `ja` / `en` / `zh`。省略时根据站名自动判定；若按用户的查询语言指定，可确保以该语言响应（例：用户用英语提问但站名为日语时，传入 `language: "en"` 即可获得英语回复）
 - `user_location` (object, 可选) — 用户当前位置 `{ lat: number, lon: number }`。指定时，运行中断期间的共享自行车指引以当前位置为基准（未指定时以出发站为基准）
 
 **响应示例**:
@@ -1268,7 +1271,7 @@ tokyo-transit-mcp/
 │   └── flight-info-design.md     # 机场航班 设计及实现记录
 ├── package.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.17.0）
+├── SKILL.md             # 项目技能定义（v2.19.0）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
