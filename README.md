@@ -175,6 +175,7 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横浜市営バス）の3事業者を並列取得し、GTFS-JP 個別取得パスで JRバス関東・都内コミュニティバス（ちぃばす・ハチ公バス等）を追加します。コミュニティバスは東京バス協会「東京バス案内WEB」（tokyobus.or.jp/sp）掲載の**41自治体ディレクトリ**に対応し、`busstop_name` に「ちぃばす」「ムーバス」「すぎ丸」等のバス名や自治体名を指定すると、名称・自治体・公式サイトURLを案内します（時刻表・路線は各自治体サイトで確認）。
 
 - **バス停検索**: `busstop_name` でバス停・系統を検索
+- **駅⇔コミュニティバス接続（バリアフリー対応）**: `search_route`・`search_bus` で駅を指定すると「この駅はどのコミュニティバスが使えるか」（ちぃばす・ハチ公バス・ムーバス・はなバス・すぎ丸等の主要10件の駅接続データ）を表示。足の悪いユーザーの「駅までの足・駅からの足」を支援し、車椅子・低床バスの確認先（自治体公式サイトURL）を注意喚起として案内。コミュニティバス停同士の乗り継ぎは `mode: 'community_bus'` セグメントとして実経路を返します（例: 渋谷駅東口→恵比寿駅前 = ハチ公バス）
 - **乗り継ぎ探索**: `from` + `to` で `odpt:BusroutePattern` の停留所順序から最短乗り継ぎ経路を探索（案B: 異系統・異事業者間の乗り継ぎ対応）
 - **横断乗り継ぎ**: バス停と駅を緯度経度で紐付け、`odpt:Station`（電車）グラフと統合。バス→電車→バスの横断ルートも探索（例: 渋谷駅前→（徒歩）→渋谷→（電車）→新橋駅前）
 - **バリアフリー**: `odpt:BusTimetable.isNonStepBus`（ノンステップバス・段差なし）を系統ごとに表示
@@ -537,6 +538,7 @@ get_timetable(station_name: "Shibuya", railway: "Yamanote Line")
 Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged in parallel from ODPT `odpt:Bus`, plus a **GTFS-JP individual-feed path** that adds JR Bus Kanto and Tokyo community buses (Chii-bus, Hachiko-bus, etc.). Community buses now cover the **41-municipality directory** from the Tokyo Bus Association (tokyobus.or.jp/sp): passing a bus name or municipality to `busstop_name` (e.g. "Mu-Bus", "Sugimaru") returns the name, municipality, and official website URL (timetables/routes are on each municipal site).
 
 - **Stop search**: `busstop_name` to find stops / routes
+- **Station ⇔ community bus access (barrier-free)**: specifying a station in `search_route` / `search_bus` shows which community buses serve it (station-access data for 10 major buses: Chiibusu, Hachiko Bus, Mu-Bus, Hanabus, Sugimaru, etc.). Supports mobility-impaired users' first/last mile (home → station / station → destination), with a caution pointing to the municipal site for wheelchair / low-floor availability. Transfers between community bus stops return real routes as `mode: 'community_bus'` segments (e.g. Shibuya Station East Exit → Ebisu Station = Hachiko Bus)
 - **Transfer search**: `from` + `to` builds shortest transfer routes from `odpt:BusroutePattern` stop order (Plan B: cross-route / cross-operator transfers)
 - **Cross-modal transfer**: bus stops and stations are linked by geo-coordinates and merged with the `odpt:Station` (train) graph, enabling bus→train→bus routes (e.g. Shibuya Station →(walk)→ Shibuya →(train)→ Shimbashi Station)
 - **Barrier-free**: `odpt:BusTimetable.isNonStepBus` (step-free / non-step buses) shown per route
@@ -894,6 +896,7 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 从 ODPT 的 `odpt:Bus` 并行获取并合并都营公交、西武公交、横滨市交通局（横滨市营公交）3 家运营商的数据，并通过 **GTFS-JP 单独数据源路径** 追加 JR 巴士关东和东京社区公交（ちぃばす、ハチ公バス等）。社区公交已覆盖东京巴士协会「东京巴士指南WEB」（tokyobus.or.jp/sp）的**41 自治体目录**：在 `busstop_name` 中指定巴士名称或自治体名（如「ムーバ斯」「すぎ丸」），即可返回名称、自治体与官方网址（时刻表与路线请在各自治体官网确认）。
 
 - **公交站查询**: `busstop_name` 搜索公交站/线路
+- **车站 ⇔ 社区公交接驳（无障碍支持）**: 在 `search_route` / `search_bus` 中指定车站时，会显示该站可用的社区公交（主要 10 条线路的接驳数据：ちぃばす、哈奇公巴士、ムーバ斯、はな巴士、すぎ丸 等），支持行动不便者的「到站前/离站后」出行，并以注意提示引导确认轮椅/低地板车辆信息（附各自治体官网链接）。社区公交站之间的换乘将以 `mode: 'community_bus'` 区段返回实际路线（例：涩谷站东口 → 惠比寿站前 = 哈奇公巴士）
 - **换乘搜索**: `from` + `to` 基于 `odpt:BusroutePattern` 的站点顺序构建最短换乘路线（方案B: 跨线路/跨运营商换乘）
 - **跨方式换乘**: 公交站与车站通过经纬度关联，并与 `odpt:Station`（铁路）图合并，支持公交→电车→公交路线（例: 渋谷站前→(步行)→渋谷→(电车)→新桥站前）
 - **无障碍**: `odpt:BusTimetable.isNonStepBus`（无障碍低地板/无台阶巴士）按线路显示

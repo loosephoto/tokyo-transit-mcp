@@ -467,6 +467,17 @@ const STATION_NAME_MAP = {
   'Osaka': '大阪', 'Kyoto': '京都', 'Narita Airport': '成田空港', 'Haneda Airport': '羽田空港',
   'Narita': '成田空港', 'Haneda': '羽田空港', 'HND': '羽田空港', 'NRT': '成田空港',
   'Odaiba Seaside Park': 'お台場海浜公園', 'Hinode Pier': '日の出桟橋', 'Toyosu': '豊洲',
+  // コミュニティバス駅接続の主要駅（ローマ字）
+  'Kichijoji': '吉祥寺', 'Mitaka': '三鷹', 'Musashisakai': '武蔵境', 'Musashi-Sakai': '武蔵境',
+  'Tanashi': '田無', 'Hibarigaoka': 'ひばりヶ丘', 'Houya': '保谷', 'Hoya': '保谷', 'Higashifushimi': '東伏見', 'Hanakoganei': '花小金井',
+  'Ogikubo': '荻窪', 'Nishiogikubo': '西荻窪', 'Koenji': '高円寺', 'Asagaya': '阿佐ヶ谷', 'Honancho': '方南町',
+  'Tachikawa': '立川', 'Fuchuhonmachi': '府中本町', 'Fuchu-Honmachi': '府中本町',
+  'Sendagi': '千駄木', 'Komagome': '駒込', 'Hongo-sanchome': '本郷三丁目', 'HongoSanchome': '本郷三丁目', 'Korakuen': '後楽園', 'Edogawabashi': '江戸川橋', 'Gokokuji': '護国寺',
+  'Nihombashi': '日本橋', 'Nihonbashi': '日本橋', 'Tsukiji': '築地', 'Hatchobori': '八丁堀', 'Kyobashi': '京橋',
+  'Tawaramachi': '田原町', 'Minowa': '三ノ輪', 'Yoyogi-Uehara': '代々木上原', 'Yoyogiuehara': '代々木上原',
+  'Sasazuka': '笹塚', 'Omotesando': '表参道', 'Daikanyama': '代官山', 'Sendagaya': '千駄ヶ谷',
+  'Tamachi': '田町', 'Mita': '三田', 'Shibakoen': '芝公園', 'Onarimon': '御成門', 'Daimon': '大門',
+  'Kamiyacho': '神谷町', 'Azabu-juban': '麻布十番', 'Azabujuban': '麻布十番', 'Akabanebashi': '赤羽橋', 'Shirokanedai': '白金高輪', 'Shirokane-Takanawa': '白金高輪',
   'Tokyo Skytree': 'とうきょうスカイツリー', 'Skytree': 'とうきょうスカイツリー',
   'Tokyo Big Sight': '東京ビッグサイト', 'Big Sight': '東京ビッグサイト',
   'Otemachi': '大手町', 'Otodo': '大手町', 'Shibuya': '渋谷',
@@ -1638,6 +1649,12 @@ async function searchRoute(args) {
 
   const displayFrom = getDisplayStationName(fromName, userLang);
   const displayTo = getDisplayStationName(toName, userLang);
+  // 🚌 駅⇔コミュニティバス接続（足の悪いユーザーの駅までの足・駅からの足）
+  const communityBusAccess = [
+    buildCommunityBusAccessBlock(fromName, userLang),
+    buildCommunityBusAccessBlock(toName, userLang)
+  ].filter(Boolean);
+  const communityBusAccessOut = communityBusAccess.length ? communityBusAccess : undefined;
 
   // 🗺️ 経路探索エンジン（ODPTキー不要・自己完結型）で実ルートを算出
   const routeResult = (simulatedFailure) ? { error: 'TEST_MODE' } : computeRoutes(fromName, toName);
@@ -1704,7 +1721,9 @@ async function searchRoute(args) {
             userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
             "🏛️ 【現在地周辺の公的機関の検索】",
       link: GOV_FACILITY_SEARCH_URL
-    }
+    },
+    // 🚌 駅⇔コミュニティバス接続（足の悪いユーザーの駅までの足・駅からの足）
+    community_bus_access: communityBusAccessOut
   };
 
   if (isTrainSuspended && !isSevereWeather && bikeShareInfo) {
@@ -2296,9 +2315,9 @@ const TOKYO_COMMUNITY_BUSES = [
   { municipality: '狛江市', name: 'こまバス', url: 'http://www.city.komae.tokyo.jp/sp/index.cfm/41,23028,312,html' },
   { municipality: '小平市', name: 'にじバス', url: 'http://www.city.kodaira.tokyo.jp/kurashi/000/000137.html' },
   { municipality: '新宿区', name: '新宿ＷＥバス', url: 'http://www.city.shinjuku.lg.jp/seikatsu/file17_06_00001.html' },
-  { municipality: '渋谷区', name: 'ハチ公バス', url: 'http://www.city.shibuya.tokyo.jp/shibuya/com_bus/index.html' },
+  { municipality: '渋谷区', name: 'ハチ公バス', url: 'https://www.city.shibuya.tokyo.jp/kurashi/kotsu/hachiko/' },
   { municipality: '墨田区', name: 'すみまるくん　他', url: 'http://www.city.sumida.lg.jp/kurashi/jyunkanbus/index.html' },
-  { municipality: '杉並区', name: 'すぎ丸', url: 'http://www.city.suginami.tokyo.jp/guide/machi/bus/index.html' },
+  { municipality: '杉並区', name: 'すぎ丸', url: 'https://www.city.suginami.tokyo.jp/guide/machi/bus/index.html' },
   { municipality: '世田谷区', name: 'せたがやくるりん　他', url: 'http://www.city.setagaya.lg.jp/kurashi/102/122/365/index.html' },
   { municipality: '台東区', name: 'めぐりん', url: 'http://www.city.taito.lg.jp/index/kurashi/kotsu/megurin/index.html' },
   { municipality: '立川市', name: 'くるりんバス', url: 'http://www.city.tachikawa.lg.jp/kurashi/kotsu/shiminbus/index.html' },
@@ -2319,9 +2338,155 @@ const TOKYO_COMMUNITY_BUSES = [
   { municipality: '町田市', name: 'まちっこ　他', url: 'http://www.city.machida.tokyo.jp/kanko/kotu_syuku/index.html' },
   { municipality: '港区', name: 'ちぃばす', url: 'https://www.city.minato.tokyo.jp/kankyo-machi/kotsu/bus/community.html' },
   { municipality: '三鷹市', name: 'みたかシティバス', url: 'http://www.city.mitaka.tokyo.jp/c_service/000/000756.html' },
-  { municipality: '武蔵野市', name: 'ムーバス', url: 'http://www.city.musashino.lg.jp/kurashi_guide/norimono_chuurin_chuusha/mu_bus/' },
+  { municipality: '武蔵野市', name: 'ムーバス', url: 'https://www.city.musashino.lg.jp/kurashi_tetsuzuki/bus_churin_chusha_kotsuanzen/mubus/index.html' },
   { municipality: '武蔵村山市', name: 'ＭＭシャトル', url: 'http://www.city.musashimurayama.lg.jp/kurashi/koutsu/koukyoukoutu/1000603/index.html' }
 ];
+
+// ============================================================
+// 🚌 コミュニティバス 駅接続ルート（主要10件・Phase 1/2 共通データ）
+// ------------------------------------------------------------
+// 足の悪いユーザーの「自宅→駅」「駅→目的地」をコミュニティバスでつなぐための
+// 駅接続データ。出典: 各自治体公式サイト（2026-08 にURL・路線・主要駅を確認）。
+// - routes: 代表系統の駅前停留所を順序付きで列挙（中間停留所は省略・公式サイト参照）
+// - stations: { 駅名: 駅前バス停名 } — 駅⇔バス停の徒歩接続（link）に使用
+// ⚠️ データは「代表駅接続」であり全停留所を網羅しない。時刻表・全ルートは各公式URL参照。
+//   バリアフリー（車椅子等）情報は自治体サイトで確認する旨をレスポンスで注意喚起する。
+const COMMUNITY_BUS_ROUTES = [
+  {
+    bus: 'ちぃばす', municipality: '港区',
+    url: 'https://www.city.minato.tokyo.jp/kankyo-machi/kotsu/bus/community.html',
+    routes: [
+      { name: '田町ルート', stops: ['田町駅前', '三田駅前', '芝浦四丁目', '港区役所前'] },
+      { name: '六本木ルート', stops: ['田町駅前', '神谷町駅前', '六本木駅前', '麻布十番駅前', '赤羽橋駅前'] },
+      { name: '麻布ルート', stops: ['麻布十番駅前', '六本木駅前', '赤羽橋駅前'] },
+      { name: '赤羽橋ルート', stops: ['赤羽橋駅前', '麻布十番駅前', '白金高輪駅前'] },
+      { name: '芝ルート', stops: ['田町駅前', '三田駅前', '芝公園駅前', '御成門駅前', '大門駅前'] }
+    ],
+    stations: {
+      '田町': '田町駅前', '三田': '三田駅前', '芝公園': '芝公園駅前', '御成門': '御成門駅前',
+      '大門': '大門駅前', '神谷町': '神谷町駅前', '六本木': '六本木駅前', '麻布十番': '麻布十番駅前',
+      '赤羽橋': '赤羽橋駅前', '白金高輪': '白金高輪駅前'
+    }
+  },
+  {
+    bus: 'ハチ公バス', municipality: '渋谷区',
+    url: 'https://www.city.shibuya.tokyo.jp/kurashi/kotsu/hachiko/',
+    routes: [
+      { name: '夕やけこやけルート（恵比寿・代官山循環）', stops: ['渋谷駅東口', '渋谷区役所', '恵比寿駅前', '代官山駅前', '渋谷駅東口'] },
+      { name: '丘を越えてルート（上原・富ヶ谷）', stops: ['渋谷駅東口', '代々木上原駅前', '渋谷駅東口'] },
+      { name: '神宮の杜ルート（神宮前・千駄ヶ谷）', stops: ['渋谷駅東口', '原宿駅前', '表参道駅前', '千駄ヶ谷駅前', '渋谷駅東口'] },
+      { name: '春の小川ルート（本町・笹塚循環）', stops: ['渋谷区役所', '笹塚駅前', '渋谷区役所'] }
+    ],
+    stations: {
+      '渋谷': '渋谷駅東口', '恵比寿': '恵比寿駅前', '代官山': '代官山駅前', '代々木上原': '代々木上原駅前',
+      '原宿': '原宿駅前', '表参道': '表参道駅前', '千駄ヶ谷': '千駄ヶ谷駅前', '笹塚': '笹塚駅前'
+    }
+  },
+  {
+    bus: 'ムーバス', municipality: '武蔵野市',
+    url: 'https://www.city.musashino.lg.jp/kurashi_tetsuzuki/bus_churin_chusha_kotsuanzen/mubus/index.html',
+    routes: [
+      { name: '吉祥寺東循環（1号路線）', stops: ['吉祥寺駅北口', '武蔵野市役所', '吉祥寺駅北口'] },
+      { name: '三鷹・吉祥寺循環（6号路線）', stops: ['三鷹駅北口', '吉祥寺駅北口', '三鷹駅北口'] },
+      { name: '境・三鷹循環（7号路線）', stops: ['武蔵境駅北口', '三鷹駅北口', '武蔵境駅北口'] }
+    ],
+    stations: {
+      '吉祥寺': '吉祥寺駅北口', '三鷹': '三鷹駅北口', '武蔵境': '武蔵境駅北口'
+    }
+  },
+  {
+    bus: 'はなバス', municipality: '西東京市',
+    url: 'https://www.city.nishitokyo.lg.jp/kurasi/kotu/hanabus/index.html',
+    routes: [
+      { name: '第1ルート', stops: ['田無駅', 'ひばりヶ丘駅', '田無駅'] },
+      { name: '第2ルート', stops: ['田無駅', '保谷駅', '田無駅'] },
+      { name: '第3ルート', stops: ['田無駅', '東伏見駅', '田無駅'] },
+      { name: '第4北ルート', stops: ['花小金井駅', '田無駅', '花小金井駅'] },
+      { name: '第4南ルート', stops: ['花小金井駅', '田無駅', '花小金井駅'] }
+    ],
+    stations: {
+      '田無': '田無駅', 'ひばりヶ丘': 'ひばりヶ丘駅', '保谷': '保谷駅', '東伏見': '東伏見駅', '花小金井': '花小金井駅'
+    }
+  },
+  {
+    bus: 'すぎ丸', municipality: '杉並区',
+    url: 'https://www.city.suginami.tokyo.jp/guide/machi/bus/index.html',
+    routes: [
+      { name: '荻窪線', stops: ['荻窪駅南口', '荻窪駅北口'] },
+      { name: '西荻線', stops: ['西荻窪駅北口', '西荻窪駅南口'] },
+      { name: '高円寺線', stops: ['高円寺駅北口', '高円寺駅南口'] },
+      { name: '阿佐谷線', stops: ['阿佐ヶ谷駅北口', '阿佐ヶ谷駅南口'] },
+      { name: '堀ノ内線', stops: ['方南町駅', '堀ノ内三丁目'] }
+    ],
+    stations: {
+      '荻窪': '荻窪駅南口', '西荻窪': '西荻窪駅北口', '高円寺': '高円寺駅北口', '阿佐ヶ谷': '阿佐ヶ谷駅北口'
+    }
+  },
+  {
+    bus: 'くるりんバス', municipality: '立川市',
+    url: 'https://www.city.tachikawa.lg.jp/kurashi/kotsu/shiminbus/index.html',
+    routes: [
+      { name: '北ルート', stops: ['立川駅北口', '立川市役所', '立川駅北口'] },
+      { name: '南ルート', stops: ['立川駅南口', '柴崎町三丁目', '立川駅南口'] }
+    ],
+    stations: { '立川': '立川駅北口' }
+  },
+  {
+    bus: 'ちゅうバス', municipality: '府中市',
+    url: 'https://www.city.fuchu.tokyo.jp/kurashi/machi/chubus/index.html',
+    routes: [
+      { name: '南町ルート', stops: ['府中駅', '府中本町駅', '府中駅'] },
+      { name: '住吉町ルート', stops: ['府中駅', '府中競馬正門前駅', '府中駅'] },
+      { name: '是政ルート', stops: ['府中駅', '是政', '府中駅'] }
+    ],
+    stations: { '府中本町': '府中本町駅' }
+  },
+  {
+    bus: 'Bーぐる', municipality: '文京区',
+    url: 'https://www.city.bunkyo.lg.jp/sosiki_busyo_kumin_jigyou_b-guru.html',
+    routes: [
+      { name: '千駄木・駒込ルート', stops: ['千駄木駅前', '駒込駅前', '千駄木駅前'] },
+      { name: '本郷・小日向ルート', stops: ['本郷三丁目駅前', '後楽園駅前', '本郷三丁目駅前'] },
+      { name: '目白台・小日向ルート', stops: ['江戸川橋駅前', '護国寺駅前', '江戸川橋駅前'] }
+    ],
+    stations: {
+      '千駄木': '千駄木駅前', '駒込': '駒込駅前', '本郷三丁目': '本郷三丁目駅前',
+      '後楽園': '後楽園駅前', '江戸川橋': '江戸川橋駅前', '護国寺': '護国寺駅前'
+    }
+  },
+  {
+    bus: '江戸バス', municipality: '中央区',
+    url: 'https://www.city.chuo.lg.jp/kurasi/edobasu/index.html',
+    routes: [
+      { name: '北循環', stops: ['日本橋駅前', '東京駅八重洲口', '銀座駅前', '日本橋駅前'] },
+      { name: '南循環', stops: ['銀座駅前', '築地駅前', '八丁堀駅前', '銀座駅前'] }
+    ],
+    stations: {
+      '日本橋': '日本橋駅前', '銀座': '銀座駅前', '築地': '築地駅前', '八丁堀': '八丁堀駅前', '京橋': '京橋駅前'
+    }
+  },
+  {
+    bus: 'めぐりん', municipality: '台東区',
+    url: 'https://www.city.taito.lg.jp/index/kurashi/kotsu/megurin/index.html',
+    routes: [
+      { name: '東西めぐりん', stops: ['上野駅入谷口', '浅草駅前', '上野駅入谷口'] },
+      { name: '南北めぐりん', stops: ['上野駅入谷口', '三ノ輪駅前', '上野駅入谷口'] },
+      { name: 'ぐるーりめぐりん', stops: ['浅草駅前', '田原町駅前', '浅草駅前'] }
+    ],
+    stations: {
+      '上野': '上野駅入谷口', '浅草': '浅草駅前', '田原町': '田原町駅前', '三ノ輪': '三ノ輪駅前'
+    }
+  }
+];
+
+// 駅名 → コミュニティバス案内（Phase 1 の案内モード用・複数バス対応）
+const COMMUNITY_BUS_STATION_ACCESS = {};
+for (const cb of COMMUNITY_BUS_ROUTES) {
+  for (const [station, stop] of Object.entries(cb.stations)) {
+    if (!COMMUNITY_BUS_STATION_ACCESS[station]) COMMUNITY_BUS_STATION_ACCESS[station] = [];
+    COMMUNITY_BUS_STATION_ACCESS[station].push({ bus: cb.bus, municipality: cb.municipality, url: cb.url, stop });
+  }
+}
 
 const BUS_GTFS_SOURCES = [
   // JRバス関東: 主要ターミナル・系統（ODPT未登録のためハードコード）
@@ -2894,12 +3059,46 @@ async function searchBusTransfer(fromInput, toInput) {
       addEdge(station, busStop, 'link');
     }
   }
-  // 部分一致でノードを特定（バス停優先、次に駅）
-  const allNodes = new Set([...busGraph.adj.keys(), ...trainAdj.keys()]);
+  // 🚌 コミュニティバスグラフ（Phase 2: 駅接続ルートを統合グラフに組み込み）
+  // 駅前停留所の系統順をエッジ化し、stations 定義で駅⇔バス停を link で接続。
+  const cbGraph = new Map(); // バス停名 → Set(隣接バス停)
+  const cbStopToBus = {};    // バス停名 → { bus, municipality, url, route }
+  for (const cb of COMMUNITY_BUS_ROUTES) {
+    for (const route of cb.routes) {
+      for (let i = 0; i < route.stops.length - 1; i++) {
+        const a = route.stops[i], b = route.stops[i + 1];
+        if (!cbGraph.has(a)) cbGraph.set(a, new Set());
+        cbGraph.get(a).add(b);
+        if (!cbGraph.has(b)) cbGraph.set(b, new Set());
+        cbGraph.get(b).add(a);
+        for (const s of [a, b]) {
+          if (!cbStopToBus[s]) cbStopToBus[s] = { bus: cb.bus, municipality: cb.municipality, url: cb.url, route: route.name };
+        }
+      }
+    }
+  }
+  for (const [s, neighbors] of cbGraph) {
+    for (const n of neighbors) addEdge(s, n, 'community_bus');
+  }
+  // コミュニティバス停 ⇔ 駅 の link エッジ（stations 定義の駅前バス停）
+  for (const cb of COMMUNITY_BUS_ROUTES) {
+    for (const [station, stop] of Object.entries(cb.stations)) {
+      if (cbGraph.has(stop) && trainAdj.has(station)) {
+        addEdge(stop, station, 'link');
+        addEdge(station, stop, 'link');
+      }
+    }
+  }
+  // 部分一致でノードを特定（ODPTバス停優先、次にコミュニティバス停、最後に駅）
+  const allNodes = new Set([...busGraph.adj.keys(), ...cbGraph.keys(), ...trainAdj.keys()]);
   const resolve = (name) => {
     if (allNodes.has(name)) return name;
     // バス停として部分一致
     for (const n of busGraph.adj.keys()) {
+      if (n.includes(name) || name.includes(n)) return n;
+    }
+    // コミュニティバス停として部分一致
+    for (const n of cbGraph.keys()) {
       if (n.includes(name) || name.includes(n)) return n;
     }
     // 駅として部分一致
@@ -2954,6 +3153,22 @@ async function searchBusTransfer(fromInput, toInput) {
       const stops = nodePath.slice(i, end + 1);
       segments.push({ mode: 'train', fromStop: stops[0], toStop: stops[stops.length - 1], stops });
       i = end + 1;
+    } else if (type === 'community_bus') {
+      // 連続するコミュニティバス区間を1セグメントにまとめる
+      let end = i + 1;
+      while (end < nodePath.length - 1) {
+        const c = nodePath[end], d = nodePath[end + 1];
+        const e2 = (adj.get(c) || []).find(x => x.to === d);
+        if (e2 && (e2.type === 'community_bus' || end + 1 === nodePath.length - 1)) end++;
+        else break;
+      }
+      const stops = nodePath.slice(i, end + 1);
+      const meta = cbStopToBus[stops[0]] || cbStopToBus[stops[stops.length - 1]] || {};
+      segments.push({
+        mode: 'community_bus', fromStop: stops[0], toStop: stops[stops.length - 1], stops,
+        bus: meta.bus, municipality: meta.municipality, website: meta.url, route: meta.route, non_step_bus: null
+      });
+      i = end + 1;
     } else {
       // bus区間: 既存 findTransferPath ロジックで nonStep 付与
       const busSeg = findBusSegment(busGraph, a, b, nonStepByPattern, nonStepByStop);
@@ -2969,6 +3184,42 @@ async function searchBusTransfer(fromInput, toInput) {
   }
   return { found: true, fromNode: fNode, toNode: tNode, segments, isCrossModal: segments.some(s => s.mode === 'train') };
 }
+// ============================================================
+// 🚌 コミュニティバス案内ブロック（Phase 1: 駅までの足・駅からの足）
+// ============================================================
+// 足の悪いユーザー向けに「この駅はどのコミュニティバスが利用できるか」を案内する。
+// 経路探索（統合グラフ）が失敗しても、駅⇔コミュニティバス停の接続情報を必ず返す。
+function findCommunityBusAccess(stationInput) {
+  if (!stationInput) return null;
+  const candidates = [stationInput, normalizeStationName(stationInput), stationInput.replace(/駅$/, '')]
+    .filter((v, i, a) => a.indexOf(v) === i);
+  for (const c of candidates) {
+    if (COMMUNITY_BUS_STATION_ACCESS[c]) return { station: c, entries: COMMUNITY_BUS_STATION_ACCESS[c] };
+  }
+  return null;
+}
+function buildCommunityBusAccessBlock(stationInput, userLang) {
+  const hit = findCommunityBusAccess(stationInput);
+  if (!hit) return null;
+  return {
+    note: userLang === 'en' ? "🚌 [Community Bus Access (first/last mile)]" :
+          userLang === 'zh' ? "🚌 【社区公交接驳（首末段）】" :
+          "🚌 【コミュニティバス接続（駅までの足・駅からの足）】",
+    station: hit.station,
+    buses: hit.entries.map(e => ({
+      bus: e.bus, municipality: e.municipality, stop: e.stop, url: e.url,
+      barrier_free_note: userLang === 'en'
+        ? "Wheelchair / low-floor availability varies by service — check the official municipal page."
+        : userLang === 'zh'
+        ? "轮椅 / 低地板车辆的可用性因线路而异 — 请查看各自治体官网。"
+        : "車椅子・低床バスの有無は系統により異なります。自治体公式サイトでご確認ください。"
+    })),
+    timetable_note: userLang === 'en' ? "Timetables & full routes: official municipal site."
+      : userLang === 'zh' ? "时刻表与完整路线请参见各自治体官网。"
+      : "時刻表・全ルートは各自治体公式サイトでご確認ください。"
+  };
+}
+
 async function searchBus(args) {
   const busstopName = (args.busstop_name || '').trim();
   const fromInput = (args.from || '').trim();
@@ -2981,6 +3232,11 @@ async function searchBus(args) {
     if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
     try {
       const result = await searchBusTransfer(fromInput, toInput);
+      // 駅⇔コミュニティバス接続（Phase 1: 足の悪いユーザーの駅までの足・駅からの足）
+      const cbAccess = [
+        buildCommunityBusAccessBlock(fromInput, userLang),
+        buildCommunityBusAccessBlock(toInput, userLang)
+      ].filter(Boolean);
       if (!result.found) {
         return jsonResponse({
           status: 'NOT_FOUND', detected_language: userLang,
@@ -2992,6 +3248,7 @@ async function searchBus(args) {
             : '乗り継ぎは都営・西武・横浜市営バスのみ対象（ODPT BusroutePattern データ）。JRバス関東・コミュニティバスは対象外です。',
             data_source: 'ODPT BusroutePattern + BusTimetable',
             ai_transit_advice: testAdv.aiAdvice,
+            community_bus_access: cbAccess.length ? cbAccess : undefined,
             test_mode: testAdv.testMode,
             simulated_failure_type: testAdv.failureType || undefined
             });
@@ -3000,15 +3257,24 @@ async function searchBus(args) {
         const o = BUS_OPERATORS.find(x => x.id === opId);
         return o ? (userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label) : opId;
       };
-      const modeLabel = (m) => userLang === 'en' ? (m === 'train' ? 'Train' : m === 'transfer' ? 'Walk transfer' : 'Bus')
-        : userLang === 'zh' ? (m === 'train' ? '电车' : m === 'transfer' ? '步行换乘' : '公交') : (m === 'train' ? '電車' : m === 'transfer' ? '徒歩乗り継ぎ' : 'バス');
+      const modeLabel = (m) => userLang === 'en' ? (m === 'train' ? 'Train' : m === 'transfer' ? 'Walk transfer' : m === 'community_bus' ? 'Community bus' : 'Bus')
+        : userLang === 'zh' ? (m === 'train' ? '电车' : m === 'transfer' ? '步行换乘' : m === 'community_bus' ? '社区公交' : '公交')
+        : (m === 'train' ? '電車' : m === 'transfer' ? '徒歩乗り継ぎ' : m === 'community_bus' ? 'コミュニティバス' : 'バス');
       const segments = result.segments.map((s, i) => {
         const base = { step: i + 1, mode: s.mode, mode_label: modeLabel(s.mode), from: s.fromStop, to: s.toStop, stops: s.stops || [s.fromStop, s.toStop] };
         if (s.mode === 'bus') { base.operator = opLabel(s.operator); base.non_step_bus = s.non_step_bus; }
         else if (s.mode === 'train') { base.operator = '鉄道'; }
+        else if (s.mode === 'community_bus') { base.operator = s.bus; base.municipality = s.municipality; base.website = s.website; base.non_step_bus = null; }
         else if (s.mode === 'transfer') { base.note = s.note; }
         return base;
       });
+      // コミュニティバス利用時のバリアフリー注意喚起（車椅子対応は自治体サイトで確認）
+      const hasCommunityBus = segments.some(s => s.mode === 'community_bus');
+      const communityBusNote = hasCommunityBus
+        ? (userLang === 'en' ? '🚌 Community bus segment: small vehicles; wheelchair / low-floor availability varies — check the official municipal page.'
+          : userLang === 'zh' ? '🚌 社区公交区间：多为小型车辆；轮椅/低地板车辆可用性因线路而异，请查看各自治体官网。'
+          : '🚌 コミュニティバス区間: 小型車両が中心です。車椅子・低床バスの有無は系統により異なります。自治体公式サイトでご確認ください。')
+        : undefined;
       // バリアフリー総評: バスセグメントのみ評価（電車は別途要確認）
       const busSegs = segments.filter(s => s.mode === 'bus');
       const allNonStep = busSegs.length > 0 && busSegs.every(s => s.non_step_bus);
@@ -3033,7 +3299,9 @@ async function searchBus(args) {
         route: segments,
         barrier_free_note: barrierFreeNote,
         note: crossModal || undefined,
-        data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link)',
+        community_bus_access: cbAccess.length ? cbAccess : undefined,
+        community_bus_note: communityBusNote,
+        data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link) + コミュニティバス駅接続(自治体公式データ)',
         ai_transit_advice: testAdv.aiAdvice,
         test_mode: testAdv.testMode,
         simulated_failure_type: testAdv.failureType || undefined
