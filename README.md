@@ -180,7 +180,7 @@ ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横
 - **横断乗り継ぎ**: バス停と駅を緯度経度で紐付け、`odpt:Station`（電車）グラフと統合。バス→電車→バスの横断ルートも探索（例: 渋谷駅前→（徒歩）→渋谷→（電車）→新橋駅前）
 - **バリアフリー**: `odpt:BusTimetable.isNonStepBus`（ノンステップバス・段差なし）を系統ごとに表示
 
-※ 乗り継ぎは都営・西武・横浜市営バスのみ対象（JRバス関東・コミュニティバスは停留所順序データがないため対象外）。運賃はODPT非対応のため検索不可。
+※ 乗り継ぎは都営・西武・横浜市営バス＋コミュニティバス駅接続ルートが対象（JRバス関東は停留所順序データがないため対象外）。運賃はODPT非対応のため検索不可。
 
 ```
 search_bus(busstop_name: "渋谷駅前")                    # バス停検索
@@ -543,7 +543,7 @@ Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged 
 - **Cross-modal transfer**: bus stops and stations are linked by geo-coordinates and merged with the `odpt:Station` (train) graph, enabling bus→train→bus routes (e.g. Shibuya Station →(walk)→ Shibuya →(train)→ Shimbashi Station)
 - **Barrier-free**: `odpt:BusTimetable.isNonStepBus` (step-free / non-step buses) shown per route
 
-Note: transfers cover Toei/Seibu/Yokohama City Bus only (JR Bus Kanto & community buses lack stop-order data, so excluded). Fares are not available via ODPT.
+Note: transfers cover Toei/Seibu/Yokohama City Bus plus community-bus station links (JR Bus Kanto lacks stop-order data, so excluded). Fares are not available via ODPT.
 
 ```
 search_bus(busstop_name: "Shibuya Station")
@@ -901,7 +901,7 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 - **跨方式换乘**: 公交站与车站通过经纬度关联，并与 `odpt:Station`（铁路）图合并，支持公交→电车→公交路线（例: 渋谷站前→(步行)→渋谷→(电车)→新桥站前）
 - **无障碍**: `odpt:BusTimetable.isNonStepBus`（无障碍低地板/无台阶巴士）按线路显示
 
-注: 换乘仅覆盖都营/西武/横滨市营公交（JR巴士关东与社区公交无站点顺序数据，故不包含）。ODPT 不提供公交票价数据。
+注: 换乘覆盖都营/西武/横滨市营公交及社区公交接驳（JR巴士关东无站点顺序数据，故不包含）。ODPT 不提供公交票价数据。
 
 ```
 search_bus(busstop_name: "渋谷駅前")                      # 公交站查询
