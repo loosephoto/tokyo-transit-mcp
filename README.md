@@ -56,7 +56,7 @@ Oshima ferry from Tokyo
 > ⚠️ **ご注意**: 本サーバーは MCP クライアント（Claude Desktop / Hermes 等）上の LLM モデルを介して応答を表示します。モデルの違いにより、AIインテリジェントアドバイスや検索結果の**表示揺れ（表現の違い・省略の有無等）が若干発生する場合があります**。検索エンジン自体の出力（JSON）はモデルに依存せず一定ですが、最終的な文章化は利用するモデルに左右されます。
 
 ### 🌐 マルチランゲージ
-日本語・英語・中国語を自動判定。ユーザーの入力言語に合わせてアドバイスを切り替え。
+日本語・英語・中国語を自動判定し、**入力言語に合わせて応答全体をローカライズ**。AIアドバイスはもちろん、経路の駅名・路線名、天気テキスト、エラーメッセージまでユーザーの言語で返します（例: `Odaiba -> Haneda` は英語、`台场到羽田机场` は中国語、`お台場→羽田空港` は日本語）。矢印・スラッシュ・括弧などの記号を含む英語入力や、簡体字・中国語の機能語（到・从・前往・出发 等）を含む入力も正しく判定します。
 
 ### 🔧 テストモード（-test）
 `search_route` に `-test <障害種別>` を付けると20種類以上の障害シミュレーションが可能。
@@ -106,7 +106,7 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 
 ### 1. `search_route` — 乗り換えルート検索（メイン機能）
 
-**機能**: 出発駅→到着駅のルートを検索。天気・運行情報を自動取得しAIアドバイスを付加。
+**機能**: 出発駅→到着駅のルートを検索。天気・運行情報を自動取得しAIアドバイスを付加。入力言語（日/英/中）に応じて応答全体（駅名・路線名・天気・エラー）を自動ローカライズ。
 
 ```
 search_route(from: "渋谷", to: "新宿")
@@ -422,7 +422,7 @@ ferry to Oshima from Tokyo
 > ⚠️ **Note**: This server displays responses through an LLM model on the MCP client (Claude Desktop / Hermes, etc.). Depending on the model, **minor display variance (differences in wording, whether advice is omitted, etc.) may occur** for the AI Intelligent Advice and search results. The search engine's own JSON output is model-independent and consistent, but the final phrasing depends on the model in use.
 
 ### 🌐 Multi-Language Support
-Automatically detects Japanese, English, and Chinese to switch advice output accordingly.
+Automatically detects Japanese, English, and Chinese and **localizes the entire response to match the input language** — not only AI advice, but also route station/line names, weather text, and error messages (e.g. `Odaiba -> Haneda` returns English, `台场到羽田机场` returns Chinese, `お台場→羽田空港` returns Japanese). English inputs containing symbols (arrows, slashes, parentheses) and inputs containing simplified Chinese characters or Chinese function words (到 / 从 / 前往 / 出发, etc.) are detected reliably.
 
 ### 🔧 Test Mode (-test)
 Add `-test <disruption_type>` to `search_route` to simulate over 20 types of transport disruptions.
@@ -471,7 +471,7 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 This MCP server provides 10 tools to handle route searches, timetables, fares, weather, and ferry route requests.
 
 ### 1. `search_route` — Route Search (Main Feature)
-**Function**: Search route from departure to arrival station. Automatically fetches weather and transit status with AI advice.
+**Function**: Search route from departure to arrival station. Automatically fetches weather and transit status with AI advice. The entire response (station/line names, weather, errors) is auto-localized to the input language (ja/en/zh).
 
 ```
 search_route(from: "Shibuya", to: "Shinjuku")
@@ -770,7 +770,7 @@ Shibuya to Odaiba route
 > ⚠️ **注意**: 本服务器通过 MCP 客户端（Claude Desktop / Hermes 等）上的 LLM 模型显示回答。因模型不同，AI 智能建议与搜索结果的**显示可能存在细微差异（措辞不同、是否省略建议等）**。搜索引擎自身的 JSON 输出与模型无关且保持一致，但最终表述取决于所使用的模型。
 
 ### 🌐 多语言支持
-自动识别日语、英语和中文，根据用户的输入语言切换输出建议。
+自动识别日语、英语和中文，**并按照输入语言本地化整个响应**——不仅是 AI 建议，路线中的站名、线路名、天气文本和错误消息也会以用户的语言返回（例如：`Odaiba -> Haneda` 返回英语，`台场到羽田机场` 返回中文，`お台場→羽田空港` 返回日语）。包含符号（箭头、斜杠、括号）的英语输入，以及包含简体字或中文功能词（到・从・前往・出发 等）的输入均可准确识别。
 
 ### 🔧 测试模式 (-test)
 在 `search_route` 中加入 `-test <故障类型>` 即可模拟 20 多种交通中断或灾害场景。
@@ -819,7 +819,7 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 本 MCP 服务器共提供 10 个工具，涵盖路线搜索、时刻表、票价、天气及轮渡航线查询。
 
 ### 1. `search_route` — 换乘路线搜索（核心功能）
-**功能**: 查询出发站至到达站的路线，自动获取天气与运行状态并附带 AI 出行建议。
+**功能**: 查询出发站至到达站的路线，自动获取天气与运行状态并附带 AI 出行建议。整个响应（站名、线路名、天气、错误消息）将按输入语言（日/英/中）自动本地化。
 
 ```
 search_route(from: "渋谷", to: "新宿")

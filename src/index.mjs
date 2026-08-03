@@ -465,6 +465,8 @@ const STATION_NAME_MAP = {
   'Meguro': '目黒', 'Kanda': '神田', 'Hamamatsucho': '浜松町', 'Shimbashi': '新橋', 'Shin-Okubo': '新大久保',
   'Takadanobaba': '高田馬場', 'Sugamo': '巣鴨', 'Nippori': '日暮里', 'Ochanomizu': '御茶ノ水',
   'Osaka': '大阪', 'Kyoto': '京都', 'Narita Airport': '成田空港', 'Haneda Airport': '羽田空港',
+  'Narita': '成田空港', 'Haneda': '羽田空港', 'HND': '羽田空港', 'NRT': '成田空港',
+  'Odaiba Seaside Park': 'お台場海浜公園', 'Hinode Pier': '日の出桟橋', 'Toyosu': '豊洲',
   'Tokyo Skytree': 'とうきょうスカイツリー', 'Skytree': 'とうきょうスカイツリー',
   'Tokyo Big Sight': '東京ビッグサイト', 'Big Sight': '東京ビッグサイト',
   'Otemachi': '大手町', 'Otodo': '大手町', 'Shibuya': '渋谷',
@@ -477,6 +479,7 @@ const STATION_NAME_MAP = {
   '惠比寿': '恵比寿', '目黑': '目黒', '神田': '神田', '滨松町': '浜松町', '新桥': '新橋', '大阪': '大阪', '京都': '京都',
   '东京晴空塔': 'とうきょうスカイツリー', '晴空塔': 'とうきょうスカイツリー',
   '东京国际展示场': '東京ビッグサイト', '国际展示场': '東京ビッグサイト',
+  '羽田机场': '羽田空港', '成田机场': '成田空港', '羽田': '羽田空港', '台场海滨公园': 'お台場海浜公園', '丰洲': '豊洲', '日出': '日の出桟橋',
 
   // 旧駅名・別表記（外部API/テーブルデータや古い入力で残りうるもの）
   'テレコムセンター': '東京ビッグサイト',     // ゆりかもめ旧駅名（現:東京ビッグサイト付近）
@@ -550,7 +553,35 @@ const STATION_DISPLAY_NAMES = {
   '浜松町': { en: 'Hamamatsucho', zh: '滨松町' },
   '新橋': { en: 'Shimbashi', zh: '新桥' },
   '成田空港': { en: 'Narita Airport', zh: '成田机场' },
-  '羽田空港': { en: 'Haneda Airport', zh: '羽田机场' }
+  '羽田空港': { en: 'Haneda Airport', zh: '羽田机场' },
+  // 経路探索グラフ上の主要駅（臨海部・空港アクセス等）
+  'お台場海浜公園': { en: 'Odaiba Seaside Park', zh: '台场海滨公园' },
+  '台場': { en: 'Daiba', zh: '台场' },
+  '豊洲': { en: 'Toyosu', zh: '丰洲' },
+  '有明': { en: 'Ariake', zh: '有明' },
+  '青海': { en: 'Aomi', zh: '青海' },
+  '汐留': { en: 'Shiodome', zh: '汐留' },
+  '竹芝': { en: 'Takeshiba', zh: '竹芝' },
+  '日の出': { en: 'Hinode', zh: '日出' },
+  '芝浦ふ頭': { en: 'Shibaura-futo', zh: '芝浦码头' },
+  '東京国際クルーズターミナル': { en: 'Tokyo International Cruise Terminal', zh: '东京国际邮轮码头' },
+  '東京ビッグサイト': { en: 'Tokyo Big Sight', zh: '东京国际展示场' },
+  '国際展示場': { en: 'Kokusai-Tenjijo', zh: '国际展示场' },
+  '東京テレポート': { en: 'Tokyo Teleport', zh: '东京电讯港' },
+  '天王洲アイル': { en: 'Tennozu Isle', zh: '天王洲岛' },
+  '新木場': { en: 'Shinkiba', zh: '新木场' },
+  '市場前': { en: 'Shijomae', zh: '市场前' },
+  '新豊洲': { en: 'Shin-Toyosu', zh: '新丰洲' },
+  '有明テニスの森': { en: 'Ariake-Tennis-no-mori', zh: '有明网球场' },
+  '羽田空港第1ターミナル': { en: 'Haneda Airport Terminal 1', zh: '羽田机场第1航站楼' },
+  '羽田空港第2ターミナル': { en: 'Haneda Airport Terminal 2', zh: '羽田机场第2航站楼' },
+  '羽田空港第3ターミナル': { en: 'Haneda Airport Terminal 3', zh: '羽田机场第3航站楼' },
+  'モノレール浜松町': { en: 'Monorail Hamamatsucho', zh: '单轨滨松町' },
+  '天空橋': { en: 'Tenkubashi', zh: '天空桥' },
+  '大門': { en: 'Daimon', zh: '大门' },
+  '月島': { en: 'Tsukishima', zh: '月岛' },
+  '勝どき': { en: 'Kachidoki', zh: '胜哄' },
+  '築地市場': { en: 'Tsukiji Market', zh: '筑地市场' }
 };
 
 function getDisplayStationName(stationName, userLang) {
@@ -559,6 +590,84 @@ function getDisplayStationName(stationName, userLang) {
   const trans = STATION_DISPLAY_NAMES[stationName];
   if (trans && trans[userLang]) return trans[userLang];
   return stationName;
+}
+
+// 路線名の多言語表示（経路探索グラフの日本語路線名 → en/zh）
+const LINE_DISPLAY_NAMES = {
+  '都営浅草線': { en: 'Toei Asakusa Line', zh: '都营浅草线' },
+  '東京メトロ銀座線': { en: 'Tokyo Metro Ginza Line', zh: '东京地铁银座线' },
+  '東京メトロ日比谷線': { en: 'Tokyo Metro Hibiya Line', zh: '东京地铁日比谷线' },
+  'ゆりかもめ': { en: 'Yurikamome', zh: '百合海鸥线' },
+  'JR山手線': { en: 'JR Yamanote Line', zh: 'JR山手线' },
+  '都営大江戸線': { en: 'Toei Oedo Line', zh: '都营大江户线' },
+  '東京メトロ丸ノ内線': { en: 'Tokyo Metro Marunouchi Line', zh: '东京地铁丸之内线' },
+  '京浜東北線': { en: 'Keihin-Tohoku Line', zh: '京滨东北线' },
+  '西武池袋線': { en: 'Seibu Ikebukuro Line', zh: '西武池袋线' },
+  '西武新宿線': { en: 'Seibu Shinjuku Line', zh: '西武新宿线' },
+  'JR中央線快速': { en: 'JR Chuo Line (Rapid)', zh: 'JR中央线快速' },
+  'JR総武線各停': { en: 'JR Sobu Line (Local)', zh: 'JR总武线各站停车' },
+  'JR中央総武線各停': { en: 'JR Chuo-Sobu Line (Local)', zh: 'JR中央总武线各站停车' },
+  'JR埼京線': { en: 'JR Saikyo Line', zh: 'JR埼京线' },
+  'JR京葉線': { en: 'JR Keiyo Line', zh: 'JR京叶线' },
+  'JR武蔵野線': { en: 'JR Musashino Line', zh: 'JR武藏野线' },
+  'JR常磐線快速': { en: 'JR Joban Line (Rapid)', zh: 'JR常磐线快速' },
+  'JR東海道線': { en: 'JR Tokaido Line', zh: 'JR东海道线' },
+  '東京メトロ東西線': { en: 'Tokyo Metro Tozai Line', zh: '东京地铁东西线' },
+  '東京メトロ千代田線': { en: 'Tokyo Metro Chiyoda Line', zh: '东京地铁千代田线' },
+  '東京メトロ半蔵門線': { en: 'Tokyo Metro Hanzomon Line', zh: '东京地铁半藏门线' },
+  '東京メトロ有楽町線': { en: 'Tokyo Metro Yurakucho Line', zh: '东京地铁有乐町线' },
+  '東京メトロ副都心線': { en: 'Tokyo Metro Fukutoshin Line', zh: '东京地铁副都心线' },
+  '小田急小田原線': { en: 'Odakyu Odawara Line', zh: '小田急小田原线' },
+  '京王線': { en: 'Keio Line', zh: '京王线' },
+  '東急東横線': { en: 'Tokyu Toyoko Line', zh: '东急东横线' },
+  '東急田園都市線': { en: 'Tokyu Den-en-toshi Line', zh: '东急田园都市线' },
+  '東武東上線': { en: 'Tobu Tojo Line', zh: '东武东上线' },
+  '東武伊勢崎線': { en: 'Tobu Isesaki Line', zh: '东武伊势崎线' },
+  '京急本線': { en: 'Keikyu Main Line', zh: '京急本线' },
+  '京成押上線': { en: 'Keisei Oshiage Line', zh: '京成押上线' },
+  '相鉄本線': { en: 'Sotetsu Main Line', zh: '相铁本线' },
+  'つくばエクスプレス': { en: 'Tsukuba Express', zh: '筑波快线' },
+  'りんかい線': { en: 'Rinkai Line', zh: '临海线' },
+  'みなとみらい線': { en: 'Minatomirai Line', zh: '港未来线' },
+  '箱根登山線': { en: 'Hakone Tozan Line', zh: '箱根登山线' },
+  '北総鉄道': { en: 'Hokuso Railway', zh: '北总铁道' },
+  '埼玉高速鉄道': { en: 'Saitama Rapid Railway', zh: '埼玉高速铁道' },
+  '東葉高速鉄道': { en: 'Toyo Rapid Railway', zh: '东叶高速铁道' },
+  '芝山鉄道': { en: 'Shibayama Railway', zh: '芝山铁道' },
+  '日暮里舎人ライナー': { en: 'Nippori-Toneri Liner', zh: '日暮里·舍人线' },
+  '東京モノレール': { en: 'Tokyo Monorail', zh: '东京单轨电车' },
+  '多摩モノレール': { en: 'Tama Monorail', zh: '多摩单轨电车' },
+  '都電荒川線': { en: 'Toden Arakawa Line', zh: '都电荒川线' },
+  '都営三田線': { en: 'Toei Mita Line', zh: '都营三田线' },
+  '都営新宿線': { en: 'Toei Shinjuku Line', zh: '都营新宿线' }
+};
+
+function getDisplayLineName(lineName, userLang) {
+  if (!lineName || userLang === 'ja') return lineName;
+  const trans = LINE_DISPLAY_NAMES[lineName];
+  return (trans && trans[userLang]) || lineName;
+}
+
+// 気象庁の日本語天気文を en/zh に機械翻訳（出現順に置換。長い語を先に置く）
+const WEATHER_TERM_MAP = {
+  en: [
+    ['時々', 'occasionally'], ['一時', 'temporarily'], ['のち', 'then'], ['後', 'then'],
+    ['晴れ', 'sunny'], ['くもり', 'cloudy'], ['曇り', 'cloudy'], ['雨', 'rain'],
+    ['雪', 'snow'], ['雷', 'thunder'], ['風', 'wind'], ['強い', 'strong'], ['弱い', 'light']
+  ],
+  zh: [
+    ['時々', '有时'], ['一時', '短暂'], ['のち', '转'], ['後', '转'],
+    ['晴れ', '晴'], ['くもり', '多云'], ['曇り', '多云'], ['雨', '雨'],
+    ['雪', '雪'], ['雷', '雷'], ['風', '风'], ['強い', '强'], ['弱い', '弱']
+  ]
+};
+function translateWeather(text, userLang) {
+  if (!text || userLang === 'ja') return text;
+  let t = text;
+  for (const [from, to] of (WEATHER_TERM_MAP[userLang] || [])) t = t.split(from).join(to);
+  // 全角スペースは英中では通常のスペースに（JMAテキスト由来の整形用スペース）
+  t = t.split('\u3000').join(' ');
+  return t.trim();
 }
 
 const FERRY_PORT_MAP = {
@@ -663,17 +772,24 @@ const EMERGENCY_EVACUATION_SEARCH_URL = "https://www.google.com/maps/search/?api
 function detectLanguage(text) {
   if (!text) return 'ja';
   const str = text.trim();
+  if (!str) return 'ja';
+  // かな（ひらがな・カタカナ）を含む → 日本語
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(str)) return 'ja';
-  if (/^[A-Za-z0-9\s,._-]+$/.test(str)) return 'en';
-  if (/[东涩澀国关风颱积淹灾电號酷场場码头碼頭]/.test(str) ||
-      str.includes("台风") || str.includes("积水") || str.includes("淹水") ||
-      str.includes("火灾") || str.includes("停电") || str.includes("酷暑") ||
-      str.includes("中暑") || str.includes("积雪") || str.includes("暴雨") ||
-      str.includes("人员") || str.includes("伤亡") || str.includes("台场") ||
-      str.includes("地震") || str.includes("人身事故") || str.includes("信号故障") ||
-      str.includes("降雪") || str.includes("海啸") || str.includes("海嘯")) {
-    return 'zh';
-  }
+  // 漢字（CJK）を1文字も含まない → 英語
+  // （-> / → / / / ( ) などの記号を含む英字入力もすべて英語として判定される）
+  if (!/[\u3400-\u9FFF\uF900-\uFAFF]/.test(str)) return 'en';
+  // 中国語シグナル: 簡体字専用字（日本語に存在しない字形。漢字は日本語でも使われるため、
+  // 「日本語に無い字形」のみを判定に使う。例: 場→场、東→东、線→线、関→关）
+  const zhChars = /[场东车机门银视动关风积灾电号涩沪这吗呢很从您请让说时颱澀灣這嗎從請讓]/;
+  // 中国語の語彙・機能語
+  const zhWords = ['台风','积水','淹水','火灾','停电','酷暑','中暑','积雪','暴雨','海啸','海嘯',
+    '地震','人身事故','信号故障','降雪','台场','站台','换乘','票价','时刻表','地铁','电车',
+    '巴士','机场','车站','线路','路线','前往','出发','到达','查询','怎么','如何','最近','附近',
+    '几点','多少','航班','列车','天气','码头','碼頭','渡轮','轮渡','要多久','多少钱'];
+  if (zhChars.test(str) || zhWords.some(w => str.includes(w))) return 'zh';
+  // かな無し・漢字のみの入力で中国語の方向助詞を含む場合 → 中国語
+  // （例: 品川到新宿 / 从浅草出发。日本語は「から」「まで」「へ」をかなで書くため競合しない）
+  if (/(从|到(?!着)|去|请|您)/.test(str)) return 'zh';
   return 'ja';
 }
 
@@ -1150,9 +1266,11 @@ const FERRY_GTFS_SOURCES = [
 async function fetchFerryData() {
   const cached = cache.get(cache.ferryGtfs.key);
   if (cached) return cached;
-  // 新規取得時のみサーキットブレイカーをチェック
+  // 新規取得時のみサーキットブレイカーをチェック。
+  // ただしブレーカーが OPEN でもハードコード水上バス（東京クルーズ）は提供するため、
+  // 例外を握りつぶして実 GTFS 取得ループをスキップし、フォールバックへ進む。
   if (!odptBreaker.canExecute()) {
-    throw new Error("ODPT API is currently offline (Circuit Breaker is OPEN)");
+    console.log('[Ferry] ODPT breaker OPEN — skip live GTFS, use hardcoded fallback');
   }
   const AdmZip = (await import('adm-zip')).default;
   const parseCsv = (content) => {
@@ -1207,9 +1325,49 @@ async function fetchFerryData() {
       for (const t of safeParse('trips.txt')) allTrips.push({ ...t, route_id: src.name + ':' + t.route_id, _source: src.name });
       for (const st of safeParse('stop_times.txt')) allStopTimes.push({ ...st, _source: src.name });
       console.log(`[Ferry] ${src.name}: loaded`); odptBreaker.onSuccess();
-    } catch (e) { console.log(`[Ferry] ${src.name}: skip (${e.message})`); odptBreaker.onFailure(e); }
+    } catch (e) {
+      console.log(`[Ferry] ${src.name}: skip (${e.message})`); odptBreaker.onFailure(e);
+    }
   }
-  const data = { stops: allStops, routes: allRoutes, trips: allTrips, stopTimes: allStopTimes };
+  // 水上バス（東京クルーズ）の実 GTFS 取得失敗時のフォールバック。
+    // ODPT 静的 GTFS（TokyoCruiseShip/AllLines.zip）が 404 化したため、浅草・お台場海浜公園 等の
+    // 主要直行航路を合成し、search_ferry で検索可能にする（実 GTFS が復旧しても重複しないよう stop_name で補完）。
+    {
+    const wbPorts = ['浅草', '浜離宮', '日の出桟橋', 'お台場海浜公園', '豊洲', '竹芝'];
+    const wbEdges = [
+    ['浅草', 'お台場海浜公園'],       // ヒミコ / エメラルダスライン（直行）
+    ['浅草', '日の出桟橋'],           // ホタルナ / 隅田川ライン
+    ['浅草', '浜離宮'],               // 隅田川ライン
+    ['日の出桟橋', 'お台場海浜公園'], // お台場ライン
+    ['浜離宮', '日の出桟橋'],
+    ['日の出桟橋', '豊洲'],
+    ['お台場海浜公園', '豊洲'],
+    ['浅草', '豊洲'],
+    ];
+    for (const p of wbPorts) {
+    const sid = `TokyoCruiseHC:${p}`;
+    if (!seenStopIds.has(sid)) { allStops.push({ stop_id: sid, stop_name: p, stop_lat: '0', stop_lon: '0' }); seenStopIds.add(sid); }
+    }
+    let wbSeq = 0;
+    for (const [a, b] of wbEdges) {
+    const rid = `TokyoCruiseHC:${a}-${b}`;
+    if (!seenRouteIds.has(rid)) {
+      allRoutes.push({ route_id: rid, route_short_name: `${a}→${b}`, route_long_name: `${a}〜${b}`, _source: '東京クルーズ（水上バス）（ハードコード）' });
+      seenRouteIds.add(rid);
+    }
+    for (const [from, to] of [[a, b], [b, a]]) {
+      const tripId = `TokyoCruiseHC:T${wbSeq++}`;
+      allTrips.push({ route_id: rid, trip_id: tripId, _source: '東京クルーズ（水上バス）（ハードコード）' });
+      allStopTimes.push({ trip_id: tripId, stop_id: `TokyoCruiseHC:${from}`, stop_sequence: '1', arrival_time: '', departure_time: '' });
+      allStopTimes.push({ trip_id: tripId, stop_id: `TokyoCruiseHC:${to}`, stop_sequence: '2', arrival_time: '', departure_time: '' });
+    }
+    }
+    console.log(`[Ferry] 東京クルーズ（水上バス）（ハードコード）: loaded (${wbPorts.length} ports, ${wbEdges.length} routes)`);
+    }
+    // stop_name 重複を排除（実 GTFS とハードコードで同名港が混在する場合の表示重複防止）
+    const seenNames = new Set();
+    const dedupedStops = allStops.filter(s => { if (seenNames.has(s.stop_name)) return false; seenNames.add(s.stop_name); return true; });
+    const data = { stops: dedupedStops, routes: allRoutes, trips: allTrips, stopTimes: allStopTimes };
   cache.set(cache.ferryGtfs.key, data, cache.ferryGtfs.ttl);
   return data;
 }
@@ -1483,9 +1641,9 @@ async function searchRoute(args) {
   if (routeResult && routeResult.error && routeResult.error !== 'TEST_MODE') {
     const errType = routeResult.error === 'STATION_NOT_FOUND' ? 'STATION_NOT_FOUND' : 'NO_ROUTE';
     const errMsg = errType === 'STATION_NOT_FOUND'
-      ? (userLang === 'en' ? `Station not found: ${routeResult.suggestion_from || fromName} / ${routeResult.suggestion_to || toName}`
-         : userLang === 'zh' ? `未找到车站：${routeResult.suggestion_from || fromName} / ${routeResult.suggestion_to || toName}`
-         : `駅が見つかりません：${routeResult.suggestion_from || fromName} / ${routeResult.suggestion_to || toName}`)
+      ? (userLang === 'en' ? `Station not found: ${displayFrom} / ${displayTo}`
+         : userLang === 'zh' ? `未找到车站：${displayFrom} / ${displayTo}`
+         : `駅が見つかりません：${displayFrom} / ${displayTo}`)
       : (userLang === 'en' ? `No route found from ${displayFrom} to ${displayTo}.`
          : userLang === 'zh' ? `未找到从 ${displayFrom} 到 ${displayTo} 的路线。`
          : `${displayFrom} から ${displayTo} への経路が見つかりません。`);
@@ -1499,17 +1657,17 @@ async function searchRoute(args) {
   if (routeResult && routeResult.routes) {
     routesPayload = routeResult.routes.map(r => ({
       summary: {
-        from: r.summary.from,
-        to: r.summary.to,
+        from: getDisplayStationName(r.summary.from, userLang),
+        to: getDisplayStationName(r.summary.to, userLang),
         transfers: r.summary.transfers,
         total_stops: r.summary.total_stops,
         estimated_minutes: r.summary.estimated_minutes,
-        main_line: r.summary.main_line
+        main_line: getDisplayLineName(r.summary.main_line, userLang)
       },
       segments: r.segments.map(s => ({
-        line: s.line,
-        from: s.from,
-        to: s.to,
+        line: getDisplayLineName(s.line, userLang),
+        from: getDisplayStationName(s.from, userLang),
+        to: getDisplayStationName(s.to, userLang),
         stops: s.stops
       }))
     }));
@@ -1528,7 +1686,7 @@ async function searchRoute(args) {
     route_note: userLang === 'en' ? "Route computed by self-contained graph engine (ODPT-independent)." :
                 userLang === 'zh' ? "路线由自包含图引擎计算（不依赖雅虎）。" :
                 "経路は自己完結型エンジンで算出（Yahoo非依存）。",
-    weather_text: userLang === 'en' ? `Tokyo Area: ${weatherText}` : userLang === 'zh' ? `东京地区: ${weatherText}` : `東京地方: ${weatherText}`,
+    weather_text: userLang === 'en' ? `Tokyo Area: ${translateWeather(weatherText, 'en')}` : userLang === 'zh' ? `东京地区: ${translateWeather(weatherText, 'zh')}` : `東京地方: ${weatherText}`,
     // Yahoo!路線情報はフォールバックとして維持（完全依存はしない）
     direct_search_url: (isRainy || isEmergencyActive) ? `${webSearchUrl}&useLocalBus=true&walkSpeed=slow` : webSearchUrl,
     // Yahooに依存しない運賃情報をsearch_fareツールで取得可能
@@ -1580,7 +1738,7 @@ async function searchRoute(args) {
     note: userLang === 'en' ? "🚃 Non-rail transit also available" :
           userLang === 'zh' ? "🚃 非铁路交通工具亦可使用" :
           "🚃 非鉄道系交通機関も利用可能",
-    operators: Object.values(NON_RAIL_OPERATORS).map(op => op.label).join('、'),
+    operators: Object.values(NON_RAIL_OPERATORS).map(op => userLang === 'en' ? op.labelEn : userLang === 'zh' ? op.labelZh : op.label).join('、'),
     suggestion: userLang === 'en' ? "Check list_transit_operators tool for details" :
                 userLang === 'zh' ? "详情请使用 list_transit_operators 工具" :
                 "詳細は list_transit_operators ツールを"
@@ -1594,12 +1752,12 @@ async function searchRoute(args) {
             userLang === 'zh' ? "🚉 【车站周边巴士站指南】" :
             "🚉 【駅周辺バス停のご案内】",
       link: mapUrl,
-      hint: userLang === 'en' ? `Check exits (East/West/South/North) near ${fromName} Station for bus stops.` :
-            userLang === 'zh' ? `在${fromName}站的东西南北出口附近寻找巴士站。` :
-            `${fromName}駅の東口・西口・南口・北口周辺にバス停があります。`,
-      link_label: userLang === 'en' ? `📍 Show bus stops near ${fromName} Station on Google Maps` :
-                  userLang === 'zh' ? `📍 在地图上查看${fromName}站周边巴士站` :
-                  `📍 ${fromName}駅周辺のバス停を地図で確認`
+      hint: userLang === 'en' ? `Check exits (East/West/South/North) near ${displayFrom} Station for bus stops.` :
+            userLang === 'zh' ? `在${displayFrom}站的东西南北出口附近寻找巴士站。` :
+            `${displayFrom}駅の東口・西口・南口・北口周辺にバス停があります。`,
+      link_label: userLang === 'en' ? `📍 Show bus stops near ${displayFrom} Station on Google Maps` :
+                  userLang === 'zh' ? `📍 在地图上查看${displayFrom}站周边巴士站` :
+                  `📍 ${displayFrom}駅周辺のバス停を地図で確認`
     };
   }
 
@@ -1711,7 +1869,7 @@ async function getWeather(args) {
     ai_transit_advice: advice,
     detected_language: userLang,
     area: displayArea,
-    weather,
+    weather: translateWeather(weather, userLang),
     max_temp: maxTemp,
     heat_alert: isHot || undefined,
     gov_facility_search_support: {
@@ -3031,11 +3189,16 @@ async function searchFlight(args) {
         if (rr && rr.routes) {
           const route = rr.routes[0];
           accessRoutes.push({
-            from: stationName, to: dest,
+            from: getDisplayStationName(stationName, userLang), to: getDisplayStationName(dest, userLang),
             transfers: route.summary.transfers,
             estimated_minutes: route.summary.estimated_minutes,
-            main_line: route.summary.main_line,
-            segments: route.segments
+            main_line: getDisplayLineName(route.summary.main_line, userLang),
+            segments: route.segments.map(s => ({
+              line: getDisplayLineName(s.line, userLang),
+              from: getDisplayStationName(s.from, userLang),
+              to: getDisplayStationName(s.to, userLang),
+              stops: s.stops
+            }))
           });
         }
       }
@@ -3083,11 +3246,16 @@ async function searchFlight(args) {
         if (rr && rr.routes) {
           const route = rr.routes[0];
           accessRoutes.push({
-            from: stationName, to: dest,
+            from: getDisplayStationName(stationName, userLang), to: getDisplayStationName(dest, userLang),
             transfers: route.summary.transfers,
             estimated_minutes: route.summary.estimated_minutes,
-            main_line: route.summary.main_line,
-            segments: route.segments
+            main_line: getDisplayLineName(route.summary.main_line, userLang),
+            segments: route.segments.map(s => ({
+              line: getDisplayLineName(s.line, userLang),
+              from: getDisplayStationName(s.from, userLang),
+              to: getDisplayStationName(s.to, userLang),
+              stops: s.stops
+            }))
           });
         }
       }
