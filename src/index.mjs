@@ -2679,9 +2679,16 @@ async function fetchAllBuses(userLang) {
 
 // バス停名の簡易正規化（駅名マップに依存しない）: trim のみ。
 // 注意: 「駅前」「駅」等の suffix は除去しない（バス停の正規名は「○○駅前」のまま）。
+// ただし英字・中国語の駅名入力（'Shibuya Station' / '涩谷' 等）は駅名正規化
+// （STATION_NAME_MAP: romaji/zh→日本語）を適用して解決できるようにする。
 // グラフ構築と検索で同一正規化を使うことでノード名一致を担保する。
 function normalizeBusStop(name) {
-  return String(name || '').trim();
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return trimmed;
+  // 末尾の 駅/Station/站 サフィックスを除去してから駅名正規化（バス停名「渋谷駅前」は対象外）
+  const stripped = trimmed.replace(/(駅|Station|站|St\.?)\s*$/i, '').trim();
+  const normalized = normalizeStationName(stripped);
+  return (normalized && normalized !== stripped) ? normalized : trimmed;
 }
 
 // odpt:BusroutePattern から (operator, routePatternId, [orderedStopNames]) を取得
