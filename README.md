@@ -406,10 +406,12 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 tokyo-transit-mcp/
 ├── src/
 │   └── index.mjs       # メインサーバー（全ロジック）
-├── docs/
-│   ├── bus-transfer-design.md    # バス乗り継ぎ・横断乗り継ぎ 設計/実装記録
-│   └── flight-info-design.md     # 空港フライト 設計/実装記録
+├── scripts/            # 回帰検証プローブ（多言語・バス乗り継ぎ・言語検出）
+│   ├── probe-all-lang.mjs
+│   ├── probe-bus-transfer-lang.mjs
+│   └── probe-language-detection.mjs
 ├── package.json
+├── package-lock.json
 ├── README.md
 ├── SKILL.md             # プロジェクトスキル定義（v2.19.0）
 ├── mcp.json             # MCPクライアント設定例
@@ -836,10 +838,12 @@ Directory layout and key files of this project.
 tokyo-transit-mcp/
 ├── src/
 │   └── index.mjs       # Main server script
-├── docs/
-│   ├── bus-transfer-design.md    # Bus transfer / cross-modal design & impl record
-│   └── flight-info-design.md     # Airport flight design & impl record
+├── scripts/            # Regression probes (multilingual / bus transfer / language detection)
+│   ├── probe-all-lang.mjs
+│   ├── probe-bus-transfer-lang.mjs
+│   └── probe-language-detection.mjs
 ├── package.json
+├── package-lock.json
 ├── README.md
 ├── SKILL.md             # Project skill definition (v2.19.0)
 ├── mcp.json             # MCP client configuration example
@@ -1266,10 +1270,12 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 tokyo-transit-mcp/
 ├── src/
 │   └── index.mjs       # 主服务器文件
-├── docs/
-│   ├── bus-transfer-design.md    # 公交换乘/跨方式换乘 设计及实现记录
-│   └── flight-info-design.md     # 机场航班 设计及实现记录
+├── scripts/            # 回归验证探针（多语言 / 公交换乘 / 语言检测）
+│   ├── probe-all-lang.mjs
+│   ├── probe-bus-transfer-lang.mjs
+│   └── probe-language-detection.mjs
 ├── package.json
+├── package-lock.json
 ├── README.md
 ├── SKILL.md             # 项目技能定义（v2.19.0）
 ├── mcp.json             # MCP 客户端配置示例
