@@ -3456,32 +3456,53 @@ const DEFAULT_ACCESS_DESTINATIONS = {
 };
 
 // AviationStack からフライトを取得（キーなし・エラー時は null を返し graceful degradation）
+// 注意: AviationStack は flight_status の複数値（カンマ区切り）を拒否する（validation_error）。
+// また無料プランは flight_date パラメータ非対応（function_access_restricted）のため、
+// エラー時は必須パラメータ（空港/便名/limit）のみで再試行する。
 async function fetchFlights(params) {
   if (!FLIGHT_API_KEY) return null;
-  const qs = new URLSearchParams({ access_key: FLIGHT_API_KEY, limit: String(params.limit || 20) });
-  if (params.flight_iata) qs.set('flight_iata', params.flight_iata);
-  else if (params.arr_iata) qs.set('arr_iata', params.arr_iata);
-  else if (params.dep_iata) qs.set('dep_iata', params.dep_iata);
-  if (params.flight_status) qs.set('flight_status', params.flight_status);
-  if (params.flight_date) qs.set('flight_date', params.flight_date);
-  if (params.airline_iata) qs.set('airline_iata', params.airline_iata);
-  const url = `${FLIGHT_API_BASE}/flights?${qs.toString()}`;
-  const cacheKey = cache.flightData.key + ':' + qs.toString();
+  const buildQuery = (p) => {
+    const qs = new URLSearchParams({ access_key: FLIGHT_API_KEY, limit: String(p.limit || 20) });
+    if (p.flight_iata) qs.set('flight_iata', p.flight_iata);
+    else if (p.arr_iata) qs.set('arr_iata', p.arr_iata);
+    else if (p.dep_iata) qs.set('dep_iata', p.dep_iata);
+    if (p.flight_status) qs.set('flight_status', p.flight_status);
+    if (p.flight_date) qs.set('flight_date', p.flight_date);
+    if (p.airline_iata) qs.set('airline_iata', p.airline_iata);
+    return qs.toString();
+  };
+  const url = `${FLIGHT_API_BASE}/flights?${buildQuery(params)}`;
+  const cacheKey = cache.flightData.key + ':' + url;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
-  try {
-    const res = await axios.get(url, { timeout: 12000 });
-    // AviationStack はエラー時 { error: { ... } } を返す（無効キー等）
+  const hasRestrictedParams = !!(params.flight_status || params.flight_date || params.airline_iata);
+  const call = async (u) => {
+    const res = await axios.get(u, { timeout: 12000 });
+    // AviationStack はエラー時 { error: { ... } } を返す（無効キー・パラメータ制限等）
     if (res.data && res.data.error) {
-      console.warn('AviationStack error:', res.data.error.message || res.data.error.type);
-      return null;
+      throw new Error(res.data.error.message || res.data.error.type);
     }
-    const data = res.data && res.data.data ? res.data.data : [];
+    return res.data && res.data.data ? res.data.data : [];
+  };
+  try {
+    const data = await call(url);
     cache.set(cacheKey, data, cache.flightData.ttl);
     return data;
   } catch (err) {
-    // ネットワークエラー・401等: graceful degradation にフォールバック
-    console.warn('AviationStack fetch failed (fallback to access route only):', err.message);
+    console.warn('AviationStack error:', err.message);
+    // 制限パラメータ（flight_status / flight_date / airline_iata）またはプラン制限（HTTP 403等）で
+    // 失敗した場合は、必須パラメータ（空港/便名/limit）のみで再試行する。
+    if ((params.flight_iata || params.arr_iata || params.dep_iata) && (hasRestrictedParams || err.response)) {
+      try {
+        const retryParams = { flight_iata: params.flight_iata, arr_iata: params.arr_iata, dep_iata: params.dep_iata, limit: params.limit || 20 };
+        const data = await call(`${FLIGHT_API_BASE}/flights?${buildQuery(retryParams)}`);
+        cache.set(cacheKey, data, cache.flightData.ttl);
+        return data;
+      } catch (e2) {
+        console.warn('AviationStack retry error:', e2.message);
+        return null;
+      }
+    }
     return null;
   }
 }
@@ -3568,7 +3589,8 @@ async function searchFlight(args) {
       }
       if (flightDate) params.flight_date = flightDate;
       if (airlineIata) params.airline_iata = airlineIata.toUpperCase();
-      params.flight_status = direction === 'arrival' ? 'landed,scheduled,active' : 'scheduled,active';
+      // flight_status は複数値が AviationStack で拒否される（validation_error）ため送らない
+      // （当日分はステータス問わず取得し、表示時に各便のステータスをそのまま見せる）
       flights = await fetchFlights(params);
     }
 
@@ -3601,9 +3623,13 @@ async function searchFlight(args) {
       // 便名のみ指定で空港が特定できない場合の案内
       const isFlightNumberOnly = !airportRaw && !!flightNumber;
       const note = isFlightNumberOnly
-        ? label('便名検索には FLIGHT_API_KEY の設定が必要です（到着空港を特定できません）。',
-                'Flight number search requires FLIGHT_API_KEY (cannot determine arrival airport).',
-                '按航班号查询需要配置 FLIGHT_API_KEY（无法确定到达机场）。')
+        ? (FLIGHT_API_KEY
+          ? label('指定された便は当日のデータに見つかりませんでした（無料プランでは当日分のみ取得可能・日付指定は非対応です）。',
+                  'No flights found for the specified flight number (free plan covers current-day data only; date parameter is not supported).',
+                  '未找到指定航班（免费套餐仅支持当日数据，不支持日期参数）。')
+          : label('便名検索には FLIGHT_API_KEY の設定が必要です（到着空港を特定できません）。',
+                  'Flight number search requires FLIGHT_API_KEY (cannot determine arrival airport).',
+                  '按航班号查询需要配置 FLIGHT_API_KEY（无法确定到达机场）。'))
         : (FLIGHT_API_KEY
           ? label('フライトが見つかりませんでした。', 'No flights found.', '未找到航班。')
           : label('フライト時刻は設定されていません（APIキー未設定）。空港へのアクセス経路のみ表示します。',

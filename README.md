@@ -236,7 +236,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（�
 - **表示項目** — 便名・航空会社・ステータス（予定/運航中/到着済/欠航）・ターミナル・ゲート・予定時刻・実際時刻・遅延（分）
 - **Graceful degradation** — `FLIGHT_API_KEY` 未設定時はフライト時刻なしで、空港へのアクセス経路のみ表示
 
-※ フライト時刻は [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）が必要です。未設定時は空港アクセス経路のみ表示します。
+※ フライト時刻は [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）が必要です。無料プランでは当日分のみ取得可能で、日付指定（`flight_date`）は非対応です。未設定時は空港アクセス経路のみ表示します。
 
 ```
 search_flight(airport: "羽田空港", direction: "arrival")              # 羽田着フライト一覧
@@ -659,7 +659,7 @@ search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(tr
 - **Fields** — flight no., airline, status (scheduled/active/landed/cancelled), terminal, gate, scheduled/actual time, delay (min)
 - **Graceful degradation** — without `FLIGHT_API_KEY`, shows airport access routes only (no flight times)
 
-Note: flight times require the [AviationStack](https://aviationstack.com/) API (`FLIGHT_API_KEY`). Without it, only airport access routes are shown.
+Note: flight times require the [AviationStack](https://aviationstack.com/) API (`FLIGHT_API_KEY`). The free plan covers current-day data only and does not support the date parameter (`flight_date`). Without a key, only airport access routes are shown.
 
 ```
 search_flight(airport: "Haneda Airport", direction: "arrival")                    # Haneda arrivals
@@ -1082,7 +1082,7 @@ search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电�
 - **显示项** — 航班号、航空公司、状态（准点/飞行中/已到达/取消）、航站楼、登机口、计划时间、实际时间、延误（分钟）
 - **优雅降级** — 未配置 `FLIGHT_API_KEY` 时仅显示机场接驳路线（无航班时刻）
 
-注：航班时刻需要 [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）。未配置时仅显示机场接驳路线。
+注：航班时刻需要 [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）。免费套餐仅支持当日数据，不支持日期参数（`flight_date`）。未配置时仅显示机场接驳路线。
 
 ```
 search_flight(airport: "羽田空港", direction: "arrival")                        # 羽田到达航班
