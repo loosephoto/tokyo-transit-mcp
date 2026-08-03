@@ -172,7 +172,7 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 
 ### 6. `search_bus` — バス路線・乗り継ぎ検索（都営・西武・横浜市営＋JRバス関東・コミュニティバス）
 
-ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横浜市営バス）の3事業者を並列取得し、GTFS-JP 個別取得パスで JRバス関東・都内コミュニティバス（ちぃばす・ハチ公バス等）を追加します。
+ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横浜市営バス）の3事業者を並列取得し、GTFS-JP 個別取得パスで JRバス関東・都内コミュニティバス（ちぃばす・ハチ公バス等）を追加します。コミュニティバスは東京バス協会「東京バス案内WEB」（tokyobus.or.jp/sp）掲載の**41自治体ディレクトリ**に対応し、`busstop_name` に「ちぃばす」「ムーバス」「すぎ丸」等のバス名や自治体名を指定すると、名称・自治体・公式サイトURLを案内します（時刻表・路線は各自治体サイトで確認）。
 
 - **バス停検索**: `busstop_name` でバス停・系統を検索
 - **乗り継ぎ探索**: `from` + `to` で `odpt:BusroutePattern` の停留所順序から最短乗り継ぎ経路を探索（案B: 異系統・異事業者間の乗り継ぎ対応）
@@ -228,6 +228,14 @@ list_ferry_ports(language: "ja")
 
 ```
 search_ferry(from_port: "東京", to_port: "大島")
+```
+
+### 11. `list_community_buses` — 東京都コミュニティバス一覧
+
+東京バス協会「東京バス案内WEB」（tokyobus.or.jp/sp）掲載の**41自治体のコミュニティバス**を自治体別に一覧表示します（ちぃばす・ハチ公バス・ムーバス・すぎ丸・はなバス 等）。各バスの公式サイトURL付きで、時刻表・路線の詳細はリンク先で確認できます。日本語・英語・中国語の3言語対応。
+
+```
+list_community_buses(language: "ja")   # ja / en / zh
 ```
 
 ---
@@ -526,7 +534,7 @@ get_timetable(station_name: "Shibuya", railway: "Yamanote Line")
 
 ### 6. `search_bus` — Bus Route & Transfer Search (Toei / Seibu / Yokohama City + JR Bus Kanto / Community Bus)
 
-Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged in parallel from ODPT `odpt:Bus`, plus a **GTFS-JP individual-feed path** that adds JR Bus Kanto and Tokyo community buses (Chii-bus, Hachiko-bus, etc.).
+Searches Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) merged in parallel from ODPT `odpt:Bus`, plus a **GTFS-JP individual-feed path** that adds JR Bus Kanto and Tokyo community buses (Chii-bus, Hachiko-bus, etc.). Community buses now cover the **41-municipality directory** from the Tokyo Bus Association (tokyobus.or.jp/sp): passing a bus name or municipality to `busstop_name` (e.g. "Mu-Bus", "Sugimaru") returns the name, municipality, and official website URL (timetables/routes are on each municipal site).
 
 - **Stop search**: `busstop_name` to find stops / routes
 - **Transfer search**: `from` + `to` builds shortest transfer routes from `odpt:BusroutePattern` stop order (Plan B: cross-route / cross-operator transfers)
@@ -577,6 +585,14 @@ list_ferry_ports(language: "en")
 ### 10. `search_ferry` — Ferry / Water Bus Route Search
 ```
 search_ferry(from_port: "Tokyo", to_port: "Oshima")
+```
+
+### 11. `list_community_buses` — Tokyo Community Buses
+
+Lists **41 community buses across Tokyo wards/cities** published by the Tokyo Bus Association (tokyobus.or.jp/sp), including Chiibusu, Hachiko Bus, Mu-Bus, Sugimaru, and Hanabus. Each entry comes with the official municipal website URL for timetables and routes. Available in Japanese, English, and Chinese.
+
+```
+list_community_buses(language: "ja")   # ja / en / zh
 ```
 
 ---
@@ -875,7 +891,7 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 
 ### 6. `search_bus` — 公交路线与换乘查询（都营/西武/横滨市营 + JR巴士关东/社区公交）
 
-从 ODPT 的 `odpt:Bus` 并行获取并合并都营公交、西武公交、横滨市交通局（横滨市营公交）3 家运营商的数据，并通过 **GTFS-JP 单独数据源路径** 追加 JR 巴士关东和东京社区公交（ちぃばす、ハチ公バス等）。
+从 ODPT 的 `odpt:Bus` 并行获取并合并都营公交、西武公交、横滨市交通局（横滨市营公交）3 家运营商的数据，并通过 **GTFS-JP 单独数据源路径** 追加 JR 巴士关东和东京社区公交（ちぃばす、ハチ公バス等）。社区公交已覆盖东京巴士协会「东京巴士指南WEB」（tokyobus.or.jp/sp）的**41 自治体目录**：在 `busstop_name` 中指定巴士名称或自治体名（如「ムーバ斯」「すぎ丸」），即可返回名称、自治体与官方网址（时刻表与路线请在各自治体官网确认）。
 
 - **公交站查询**: `busstop_name` 搜索公交站/线路
 - **换乘搜索**: `from` + `to` 基于 `odpt:BusroutePattern` 的站点顺序构建最短换乘路线（方案B: 跨线路/跨运营商换乘）
@@ -926,6 +942,14 @@ list_ferry_ports(language: "zh")
 ### 10. `search_ferry` — 轮渡/水上巴士航线搜索
 ```
 search_ferry(from_port: "東京", to_port: "大島")
+```
+
+### 11. `list_community_buses` — 东京都社区公交一览
+
+按自治体列出东京巴士协会「东京巴士指南WEB」（tokyobus.or.jp/sp）收录的**41条社区公交**（ちぃばす・哈チ公巴士・ムーバ斯・すぎ丸・はな巴士 等）。每条均附带官方网址，时刻表与路线详情请在链接中确认。支持日语、英语、中文。
+
+```
+list_community_buses(language: "ja")   # ja / en / zh
 ```
 
 ---

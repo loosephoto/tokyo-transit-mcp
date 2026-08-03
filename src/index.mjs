@@ -1425,6 +1425,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: '交通事業者一覧 - 鉄道・AGT・モノレール・路面電車・フェリーの全事業者を種別フィルター付きで表示。',
       inputSchema: { type: 'object', properties: { language: { type: 'string', enum: ['ja', 'en', 'zh'] }, type_filter: { type: 'string', enum: ['rail', 'agt', 'monorail', 'tram', 'all'] } }, required: [] }
     },
+    { name: 'list_community_buses',
+      description: '🚌 東京都コミュニティバス一覧 - 東京バス協会（tokyobus.or.jp）掲載の41自治体コミュニティバス（ちぃばす・ハチ公バス・ムーバス等）を自治体別に表示。時刻表・路線は各自治体公式サイトへのリンクで案内。',
+      inputSchema: { type: 'object', properties: { language: { type: 'string', enum: ['ja', 'en', 'zh'] } }, required: [] }
+    },
     { name: 'get_operator_routes',
       description: '事業者別路線一覧 - 指定事業者の全路線と駅を表示（例: tokyometro, jreast, mir, twr, yurikamome, toden）。',
       inputSchema: { type: 'object', properties: { operator_name: { type: 'string', description: '事業者キー' }, language: { type: 'string', enum: ['ja', 'en', 'zh'] } }, required: ['operator_name'] }
@@ -1458,6 +1462,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'list_ferry_ports': return await listFerryPorts(args);
       case 'search_ferry': return await searchFerry(args);
       case 'list_transit_operators': return await listTransitOperators(args);
+      case 'list_community_buses': return await listCommunityBuses(args);
       case 'get_operator_routes': return await getOperatorRoutes(args);
       case 'search_fare': return await searchFare(args);
       case 'get_timetable': return await getTimetable(args);
@@ -1881,9 +1886,28 @@ async function getWeather(args) {
   });
 }
 
-// ==========================================
+// ============================================================
+// 🚌 東京都コミュニティバス一覧（tokyobus.or.jp ディレクトリ）
+// ============================================================
+async function listCommunityBuses(args) {
+  const userLang = args?.language || 'ja';
+  const sorted = [...TOKYO_COMMUNITY_BUSES].sort((a, b) => a.municipality.localeCompare(b.municipality, 'ja'));
+  return jsonResponse({
+    status: "SUCCESS",
+    detected_language: userLang,
+    title: userLang === 'en' ? "🚌 Tokyo Community Buses" : userLang === 'zh' ? "🚌 东京都社区公交一览" : "🚌 東京都コミュニティバス一覧",
+    note: userLang === 'en' ? "41 community buses across Tokyo wards/cities (source: Tokyo Bus Association tokyobus.or.jp). Timetables & routes are available on each municipality's official site." :
+          userLang === 'zh' ? "东京都23区及多摩地区的41条社区公交（来源：东京巴士协会 tokyobus.or.jp）。时刻表与路线请参见各自治体官网。" :
+          "東京都23区・多摩地域の41コミュニティバス（出典: 東京バス協会 tokyobus.or.jp）。時刻表・路線は各自治体公式サイトでご確認ください。",
+    total: sorted.length,
+    community_buses: sorted.map(b => ({ municipality: b.municipality, name: b.name, url: b.url })),
+    source: "https://www.tokyobus.or.jp/sp/"
+  });
+}
+
+// ============================================================
 // 🚢 フェリー港一覧
-// ==========================================
+// ============================================================
 async function listFerryPorts(args) {
   const userLang = args?.language || 'ja';
   try {
@@ -2248,6 +2272,57 @@ const BUS_OPERATORS = [
 //   定義し検索可能にする（フェリーの FERRY_GTFS_SOURCES と同設計）。
 //   将来的に安定URLが確定したら { url, date } ソースとして追加可能。
 // ============================================================
+// ============================================================
+// 🚌 東京都コミュニティバス ディレクトリ（41自治体）
+// ------------------------------------------------------------
+// 出典: 東京バス協会「東京バス案内WEB」スマホ版 https://www.tokyobus.or.jp/sp/ の
+// 「コミュニティバス検索」一覧（JSバンドル内の静的リンク集）。2026-08 に取得・確認。
+// 本サイトは路線・停留所・時刻表データを持たず各自治体公式ページへのリンクのみのため、
+// 検索結果では「名称＋自治体＋公式URL」の案内を表示する（ディレクトリ用途）。
+const TOKYO_COMMUNITY_BUSES = [
+  { municipality: '荒川区', name: 'さくら・汐入さくら', url: 'https://www.city.arakawa.tokyo.jp/kurashi/koutsu_bus/kotsu/index.html' },
+  { municipality: '足立区', name: 'はるかぜ', url: 'https://www.city.adachi.tokyo.jp/machi/kotsu/index.html' },
+  { municipality: '昭島市', name: 'Ａバス', url: 'http://www.city.akishima.lg.jp/030/130/index.html' },
+  { municipality: 'あきる野市', name: 'るのバス', url: 'http://www.city.akiruno.tokyo.jp/category/1-9-5-0-0.html' },
+  { municipality: '板橋区', name: 'りんりん号', url: 'http://www.city.itabashi.tokyo.jp/c_kurashi/026/026518.html' },
+  { municipality: '稲城市', name: 'ｉバス', url: 'https://www.city.inagi.tokyo.jp/kurashi/bus/ai_bus/index.html' },
+  { municipality: '大田区', name: 'たまちゃんバス', url: 'http://www.city.ota.tokyo.jp/seikatsu/sumaimachinami/koutsu/communitybusdounyu/communitybus_shikou.html' },
+  { municipality: '北区', name: 'Ｋバス', url: 'http://www.city.kita.tokyo.jp/kurashi/bus/index.html' },
+  { municipality: '清瀬市', name: 'きよバス', url: 'http://www.city.kiyose.lg.jp/050/060/010/index.html' },
+  { municipality: '国立市', name: 'くにっこ', url: 'http://www.city.kunitachi.tokyo.jp/machi/traffic/traffic3/traffic7/index.html' },
+  { municipality: '江東区', name: 'しおかぜ', url: 'http://www.city.koto.lg.jp/470801/kurashi/kotsu/kokyo/13116.html' },
+  { municipality: '小金井市', name: 'ＣｏＣｏバス', url: 'https://www.city.koganei.lg.jp/smph/kurashi/482/buss/cocobus.html' },
+  { municipality: '国分寺市', name: 'ぶんバス', url: 'http://www.city.kokubunji.tokyo.jp/kurashi/koutsuu/bus/' },
+  { municipality: '狛江市', name: 'こまバス', url: 'http://www.city.komae.tokyo.jp/sp/index.cfm/41,23028,312,html' },
+  { municipality: '小平市', name: 'にじバス', url: 'http://www.city.kodaira.tokyo.jp/kurashi/000/000137.html' },
+  { municipality: '新宿区', name: '新宿ＷＥバス', url: 'http://www.city.shinjuku.lg.jp/seikatsu/file17_06_00001.html' },
+  { municipality: '渋谷区', name: 'ハチ公バス', url: 'http://www.city.shibuya.tokyo.jp/shibuya/com_bus/index.html' },
+  { municipality: '墨田区', name: 'すみまるくん　他', url: 'http://www.city.sumida.lg.jp/kurashi/jyunkanbus/index.html' },
+  { municipality: '杉並区', name: 'すぎ丸', url: 'http://www.city.suginami.tokyo.jp/guide/machi/bus/index.html' },
+  { municipality: '世田谷区', name: 'せたがやくるりん　他', url: 'http://www.city.setagaya.lg.jp/kurashi/102/122/365/index.html' },
+  { municipality: '台東区', name: 'めぐりん', url: 'http://www.city.taito.lg.jp/index/kurashi/kotsu/megurin/index.html' },
+  { municipality: '立川市', name: 'くるりんバス', url: 'http://www.city.tachikawa.lg.jp/kurashi/kotsu/shiminbus/index.html' },
+  { municipality: '多摩市', name: '多摩市ミニバス', url: 'http://www.city.tama.lg.jp/0000001287.html' },
+  { municipality: '中央区', name: '江戸バス', url: 'http://www.city.chuo.lg.jp/kurasi/edobasu/index.html' },
+  { municipality: '調布市', name: 'ミニバス', url: 'http://www.city.chofu.tokyo.jp/www/genre/0000000000000/1000000010120/index.html' },
+  { municipality: '豊島区', name: '池07系統', url: 'http://www.city.toshima.lg.jp/298/machizukuri/kotsu/bus/1504221057.html' },
+  { municipality: '西東京市', name: 'はなバス', url: 'http://www.city.nishitokyo.lg.jp/kurasi/kotu/hanabus/index.html' },
+  { municipality: '練馬区', name: 'みどりバス', url: 'http://www.city.nerima.tokyo.jp/kurashi/sumai/bus/index.html' },
+  { municipality: '八王子市', name: 'はちバス', url: 'http://www.city.hachioji.tokyo.jp/kurashi/life/001/002/index.html' },
+  { municipality: '羽村市', name: 'はむらん', url: 'http://www.city.hamura.tokyo.jp/category/1-11-15-0-0.html' },
+  { municipality: '日野市', name: 'ミニバス', url: 'http://www.city.hino.lg.jp/kurashi/kotsu/bus/minibus/index.html' },
+  { municipality: '東大和市', name: 'ちょこバス', url: 'https://www.city.higashiyamato.lg.jp/index.cfm/31,0,335,547,html' },
+  { municipality: '東村山市', name: 'グリーンバス', url: 'http://www.city.higashimurayama.tokyo.jp/kurashi/sumai/bus/index.html' },
+  { municipality: '檜原村', name: 'やまびこ', url: 'http://www.vill.hinohara.tokyo.jp/0000000090.html' },
+  { municipality: '府中市', name: 'ちゅうバス', url: 'https://www.city.fuchu.tokyo.jp/kurashi/machi/chubus/index.html' },
+  { municipality: '文京区', name: 'Ｂーぐる', url: 'http://www.city.bunkyo.lg.jp/sosiki_busyo_kumin_jigyou_b-guru.html' },
+  { municipality: '町田市', name: 'まちっこ　他', url: 'http://www.city.machida.tokyo.jp/kanko/kotu_syuku/index.html' },
+  { municipality: '港区', name: 'ちぃばす', url: 'https://www.city.minato.tokyo.jp/kankyo-machi/kotsu/bus/community.html' },
+  { municipality: '三鷹市', name: 'みたかシティバス', url: 'http://www.city.mitaka.tokyo.jp/c_service/000/000756.html' },
+  { municipality: '武蔵野市', name: 'ムーバス', url: 'http://www.city.musashino.lg.jp/kurashi_guide/norimono_chuurin_chuusha/mu_bus/' },
+  { municipality: '武蔵村山市', name: 'ＭＭシャトル', url: 'http://www.city.musashimurayama.lg.jp/kurashi/koutsu/koukyoukoutu/1000603/index.html' }
+];
+
 const BUS_GTFS_SOURCES = [
   // JRバス関東: 主要ターミナル・系統（ODPT未登録のためハードコード）
   {
@@ -2270,11 +2345,13 @@ const BUS_GTFS_SOURCES = [
     ]
   },
   // 東京都内コミュニティバス（代表例: 23区＋多摩地域の主要コミュニティバス）
+  // communityBuses: tokyobus.or.jp/sp の41自治体ディレクトリ（名称＋公式URL）。検索・一覧表示用。
   {
     name: '東京都コミュニティバス', operatorId: 'TokyoCommunity',
     label: '都内コミュニティバス', labelEn: 'Tokyo Community Bus', labelZh: '东京都社区公交',
-    website: 'https://www.metro.tokyo.lg.jp/',
+    website: 'https://www.tokyobus.or.jp/sp/',
     hardCoded: true,
+    communityBuses: TOKYO_COMMUNITY_BUSES,
     stops: [
       '港区役所（ちぃばす）', '新宿駅西口（新宿WEバス）', '渋谷駅（ハチ公バス）',
       '千代田区役所（風ぐるま）', '中央区役所（江戸バス）', '品川駅（すいすい館山）',
@@ -2320,6 +2397,27 @@ function buildHardCodedBusRecords(src) {
       _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
       _searchKeys: [from, to, note],
       _displayNote: note,
+      _hardCoded: true
+    });
+  }
+  // コミュニティバス ディレクトリ（自治体×バス名×公式URL）も検索対象に
+  // 出典: tokyobus.or.jp/sp のコミュニティバス検索一覧（名称＋自治体＋公式ページURL）
+  for (const cb of (src.communityBuses || [])) {
+    const note = `[コミュニティバス] ${cb.name}（${cb.municipality}）`;
+    const searchable = `${cb.municipality}${cb.name}`;
+    recs.push({
+      'odpt:note': note,
+      'odpt:busroute': `${src.operatorId}:cb:${cb.name}`,
+      'odpt:busNumber': '',
+      'odpt:frequency': '',
+      'odpt:operator': `odpt.Operator:${src.operatorId}`,
+      _operatorId: src.operatorId,
+      _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
+      _searchKeys: [cb.name, cb.municipality, searchable, note, 'コミュニティバス'],
+      _displayNote: `${cb.name}（${cb.municipality}）`,
+      _communityBus: true,
+      _communityBusUrl: cb.url,
+      _municipality: cb.municipality,
       _hardCoded: true
     });
   }
@@ -2982,7 +3080,10 @@ async function searchBus(args) {
         operators: operatorSumm,
         bus_routes: buses.slice(0, 20).map(b => ({
           note: b['odpt:note'] || b._displayNote, route: b['odpt:busroute'], number: b['odpt:busNumber'],
-          operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label
+          operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label,
+          website: b._communityBusUrl || b._operatorLabel.website || undefined,
+          community_bus: b._communityBus ? true : undefined,
+          municipality: b._municipality || undefined
         })),
         barrier_free_note: barrierFreeNote,
         data_source: dataSourceNote,
@@ -3010,7 +3111,10 @@ async function searchBus(args) {
       bus_routes: matched.slice(0, 20).map(b => ({
         note: b['odpt:note'] || b._displayNote, route: b['odpt:busroute'], number: b['odpt:busNumber'],
         frequency: b['odpt:frequency'],
-        operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label
+        operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label,
+        website: b._communityBusUrl || b._operatorLabel.website || undefined,
+        community_bus: b._communityBus ? true : undefined,
+        municipality: b._municipality || undefined
       })),
       barrier_free_note: barrierFreeNote,
       data_source: dataSourceNote,
@@ -3280,7 +3384,7 @@ async function searchFlight(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight };
 
 async function main() {
   const transport = new StdioServerTransport();
