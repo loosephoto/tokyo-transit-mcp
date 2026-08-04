@@ -29,9 +29,9 @@
 | ✈️ フライト | 羽田(HND)・成田(NRT) の到着/出発フライト（AviationStack）。キー未設定時は空港アクセス経路のみ表示（graceful degradation） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API・1,878ポート） |
 
-### 🛤️ 路線網とAPI突合
+### 🛤️ 路線網の網羅性とデータ確認
 
-`odpt:Railway`、公開路線一覧、国土数値情報の鉄道データを突合し、v2.20.0で東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。駅順・支線・接続駅を確認し、駅表示名（日本語/英語/中国語）と路線表示名も同期しています。APIは事業者・路線の存在確認に使用し、経路探索はキー不要の内蔵グラフで実行します。
+公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -40,6 +40,7 @@
 - **☀ 晴天時** — 快適な移動をサポート
 - **☔ 雨天時** — 濡れた駅構内・階段の滑りやすさを注意喚起し、バス振替を推奨
 - **🌡 高温時** — 熱中症警戒アラートと水分補給を推奨
+- **❄ 降雪時** — 足元の凍結・遅延・運休の可能性を案内し、時間に余裕を持つ移動を推奨
 - **🚨 緊急時** — 運転見合わせ・災害検知時は避難所リンクを自動表示
 
 ### 🛡 セーフティ＆フォールトトレランス
@@ -48,7 +49,7 @@
 - **統一キャッシュ管理** — API負荷を最大80%削減（最長24時間キャッシュ）
 - **デグレードモード** — API障害時も部分稼働を継続
 - **荒天時安全ロジック** — 台風・浸水時は自転車案内を自動非表示
-- **LLMフレンドリーJSON** — 全エラーを構造化データで出力
+- **LLMフレンドリーJSON** — 全エラーを、AIが状況・再試行可否・次の選択肢を解釈しやすい構造化データで出力
 
 ### 💬 自然言語で簡単検索
 
@@ -67,15 +68,15 @@ Oshima ferry from Tokyo
 
 ### 🌐 マルチランゲージ
 
-入力言語を自動判定し、**応答全体をその言語でローカライズ**します。AIアドバイスだけでなく、経路の駅名・路線名、天気テキスト、エラーメッセージまでユーザーの言語で返します。
+利用者の質問言語に合わせて、**応答全体を日本語・英語・中国語でローカライズ**します。AIアドバイスだけでなく、経路の駅名・路線名、天気テキスト、エラーメッセージも同じ言語で返します。
 
-| 入力 | 応答言語 |
-|:---|:---|
-| `お台場→羽田空港` | 日本語 |
-| `Odaiba -> Haneda` | 英語 |
-| `台场到羽田机场` | 中国語 |
+| 質問の言語 | 推奨する `language` 指定 | 応答言語 |
+|:---|:---|:---|
+| 日本語 | `ja` または省略 | 日本語 |
+| 英語 | `en` | 英語 |
+| 中国語 | `zh` | 中国語 |
 
-矢印・スラッシュ・括弧などの記号を含む英語入力や、簡体字・中国語の機能語（到・从・前往・出发 等）を含む入力も正しく判定します。
+通常は質問文から自動判定します。駅名が日本語表記でも、英語・中国語で質問された場合は `language: "en"` / `language: "zh"` を指定すると、確実に希望言語で応答します。
 
 ### 🔧 テストモード（-test）
 
@@ -152,42 +153,29 @@ search_route(from: "渋谷", to: "新宿")
 - `to` (string) — 到着駅名（または最寄り駅に変換可能な施設名・ランドマーク名）
 - `language` (string, 任意) — 応答言語の強制指定 ja / en / zh。省略時は駅名から自動判定しますが、ユーザーのクエリ言語に合わせて指定すると確実にその言語で応答します（例: 英語で質問したのに駅名が日本語の場合に language: "en" を渡すと英語で返答）
 
-**ランドマーク自動変換（環境客・観光客向け）**:
-入力が駅名でない主要施設・ランドマーク名の場合、自動的にもっとも近い駅へ変換して経路検索します。変換結果は landmark_info フィールドで案内されます（例: 「東京ディズニーランド」→「舞浜」、徒歩目安付き）。対応例: 東京ディズニーランド/ディズニーシー、東京スカイツリー、東京タワー、東京ドーム、日本武道館、東京ビッグサイト、浅草寺/雷門、横浜中華街、幕張メッセ など。
+> [!TIP]
+> **施設名・ランドマークからも検索できます**
+>
+> 駅名ではなく、観光地・テーマパーク・神社仏閣・公園・美術館の名称を `from` / `to` に指定すると、最寄り駅へ自動変換して経路を検索します。英語・中国語の施設名・公園名・略称にも対応します。
 
-**有名神社仏閣・観光スポットも対応**:
-明治神宮（原宿）、成田山新勝寺（成田空港）、東京大学・赤門（本郷三丁目）、六義園（駒込）、根津神社（後楽園）、護国寺（護国寺）、谷中霊園・谷中銀座（日暮里）、上野恩賜公園・上野動物園・寛永寺（上野）など。外国人観光客も「Meiji Shrine」「Naritasan」「University of Tokyo」「Rikugien」「Nezu Shrine」等の英語名で検索可能です。
+| 分類 | 代表例 |
+|:---|:---|
+| テーマパーク・観光 | 東京ディズニーランド、サンリオピューロランド、六本木ヒルズ、皇居、浜離宮 |
+| 神社仏閣・歴史 | 明治神宮、浅草寺、神田明神、成田山新勝寺、歌舞伎座 |
+| 公園・庭園 | 舎人公園、代々木公園、小石川後楽園、清澄庭園、昭和記念公園 |
+| 美術館・文化施設 | 森美術館、国立新美術館、teamLab、東京国立博物館、日本科学未来館 |
 
-**都心の主要観光スポットも対応**:
-東京ドームシティ・後楽園（後楽園）、六本木ヒルズ（六本木）、麻布十番商店街（麻布十番）、表参道・青山（表参道）、増上寺（芝公園）、浜離宮恩賜庭園（水上バス「浜離宮」発着場が最寄り／陸路は竹芝）、築地場外市場（築地）、豊洲市場・teamLab（豊洲）、皇居・二重橋（東京）、国会議事堂（永田町）など。「Roppongi Hills」「Tokyo Dome City」「Omotesando」「Tsukiji Market」「Imperial Palace」等の英語名でも検索できます。
-
-**主要公園・庭園も対応**:
-舎人公園（舎人公園）、代々木公園（原宿）、小石川後楽園（後楽園）、清澄庭園（清澄白河）、水元公園（松戸）、昭和記念公園（立川）、砧公園（用賀）、駒沢公園（駒沢大学）、有栖川宮記念公園（広尾）、檜町公園（六本木）、目黒天空庭園（池尻大橋）、若洲海浜公園・夢の島公園（新木場）、大井ふ頭中央海浜公園（大井町）、和田倉噴水公園（大手町）、日比谷公園（日比谷）、小金井公園（花小金井）など。英語・中国語の公園名でも検索できます。
-
-**美術館・博物館・文化施設も対応**:
-森美術館（六本木）、国立新美術館（乃木坂）、チームラボプラネッツ（新豊洲）、チームラボボーダレス（神谷町）、神田明神（御茶ノ水）、築地本願寺（築地）、歌舞伎座（東銀座）、東京都庁展望室（都庁前）、サンシャインシティ（池袋）、日本科学未来館（東京テレポート）、東京駅丸の内駅舎（東京）など。「Mori Art Museum」「The National Art Center, Tokyo」「teamLab Planets」「Kanda Myojin」「Kabukiza Theatre」「Miraikan」等の英語名や中国語名にも対応しています。
-
-**降車地域の文化・芸能・芸術施設**:
-`search_route` の到着駅周辺には `destination_cultural_facilities` を表示します。美術館・博物館・劇場・伝統芸能・神社仏閣・科学館・水族館などを、施設名・カテゴリ・徒歩目安（分）付きで案内します。施設情報は現在、確定性を優先した厳選ローカルデータです。東京都オープンデータAPI（文化施設・美術館・博物館）、文化庁文化情報プラットフォーム、Wikidata SPARQL等の活用候補を調査済みで、将来のデータ同期拡張に備えた構造にしています。
-
-レスポンス例:
-```json
-{
-  "destination_cultural_facilities": [
-    { "name": "森美術館", "category": "美術館", "walk_min": 5 },
-    { "name": "東京ミッドタウン", "category": "複合文化施設", "walk_min": 5 }
-  ]
-}
-```
-
-**多言語・別名（訳名・略称）対応**:
-施設名は日本語の正式名称だけでなく、英語・中国語の名称、および訳名・略称でも検索できます（例: 東京ディズニーランド = Disneyland / Disney / 迪士尼 / 东京迪士尼乐园）。案内文（note）は language パラメータに応じて ja/en/zh で出力されます。
-
+**入力例**:
 ```text
-search_route(from: "東京", to: "東京ディズニーランド")    # 到着側を「舞浜」へ自動変換し、landmark_info で案内
-search_route(from: "Tokyo", to: "Disney")               # 英語・略称でも「舞浜」へ変換（language: "en" 推奨）
-search_route(from: "东京站", to: "迪士尼")                # 中国語でも変換（language: "zh" 推奨）
+search_route(from: "東京", to: "サンリオピューロランド")
+search_route(from: "Tokyo", to: "Mori Art Museum", language: "en")
+search_route(from: "东京", to: "三丽鸥彩虹乐园", language: "zh")
+search_route(from: "Shibuya", to: "Yoyogi Park", language: "en")
+search_route(from: "涩谷", to: "代代木公园", language: "zh")
 ```
+
+> [!NOTE]
+> 到着駅周辺に文化・芸術施設がある場合、`destination_cultural_facilities` に施設名・カテゴリ・徒歩目安を表示します。美術館、博物館、劇場、伝統芸能、神社仏閣、科学館、水族館などを案内します。
 - `user_location` (object, 任意) — 利用者の現在位置 `{ lat: number, lon: number }`。指定時は運転見合わせ時のシェアサイクル案内を現在地基準で表示（未指定時は出発駅基準）
 
 **レスポンス例**:
@@ -251,26 +239,26 @@ search_fare(from: "渋谷", to: "新宿")
 get_timetable(station_name: "渋谷", railway: "山手線")
 ```
 
-### 6. `search_bus` — バス路線・乗り継ぎ検索（都営・西武・横浜市営＋コミュニティバス）
+### 6. `search_bus` — バス路線・乗り継ぎ検索
 
-ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横浜市営バス）の3事業者を並列取得し、GTFS-JP 個別取得パスで JRバス関東・都内コミュニティバス（ちぃばす・ハチ公バス等）を追加します。コミュニティバスは東京バス協会「東京バス案内WEB」掲載の**41自治体ディレクトリ**に対応し、`busstop_name` に「ちぃばす」「ムーバス」「すぎ丸」等のバス名や自治体名を指定すると、名称・自治体・公式サイトURLを案内します（時刻表・路線の詳細は各自治体サイトで確認）。
+> [!TIP]
+> 都営・西武・横浜市営バスに加え、都内41自治体のコミュニティバスを検索できます。ODPTのバス停順序データを使い、バス⇔電車⇔バスの横断経路にも対応します。
 
-- **バス停検索** — `busstop_name` でバス停・系統を検索
-- **駅⇔コミュニティバス接続（バリアフリー対応）** — `search_route` / `search_bus` で駅を指定すると「この駅はどのコミュニティバスが使えるか」を表示（主要10件の駅接続データ: ちぃばす・ハチ公バス・ムーバス・はなバス・すぎ丸 等）。足の悪いユーザーの「駅までの足・駅からの足」を支援し、車椅子・低床バスの確認先（自治体公式サイトURL）を注意喚起として案内。コミュニティバス停同士の乗り継ぎは `mode: 'community_bus'` セグメントとして実経路を返します（例: 渋谷駅東口→恵比寿駅前 = ハチ公バス）
-- **乗り継ぎ探索** — `from` + `to` で `odpt:BusroutePattern` の停留所順序から最短乗り継ぎ経路を探索（異系統・異事業者間の乗り継ぎ対応）
-- **🚌 乗り物指定優先（`vehicle`）** — 乗り継ぎ探索モードで `vehicle` を指定すると、その乗り物を優先した経路を探索します。`bus`（バス優先）/`train`（電車優先）/`community_bus`（コミュニティバス優先）/`ferry`（水上バス優先）/`any`（自動＝最短・デフォルト）。指定した乗り物が極端に遠回りになる場合（乗換が2回以上多い、または所要目測が10分以上長い）、`better_alternative` フィールドでより良い経路（推奨乗り物・節約できる乗換回数・分数）を進言します。所要時間は駅数・停留所数を基にしたグラフ上の概算です。
-- **ODPT障害時の縮退** — `search_bus` のバス停検索は、ODPT APIが利用できない場合でも hard-coded のコミュニティバス/JRバスデータへ縮退します。一方、ODPTの停留所順序を必要とする統合乗り継ぎ探索は、データ取得失敗時に経路を返せない場合があります。
-- **横断乗り継ぎ** — バス停と駅を緯度経度で紐付け、`odpt:Station`（電車）グラフと統合。バス→電車→バスの横断ルートも探索（例: 渋谷駅前→（徒歩）→渋谷→（電車）→新橋駅前）
-- **バリアフリー** — `odpt:BusTimetable.isNonStepBus`（ノンステップバス・段差なし）を系統ごとに表示
+| できること | 指定方法 | 補足 |
+|:---|:---|:---|
+| バス停・系統を探す | `busstop_name` | バス名・自治体名でも検索可 |
+| 乗り継ぎを探す | `from` + `to` | 異なる系統・事業者間にも対応 |
+| 乗り物を優先する | `vehicle` | `bus` / `train` / `community_bus` / `ferry` / `any` |
+| バリアフリー情報 | 自動表示 | ノンステップバス情報と自治体サイトを案内 |
 
-※ 乗り継ぎは都営・西武・横浜市営バス＋コミュニティバス駅接続ルートが対象です（JRバス関東は停留所順序データがないため乗り継ぎ対象外・バス停検索のみ）。運賃はODPT非対応のため検索できません。
-
+```text
+search_bus(busstop_name: "渋谷駅前")
+search_bus(from: "渋谷駅前", to: "新橋駅前")
+search_bus(from: "浅草", to: "上野", vehicle: "bus")
 ```
-search_bus(busstop_name: "渋谷駅前")                    # バス停検索
-search_bus(from: "渋谷駅前", to: "新橋駅前")            # バス→電車→バス 横断乗り継ぎ
-search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（電車）→川崎 横断乗り継ぎ
-search_bus(from: "浅草", to: "上野", vehicle: "bus")       # バス優先（better_alternative で電車案内の可能性あり）
-```
+
+> [!NOTE]
+> バス停検索はODPT障害時も内蔵のコミュニティバス/JRバス情報へ縮退します。統合乗り継ぎは停留所順序データが必要なため、ODPT障害時には経路を返せない場合があります。JRバス関東はバス停検索のみ対象です。
 
 ### 開発・回帰検証
 
@@ -287,20 +275,24 @@ npm run test:vehicle # vehicle優先の決定的モック回帰
 
 ### 7. `search_flight` — 空港フライト時刻・到着時刻表示
 
-- **空港検索** — `airport`（羽田空港/成田空港/HND/NRT 等）で到着/出発フライトを検索
-- **空港名の表記揺れ対応** — 「羽田」/「成田」/「Haneda」/「Narita」等、末尾の「空港/Airport/机场」の有無や日英中表記を自動正規化
-- **便名検索** — `flight_number`（NH001/JL000 等）で特定便を検索
-- **到着時の最適連携** — `destination`（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路（電車）を自動提案。**海外からの来客・帰省時に最適**。`destination` 未指定でも、到着時は主要アクセス駅（羽田: 東京駅/品川/浜松町、成田: 東京駅/日暮里/新宿）へのルートを自動表示（`access_routes`）
-- **表示項目** — 便名・航空会社・ステータス（予定/運航中/到着済/欠航）・ターミナル・ゲート・予定時刻・実際時刻・遅延（分）
-- **Graceful degradation** — `FLIGHT_API_KEY` 未設定時はフライト時刻なしで、空港へのアクセス経路のみ表示
+> [!TIP]
+> 羽田・成田の到着/出発便と、空港から目的地への鉄道アクセスをまとめて確認できます。空港名は日本語・英語・中国語・IATAコードで指定できます。
 
-※ フライト時刻は [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）が必要です。無料プランでは当日分のみ取得可能で、日付指定（`flight_date`）は非対応です。未設定時は空港アクセス経路のみ表示します。
+| できること | 指定方法 | 補足 |
+|:---|:---|:---|
+| 空港の発着便を調べる | `airport` + `direction` | 羽田 / 成田 / HND / NRT 等 |
+| 特定便を調べる | `flight_number` | 例: `NH001` |
+| 到着後のアクセスを調べる | `destination` | 到着ターミナルから鉄道経路を提案 |
+| 主要駅へのアクセスを見る | `destination` を省略 | 到着便では `access_routes` を自動表示 |
 
+```text
+search_flight(airport: "羽田空港", direction: "arrival")
+search_flight(airport: "成田空港", direction: "arrival", destination: "東京駅")
+search_flight(flight_number: "NH001", direction: "arrival")
 ```
-search_flight(airport: "羽田空港", direction: "arrival")              # 羽田着フライト一覧
-search_flight(airport: "成田空港", direction: "arrival", destination: "東京駅")  # 成田着→東京駅へのアクセス経路付き
-search_flight(flight_number: "NH001", direction: "arrival")          # 便名指定
-```
+
+> [!NOTE]
+> フライト時刻の取得には [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）が必要です。無料プランは当日分のみ対応し、`flight_date` は利用できません。キー未設定時も、空港アクセス経路は表示します。
 
 ### 8. `list_transit_operators` — 交通事業者一覧
 
@@ -519,15 +511,18 @@ Beyond simple route search, this server integrates weather data and public trans
 | ✈️ Flights | Haneda (HND) / Narita (NRT) arrivals & departures (AviationStack). Without a key, airport access routes are shown only (graceful degradation) |
 | 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
 
-### 🛤️ Route Network and API Cross-Check
+### 🛤️ Route Coverage and Data Validation
 
-Using `odpt:Railway`, public railway lists, and Japan’s National Land Numerical Information railway data, v2.20.0 adds the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line. Station order, branches, interchange points, and Japanese/English/Chinese display names were synchronized. APIs are used to verify operators and railway existence; route search runs on the built-in graph without requiring an API key.
+The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added. Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
+
+### 🤖 AI Intelligent Advice
 
 Generates concrete, useful advice for your trip based on weather and operational status.
 
 - **☀ Sunny** — supports comfortable travel
 - **☔ Rainy** — warns about slippery station floors and stairs, recommends bus alternatives
 - **🌡 High Temperature** — heatstroke alert and hydration reminder
+- **❄ Snow** — warns of icy surfaces, delays, and possible suspensions; recommends allowing extra time
 - **🚨 Emergency** — automatically shows shelter/evacuation links during service suspensions or disasters
 
 ### 🛡 Safety & Fault Tolerance
@@ -536,7 +531,7 @@ Generates concrete, useful advice for your trip based on weather and operational
 - **Unified Cache Management** — reduces API load by up to 80% (up to 24h caching)
 - **Degraded Mode** — keeps partial operation during API disruptions
 - **Severe Weather Logic** — automatically hides bike guidance during typhoons or flooding
-- **LLM-Friendly JSON** — all errors output in structured JSON
+- **LLM-Friendly JSON** — errors are emitted as structured data so AI can interpret context, retryability, and next options
 
 ### 💬 Easy Search in Natural Language
 
@@ -555,15 +550,15 @@ ferry to Oshima from Tokyo
 
 ### 🌐 Multi-Language Support
 
-The input language is auto-detected and the **entire response is localized to that language** — AI advice, route station/line names, weather text, and error messages all come back in the user's language.
+The full response — AI advice, station and line names, weather text, and errors — is localized in Japanese, English, or Chinese to match the user's question.
 
-| Input | Response language |
-|:---|:---|
-| `お台場→羽田空港` | Japanese |
-| `Odaiba -> Haneda` | English |
-| `台场到羽田机场` | Chinese |
+| User's language | Recommended `language` value | Response language |
+|:---|:---|:---|
+| Japanese | `ja` or omit | Japanese |
+| English | `en` | English |
+| Chinese | `zh` | Chinese |
 
-English inputs containing symbols (arrows, slashes, parentheses) and inputs containing simplified Chinese characters or Chinese function words (到 / 从 / 前往 / 出发, etc.) are detected reliably.
+The language is normally inferred from the question. When Japanese station names are used in an English or Chinese request, pass `language: "en"` or `language: "zh"` to ensure the intended response language.
 
 ### 🔧 Test Mode (-test)
 
