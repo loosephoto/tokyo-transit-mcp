@@ -407,6 +407,12 @@ function buildErrorResponse(errorType, errorMessage, details = {}) {
         en: ["The specified station is not in the routing data.", "Try another station name (e.g., a nearby major station)."],
         zh: ["指定车站不在路径搜索数据中。", "请尝试其他站名（如附近的主要车站）。"] },
       suggestionKey: "STATION_NOT_FOUND" },
+    AMBIGUOUS_STATION: { httpCode: 300, retryable: false,
+      suggestions: {
+        ja: ["一致する駅が複数あるため、検索を中断しました。", "提示された候補から正しい駅を選択して再度お試しください。"],
+        en: ["Multiple stations matched, so the search was paused.", "Please pick the correct station from the candidates and retry."],
+        zh: ["匹配到多个车站，已暂停搜索。", "请从候补中选择正确的车站后重试。"] },
+      suggestionKey: "AMBIGUOUS_STATION" },
     UNKNOWN_ERROR: { httpCode: 500, retryable: false,
       suggestions: {
         ja: ["予期しないエラーが発生しました。", "もう一度お試しいただくか、管理者にお問い合わせください。"],
@@ -1464,37 +1470,57 @@ for (const [st, entries] of Object.entries(STATION_TO_LINES)) {
 // 出発駅・到着駅は「その駅の全路線ノードから開始/到着」とみなす
 
 // 最寄り駅探索（部分一致・前方一致）
+// 戻り値: { station, candidates, ambiguous, exact, landmark }
+//   station    : 確定した駅名（曖昧/未検出時は null）
+//   candidates : 部分一致で見つかった候補駅名の配列（前方一致優先・重複排除）
+//   ambiguous  : 完全一致せず複数候補があり、どれが正解か確定できない場合 true
+//   exact      : 完全一致（または正規化後完全一致）で決まった場合 true
+//   landmark   : ランドマーク名から変換された場合、元の施設名（例: 東京ディズニーランド）
+// 注意: 部分一致は「入力が候補の接頭辞（前方一致）」または「完全一致」に限定する。
+// そうしないと「金町」で「黄金町」(=黄+金町) を含んでしまうsubstring問題で誤認する。
 function resolveStation(rawName) {
-  if (!rawName) return null;
+  if (!rawName) return { station: null, candidates: [], ambiguous: false, exact: false, landmark: null };
   const key = rawName.trim();
-  if (STATION_TO_LINES[key]) return key;
+  if (STATION_TO_LINES[key]) return { station: key, candidates: [key], ambiguous: false, exact: true, landmark: null };
   // 完全一致（正規化後）
   const norm = normalizeStationName(key);
-  if (STATION_TO_LINES[norm]) return norm;
-  // 部分一致: 入力（および正規化後）の両方で候補を探す
-  //   containsKey   = 候補が入力を含む（具体的な駅名）
-  //   includedByKey = 入力が候補を含む（一般的な駅名）
+  if (STATION_TO_LINES[norm]) return { station: norm, candidates: [norm], ambiguous: false, exact: true, landmark: null };
+
+  // ランドマーク（施設名）から最寄り駅への変換
+  // ※ 前方一致（駅名の部分一致）より先に評価する。理由: 「羽田空港」のように
+  // 実在しない駅名だが施設名としては有効な入力を、駅名前方一致の「曖昧」で
+  // 止めずに最寄り駅へ変換するため。駅名として完全一致する入力は上の分岐で
+  // 既に処理済みなので、ここで駅名を誤って上書きすることはない。
+  const lm = resolveLandmark(key);
+  if (lm && STATION_TO_LINES[lm.station]) {
+    return { station: lm.station, candidates: [lm.station], ambiguous: false, exact: false, landmark: lm.landmark, landmarkNote: lm.note, walk_min: lm.walk_min };
+  }
+
   const searchKeys = [key, norm].filter((v, i, a) => a.indexOf(v) === i); // key と norm の重複排除
-  const containsKey = [];
-  const includedByKey = [];
+
+  // 前方一致（入力が候補の接頭辞）: 誤認を防ぐため substring 包含は使わない
+  const prefixMatches = [];
   for (const s of Object.keys(STATION_TO_LINES)) {
     for (const k of searchKeys) {
-      if (s.includes(k)) { if (!containsKey.includes(s)) containsKey.push(s); }
-      else if (k.includes(s)) { if (!includedByKey.includes(s)) includedByKey.push(s); }
+      if (s === k) { if (!prefixMatches.includes(s)) prefixMatches.push(s); }
+      else if (s.startsWith(k)) { if (!prefixMatches.includes(s)) prefixMatches.push(s); }
     }
   }
-  // 具体的な駅名（入力を含む候補）を最優先、なければ入力が含む候補（より長い方）
-  if (containsKey.length) {
-    containsKey.sort((a, b) => b.length - a.length);
-    return containsKey[0];
+  if (prefixMatches.length === 1) {
+    return { station: prefixMatches[0], candidates: prefixMatches, ambiguous: false, exact: false, landmark: null };
   }
-  if (includedByKey.length) {
-    includedByKey.sort((a, b) => b.length - a.length);
-    return includedByKey[0];
+  if (prefixMatches.length > 1) {
+    // 複数候補 → 曖昧。ただし「入力そのものが別路線で実在する駅」なら完全一致優先済みのためここには来ない。
+    return { station: null, candidates: prefixMatches, ambiguous: true, exact: false, landmark: null };
   }
+
+  // 後方一致・その他の部分一致は「誤認」の元なので使用しない。
   // 正規化名で再試行（STATION_NAME_MAP に旧名がある場合）
-  if (norm !== key && STATION_TO_LINES[normalizeStationName(key)]) return normalizeStationName(key);
-  return null;
+  if (norm !== key && STATION_TO_LINES[normalizeStationName(key)]) {
+    const nm = normalizeStationName(key);
+    return { station: nm, candidates: [nm], ambiguous: false, exact: false, landmark: null };
+  }
+  return { station: null, candidates: [], ambiguous: false, exact: false, landmark: null };
 }
 
 // ダイクストラ法による最短経路探索（ハイパーノード版）
@@ -1592,19 +1618,27 @@ function commonLines(a, b) {
 
 // ルート検索のメインエントリ（searchRouteから呼び出し）
 function computeRoutes(fromRaw, toRaw) {
-  const from = resolveStation(fromRaw);
-  const to = resolveStation(toRaw);
+  const fromRes = resolveStation(fromRaw);
+  const toRes = resolveStation(toRaw);
+  // 曖昧（複数候補がありどれが正解か確定できない）の場合は検索を中断し選択を促す
+  if (fromRes.ambiguous) {
+    return { error: 'AMBIGUOUS_STATION', side: 'from', input: fromRaw, candidates: fromRes.candidates };
+  }
+  if (toRes.ambiguous) {
+    return { error: 'AMBIGUOUS_STATION', side: 'to', input: toRaw, candidates: toRes.candidates };
+  }
+  const from = fromRes.station;
+  const to = toRes.station;
   if (!from || !to) {
     return { error: 'STATION_NOT_FOUND', from, to, suggestion_from: fromRaw, suggestion_to: toRaw };
   }
   const result = findShortestPath(from, to);
   if (!result || !result.path) {
-    return { error: 'NO_ROUTE', from, to };
+    return { error: 'NO_ROUTE', from, to, fromLandmark: fromRes.landmark, toLandmark: toRes.landmark };
   }
   const { path, lines } = result;
   const segments = buildRouteSegments(path, lines);
   const totalStops = path.length - 1;
-  // 所要時間の簡易見積もり（駅数ベース: 1区間≈2.5分、乗換≈4分）
   const transfers = Math.max(0, segments.length - 1);
   const estimatedMinutes = Math.round(totalStops * 2.5 + transfers * 4);
 
@@ -1626,7 +1660,7 @@ function computeRoutes(fromRaw, toRaw) {
     })),
     path
   }];
-  return { routes, from, to };
+  return { routes, from, to, fromLandmark: fromRes.landmark, toLandmark: toRes.landmark, fromLandmarkNote: fromRes.landmarkNote, toLandmarkNote: toRes.landmarkNote };
 }
 
 async function findNearestBikeStations(stationName, userLocation = null, maxResults = 5, maxDistance = 2000) {
@@ -1903,6 +1937,222 @@ function handleApiError(error, details = {}) {
   return jsonResponse(buildErrorResponse(errType, error.message || 'APIエラー', details));
 }
 
+// ランドマーク・主要施設 → 最寄り駅 変換マップ
+// 環境客・観光客が「駅名でない施設名」で検索した際の利便性向上のため。
+// value: { station: 最寄り駅名(STATION_TO_LINESに存在), note: 駅からの補足(任意), walk_min: 徒歩目安分 }
+// ランドマーク・主要施設 → 最寄り駅 変換マップ（多言語・別名対応）
+// 環境客・観光客が「駅名でない施設名」で検索した際の利便性向上のため。
+// ・names に 日本語 / 英語 / 中国語 の別名（訳名・略称）を全て登録
+// ・note は言語別（ja/en/zh）で案内文を保持
+// ・最寄り駅(station)はSTATION_TO_LINESに存在する駅名
+const LANDMARK_DEFS = {
+  tokyo_disneyland: {
+    station: '舞浜', walk_min: 10,
+    note: { ja: '舞浜駅から徒歩約10分（ディズニーリゾートライン利用可）', en: 'About 10 min walk from Maihama Stn (Disney Resort Line available)', zh: '从舞滨站步行约10分钟（可乘坐迪士尼度假区线）' },
+    names: { ja: ['東京ディズニーランド', 'ディズニーランド', 'ディズニーリゾート', 'ディズニー'], en: ['Tokyo Disneyland', 'Disneyland', 'Tokyo Disney Resort', 'Disney', 'TDL'], zh: ['东京迪士尼乐园', '迪士尼乐园', '迪士尼', '东京迪士尼度假区'] }
+  },
+  tokyo_disneysea: {
+    station: '舞浜', walk_min: 10,
+    note: { ja: '舞浜駅からディズニーリゾートライン「リゾートゲートウェイ・ステーション」乗換', en: 'Transfer at Resort Gateway Stn on the Disney Resort Line from Maihama Stn', zh: '在舞滨站换乘迪士尼度假区线至度假区门户站' },
+    names: { ja: ['東京ディズニーシー', 'ディズニーシー'], en: ['Tokyo DisneySea', 'DisneySea'], zh: ['东京迪士尼海洋', '迪士尼海洋'] }
+  },
+  tokyo_skytree: {
+    station: 'とうきょうスカイツリー', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['東京スカイツリー', 'スカイツリー'], en: ['Tokyo Skytree', 'Skytree'], zh: ['东京晴空塔', '晴空塔'] }
+  },
+  tokyo_tower: {
+    station: '御成門', walk_min: 10,
+    note: { ja: '御成門駅から徒歩約10分（赤羽橋駅からも約10分）', en: 'About 10 min walk from Onarimon Stn (also ~10 min from Akabanebashi Stn)', zh: '从御成门站步行约10分钟（赤羽桥站也可步行约10分钟）' },
+    names: { ja: ['東京タワー'], en: ['Tokyo Tower'], zh: ['东京塔'] }
+  },
+  odaiba: {
+    station: '台場', walk_min: 2,
+    note: { ja: 'りんかい線・ゆりかもめ', en: 'Rinkai Line / Yurikamome', zh: '临海线・百合海鸥号' },
+    names: { ja: ['お台場', '台場'], en: ['Odaiba'], zh: ['台场', '御台场'] }
+  },
+  tokyo_dome: {
+    station: '水道橋', walk_min: 5,
+    note: { ja: '水道橋駅から徒歩約5分', en: 'About 5 min walk from Suidobashi Stn', zh: '从水道桥站步行约5分钟' },
+    names: { ja: ['東京ドーム'], en: ['Tokyo Dome'], zh: ['东京巨蛋'] }
+  },
+  nippon_budokan: {
+    station: '九段下', walk_min: 5,
+    note: { ja: '九段下駅から徒歩約5分', en: 'About 5 min walk from Kudanshita Stn', zh: '从九段下站步行约5分钟' },
+    names: { ja: ['日本武道館'], en: ['Nippon Budokan', 'Budokan'], zh: ['日本武道馆'] }
+  },
+  tokyo_bigsight: {
+    station: '国際展示場', walk_min: 3,
+    note: { ja: 'りんかい線', en: 'Rinkai Line', zh: '临海线' },
+    names: { ja: ['東京ビッグサイト'], en: ['Tokyo Big Sight'], zh: ['东京国际展览中心', '东京国际展示场'] }
+  },
+  akihabara: {
+    station: '秋葉原', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['秋葉原電気街', '秋葉原'], en: ['Akihabara', 'Akihabara Electric Town'], zh: ['秋叶原', '秋叶原电器街'] }
+  },
+  shibuya_scramble: {
+    station: '渋谷', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['渋谷スクランブル交差点', '渋谷'], en: ['Shibuya Crossing', 'Shibuya'], zh: ['涩谷十字路口', '涩谷'] }
+  },
+  sensoji: {
+    station: '浅草', walk_min: 5,
+    note: { ja: '浅草駅から徒歩約5分', en: 'About 5 min walk from Asakusa Stn', zh: '从浅草站步行约5分钟' },
+    names: { ja: ['浅草寺', '雷門'], en: ['Sensoji', 'Kaminarimon', 'Asakusa Temple'], zh: ['浅草寺', '雷门'] }
+  },
+  shinjuku_gyoen: {
+    station: '新宿御苑前', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['新宿御苑'], en: ['Shinjuku Gyoen'], zh: ['新宿御苑'] }
+  },
+  ueno_zoo: {
+    station: '上野', walk_min: 5,
+    note: { ja: '上野駅から徒歩約5分', en: 'About 5 min walk from Ueno Stn', zh: '从上野站步行约5分钟' },
+    names: { ja: ['上野動物園'], en: ['Ueno Zoo'], zh: ['上野动物园'] }
+  },
+  tskuba_botanical: {
+    station: 'うしく', walk_min: 15,
+    note: { ja: '駅から路線バス・タクシー', en: 'Local bus / taxi from the station', zh: '从车站乘坐路线巴士或出租车' },
+    names: { ja: ['筑波実験植物園'], en: ['Tsukuba Botanical Garden'], zh: ['筑波实验植物园'] }
+  },
+  kasairinkai_park: {
+    station: '葛西臨海公園', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['葛西臨海公園'], en: ['Kasai Rinkai Park'], zh: ['葛西临海公园'] }
+  },
+  inokashira_park: {
+    station: '吉祥寺', walk_min: 5,
+    note: { ja: '吉祥寺駅から徒歩約5分', en: 'About 5 min walk from Kichijoji Stn', zh: '从吉祥寺站步行约5分钟' },
+    names: { ja: ['井の頭恩賜公園'], en: ['Inokashira Park'], zh: ['井之头恩赐公园'] }
+  },
+  tama_zoo: {
+    station: '多摩動物公園', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['多摩動物公園'], en: ['Tama Zoological Park', 'Tama Zoo'], zh: ['多摩动物园'] }
+  },
+  tokyo_racecourse: {
+    station: '府中競馬正門前', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['東京競馬場'], en: ['Tokyo Racecourse'], zh: ['东京赛马场'] }
+  },
+  yokohama_chinatown: {
+    station: '元町・中華街', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['横浜中華街'], en: ['Yokohama Chinatown'], zh: ['横滨中华街'] }
+  },
+  yokohama_minatomirai: {
+    station: 'みなとみらい', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['横浜みなとみらい'], en: ['Yokohama Minatomirai', 'Minatomirai'], zh: ['横滨港未来', '港未来'] }
+  },
+  makuhari_messe: {
+    station: '海浜幕張', walk_min: 1,
+    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    names: { ja: ['幕張メッセ'], en: ['Makuhari Messe'], zh: ['幕张展览馆'] }
+  },
+  tokyo_station: {
+    station: '東京', walk_min: 0,
+    note: { ja: '', en: '', zh: '' },
+    names: { ja: ['東京駅'], en: ['Tokyo Station'], zh: ['东京站'] }
+  },
+  haneda_airport: {
+    station: '羽田空港第3ターミナル', walk_min: 1,
+    note: { ja: '京急・モノレール', en: 'Keikyu / Monorail', zh: '京急・单轨电车' },
+    names: { ja: ['羽田空港', '羽田'], en: ['Haneda Airport', 'Haneda', 'HND'], zh: ['羽田机场'] }
+  },
+  narita_airport: {
+    station: '成田空港', walk_min: 1,
+    note: { ja: '京成・JR', en: 'Keisei / JR', zh: '京成・JR' },
+    names: { ja: ['成田空港'], en: ['Narita Airport', 'Narita'], zh: ['成田机场'] }
+  },
+  // ===== 有名神社仏閣・観光スポット（追加） =====
+  meiji_jingu: {
+    station: '原宿', walk_min: 5,
+    note: { ja: '原宿駅から徒歩約5分（表参道口・明治神宮前〈原宿〉駅も利用可）', en: 'About 5 min walk from Harajuku Stn (also near Meiji-jingumae Stn)', zh: '从原宿站步行约5分钟（亦可使用明治神宫前〈原宿〉站）' },
+    names: { ja: ['明治神宮', '明治神社', 'めいじじんぐう'], en: ['Meiji Shrine', 'Meiji Jingu'], zh: ['明治神宫'] }
+  },
+  narita_san: {
+    station: '成田空港', walk_min: 10,
+    note: { ja: '成田駅から徒歩約10分（京成成田駅からも。データ上の最寄り実在駅は「成田空港」）', en: 'About 10 min walk from Narita Stn (also Keisei Narita Stn; nearest mapped station is "Narita Airport")', zh: '从成田站步行约10分钟（亦可使用京成成田站；数据上最近实存车站为「成田机场」）' },
+    names: { ja: ['成田山新勝寺', '成田山', '成田山公園'], en: ['Naritasan Shinshoji', 'Naritasan', 'Narita Temple'], zh: ['成田山新胜寺', '成田山'] }
+  },
+  ueno_park: {
+    station: '上野', walk_min: 5,
+    note: { ja: '上野駅から徒歩約5分（恩賜上野動物園・東京国立博物館・寛永寺等）', en: 'About 5 min walk from Ueno Stn (Ueno Zoo, Tokyo National Museum, Kaneiji Temple)', zh: '从上野站步行约5分钟（上野动物园・东京国立博物馆・宽永寺等）' },
+    names: { ja: ['上野恩賜公園', '恩賜上野動物園', '上野動物園', '寛永寺', '東京国立博物館', '国立科学博物館'], en: ['Ueno Park', 'Ueno Zoo', 'Tokyo National Museum', 'Kaneiji'], zh: ['上野恩赐公园', '上野动物园', '东京国立博物馆', '宽永寺'] }
+  },
+  tokyo_university: {
+    station: '本郷三丁目', walk_min: 5,
+    note: { ja: '本郷三丁目駅から徒歩約5分（赤門・東京大学本郷キャンパス）', en: 'About 5 min walk from Hongo-sanchome Stn (Red Gate / UTokyo Hongo Campus)', zh: '从本乡三丁目站步行约5分钟（红门・东京大学本乡校区）' },
+    names: { ja: ['東京大学', '東大', '赤門'], en: ['University of Tokyo', 'Tokyo University', 'UTokyo', 'Akamon'], zh: ['东京大学', '东大', '赤门'] }
+  },
+  rikugi_en: {
+    station: '駒込', walk_min: 5,
+    note: { ja: '駒込駅から徒歩約5分（六義園・旧岩崎邸庭園も近接）', en: 'About 5 min walk from Komagome Stn (Rikugien & former Iwasaki residence nearby)', zh: '从驹込站步行约5分钟（六义园・旧岩崎宅邸庭园邻近）' },
+    names: { ja: ['六義園', '旧岩崎邸庭園'], en: ['Rikugien', 'Former Iwasaki Residence'], zh: ['六义园', '旧岩崎邸庭园'] }
+  },
+  negoro_shrine: {
+    station: '後楽園', walk_min: 8,
+    note: { ja: '後楽園駅から徒歩約8分（根津神社・湯島聖堂も近接）', en: 'About 8 min walk from Korakuen Stn (Nezu Shrine & Yushima Seido nearby)', zh: '从后乐园站步行约8分钟（根津神社・汤岛圣堂邻近）' },
+    names: { ja: ['根津神社', '湯島聖堂', '湯島天満宮'], en: ['Nezu Shrine', 'Yushima Seido', 'Yushima Tenjin'], zh: ['根津神社', '汤岛圣堂', '汤岛天满宫'] }
+  },
+  gokokuji: {
+    station: '護国寺', walk_min: 3,
+    note: { ja: '護国寺駅から徒歩約3分', en: 'About 3 min walk from Gokokuji Stn', zh: '从护国寺站步行约3分钟' },
+    names: { ja: ['護国寺'], en: ['Gokokuji Temple'], zh: ['护国寺'] }
+  },
+  yanaka: {
+    station: '日暮里', walk_min: 5,
+    note: { ja: '日暮里駅から徒歩約5分（谷中霊園・谷中銀座・根津・千駄木の古い町並み）', en: 'About 5 min walk from Nippori Stn (Yanaka Cemetery, Yanaka Ginza, historic town)', zh: '从日暮里站步行约5分钟（谷中灵园・谷中银座・根津・千駄木老街）' },
+    names: { ja: ['谷中霊園', '谷中銀座', '谷中', '根津', '千駄木'], en: ['Yanaka', 'Yanaka Cemetery', 'Yanaka Ginza'], zh: ['谷中灵园', '谷中银座', '谷中'] }
+  }
+};
+
+// 全ての検索可能文字列（ja/en/zh 別名）を小文字化してフラットルックアップに構築
+const LANDMARK_LOOKUP = {};
+for (const [defKey, def] of Object.entries(LANDMARK_DEFS)) {
+  for (const lang of ['ja', 'en', 'zh']) {
+    for (const n of (def.names[lang] || [])) {
+      LANDMARK_LOOKUP[n.toLowerCase()] = { defKey, lang, original: n };
+    }
+  }
+}
+
+// ランドマーク名（別名・訳名・略称・多言語）で最寄り駅を解決。
+// 1) 完全一致（全言語・小文字） 2) サフィックス除去 3) 部分一致（入力がいずれかの名称を含む、長い名称を優先）
+function resolveLandmark(rawName) {
+  if (!rawName) return null;
+  const key = rawName.trim();
+  const lower = key.toLowerCase();
+  // 1. 完全一致（全言語）
+  if (LANDMARK_LOOKUP[lower]) {
+    const { defKey, lang, original } = LANDMARK_LOOKUP[lower];
+    const def = LANDMARK_DEFS[defKey];
+    return { station: def.station, note: def.note, walk_min: def.walk_min, landmark: original, landmarkLang: lang };
+  }
+  // 2. サフィックス除去（日本語の「駅」「公園」等を除去して再一致）
+  const stripped = key.replace(/(駅|バス停|停留所|公園|競技場|ドーム|タワー|テーマパーク)$/, '');
+  if (stripped !== key) {
+    const sl = stripped.toLowerCase();
+    if (LANDMARK_LOOKUP[sl]) {
+      const { defKey, lang, original } = LANDMARK_LOOKUP[sl];
+      const def = LANDMARK_DEFS[defKey];
+      return { station: def.station, note: def.note, walk_min: def.walk_min, landmark: original, landmarkLang: lang };
+    }
+  }
+  // 3. 部分一致（入力がいずれかの名称を含む）: 長い名称を優先（「東京ディズニーランド」が「ディズニー」より優先）
+  const contained = Object.keys(LANDMARK_LOOKUP)
+    .filter(k => lower.includes(k))
+    .sort((a, b) => b.length - a.length);
+  if (contained.length) {
+    const { defKey, lang, original } = LANDMARK_LOOKUP[contained[0]];
+    const def = LANDMARK_DEFS[defKey];
+    return { station: def.station, note: def.note, walk_min: def.walk_min, landmark: original, landmarkLang: lang };
+  }
+  return null;
+}
+
 function normalizeStationName(name) {
   const trimmed = name.trim();
   if (STATION_NAME_MAP[trimmed]) return STATION_NAME_MAP[trimmed];
@@ -2075,6 +2325,27 @@ async function searchRoute(args) {
 
   // ルートが見つからない場合は、エラー種別に応じた統一エラー応答を返す（SUCCESSを誤って返さない）
   if (routeResult && routeResult.error && routeResult.error !== 'TEST_MODE') {
+    if (routeResult.error === 'AMBIGUOUS_STATION') {
+      // 同名・類似駅名が複数あり、誤認リスクがあるため検索を中断し選択を促す
+      const sideLabel = routeResult.side === 'from'
+        ? (userLang === 'en' ? 'departure' : userLang === 'zh' ? '出发' : '出発')
+        : (userLang === 'en' ? 'arrival' : userLang === 'zh' ? '到达' : '到着');
+      const candidatesDisp = (routeResult.candidates || []).map(c => getDisplayStationName(c, userLang));
+      const promptMsg = userLang === 'en'
+        ? `Multiple stations match "${routeResult.input}" (${sideLabel}). Please choose one: ${candidatesDisp.join(' / ')}`
+        : userLang === 'zh'
+          ? `「${routeResult.input}」匹配到多个车站（${sideLabel}）。请选择其一：${candidatesDisp.join(' / ')}`
+          : `「${routeResult.input}」に一致する駅が複数あります（${sideLabel}）。どれかを選択してください：${candidatesDisp.join(' / ')}`;
+      const disambiguation = {
+        input: routeResult.input,
+        side: routeResult.side,
+        candidates: candidatesDisp,
+        message: promptMsg
+      };
+      return jsonResponse(buildErrorResponse('AMBIGUOUS_STATION', promptMsg, {
+        userLang, from: displayFrom, to: displayTo, disambiguation
+      }));
+    }
     const errType = routeResult.error === 'STATION_NOT_FOUND' ? 'STATION_NOT_FOUND' : 'NO_ROUTE';
     const errMsg = errType === 'STATION_NOT_FOUND'
       ? (userLang === 'en' ? `Station not found: ${displayFrom} / ${displayTo}`
@@ -2090,6 +2361,7 @@ async function searchRoute(args) {
   }
 
   let routesPayload = undefined;
+  const landmarkInfo = {};
   if (routeResult && routeResult.routes) {
     routesPayload = routeResult.routes.map(r => ({
       summary: {
@@ -2107,6 +2379,29 @@ async function searchRoute(args) {
         stops: s.stops
       }))
     }));
+    // ランドマーク（施設名）から変換された場合、ユーザーへの案内として付与
+    // note は言語別オブジェクト {ja,en,zh} → 応答言語(userLang)で解決
+    const pickLang = (noteObj) => (noteObj && typeof noteObj === 'object' ? (noteObj[userLang] || noteObj.ja || '') : (noteObj || ''));
+    if (routeResult.fromLandmark) {
+      const noteStr = pickLang(routeResult.fromLandmarkNote);
+      landmarkInfo.from = {
+        landmark: routeResult.fromLandmark,
+        nearest_station: getDisplayStationName(routeResult.from, userLang),
+        note: userLang === 'en' ? `Nearest station to ${routeResult.fromLandmark}: ${getDisplayStationName(routeResult.from, userLang)}${noteStr ? ' — ' + noteStr : ''}`
+          : userLang === 'zh' ? `${routeResult.fromLandmark} 的最近车站：${getDisplayStationName(routeResult.from, userLang)}${noteStr ? ' — ' + noteStr : ''}`
+          : `${routeResult.fromLandmark} の最寄り駅：${getDisplayStationName(routeResult.from, userLang)}${noteStr ? ' — ' + noteStr : ''}`
+      };
+    }
+    if (routeResult.toLandmark) {
+      const noteStr = pickLang(routeResult.toLandmarkNote);
+      landmarkInfo.to = {
+        landmark: routeResult.toLandmark,
+        nearest_station: getDisplayStationName(routeResult.to, userLang),
+        note: userLang === 'en' ? `Nearest station to ${routeResult.toLandmark}: ${getDisplayStationName(routeResult.to, userLang)}${noteStr ? ' — ' + noteStr : ''}`
+          : userLang === 'zh' ? `${routeResult.toLandmark} 的最近车站：${getDisplayStationName(routeResult.to, userLang)}${noteStr ? ' — ' + noteStr : ''}`
+          : `${routeResult.toLandmark} の最寄り駅：${getDisplayStationName(routeResult.to, userLang)}${noteStr ? ' — ' + noteStr : ''}`
+      };
+    }
   }
 
   const resultPayload = {
@@ -2119,6 +2414,8 @@ async function searchRoute(args) {
     degraded_mode: apiDegraded ? true : undefined,
     // 実ルート（自己完結型経路エンジンで算出）
     routes: routesPayload,
+    // ランドマーク（施設名）入力時の最寄り駅案内
+    landmark_info: Object.keys(landmarkInfo).length ? landmarkInfo : undefined,
     route_note: userLang === 'en' ? "Route computed by the built-in route engine." :
                 userLang === 'zh' ? "路线由内置路线引擎计算。" :
                 "経路は自己完結型エンジンで算出。",
