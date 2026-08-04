@@ -51,6 +51,11 @@
 - **荒天時安全ロジック** — 台風・浸水時は自転車案内を自動非表示
 - **LLMフレンドリーJSON** — 全エラーを、AIが状況・再試行可否・次の選択肢を解釈しやすい構造化データで出力
 
+> [!WARNING]
+> **地震時の交通モード別安全処理**
+>
+> 地震時は通常の経路・航路を「利用可能」として提示せず、安全確保を優先します。鉄道・トラム・バス・AGT・モノレールでは運転見合わせを前提に、落下物・架線・ホーム端から離れ、係員・自治体の指示を待つよう案内します。フェリー・水上バスでは乗船・水路移動を中止し、乗船前は岸辺・桟橋・水面から離れて指定避難場所または高台へ避難するよう案内します。乗船中は自己判断で下船・入水せず、船長・乗組員の指示に従うよう案内します。
+
 ### 💬 自然言語で簡単検索
 
 駅名・バス停・港名は**部分一致・表記揺れ・旧名でも自動解決**します。「スカイツリーからテレコムセンターまで」「Odaiba から Toyosu」「東京ビッグサイトまでバス」のように、日本語・英語・中国語の自然な表現をそのまま渡すだけで検索できます。
@@ -533,6 +538,11 @@ Generates concrete, useful advice for your trip based on weather and operational
 - **Severe Weather Logic** — automatically hides bike guidance during typhoons or flooding
 - **LLM-Friendly JSON** — errors are emitted as structured data so AI can interpret context, retryability, and next options
 
+> [!WARNING]
+> **Earthquake safety by transport mode**
+>
+> During an earthquake, normal routes and water routes are not presented as available; safety takes priority. For rail, tram, bus, AGT, and monorail, the guidance assumes a safety suspension and tells users to stay clear of falling objects, overhead wires, and platform edges while awaiting staff and local-authority instructions. For ferries and water buses, it tells users not to board or continue water travel; before boarding, move away from shorelines, piers, and the water toward designated shelters or higher ground. On board, do not disembark or enter the water on your own; follow the captain and crew instructions.
+
 ### 💬 Easy Search in Natural Language
 
 Station, bus stop, and port names are **automatically resolved by partial match, notation variance, and legacy names**, so exact input is not required. Simply pass natural expressions in Japanese, English, or Chinese — e.g. "route from Skytree to Telecom Center", "Odaiba to Toyosu", or "bus to Tokyo Big Sight".
@@ -1013,6 +1023,11 @@ MIT License
 - **降级模式** — API 故障时保持部分功能运行
 - **恶劣天气安全逻辑** — 台风或洪水时自动隐藏自行车指引
 - **LLM 友好 JSON** — 以便 AI 理解当前状况、是否可重试和下一步选择的结构化数据输出所有错误
+
+> [!WARNING]
+> **按交通方式区分的地震安全处理**
+>
+> 地震时不会将常规路线或水路航线显示为可用，安全优先。对铁路、有轨电车、公交、AGT 和单轨电车，系统假定正在进行安全检查而暂停运行，并提示远离高空坠物、架空电线和站台边缘，等待工作人员和当地政府指示。对轮渡和水上巴士，系统提示停止登船和水路出行；登船前应远离岸边、码头和水面，前往指定避难场所或高处。乘船中请勿自行下船或进入水中，应遵从船长和船员指示。
 
 ### 💬 自然语言轻松搜索
 

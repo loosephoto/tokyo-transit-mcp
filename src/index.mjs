@@ -359,6 +359,107 @@ function buildTestAdvice(simulatedFailure, userLang = 'ja') {
   };
 }
 
+// 地震時は通常の経路・航路を「利用可能な経路」として提示しない。
+// ground: 鉄道/トラム/バス等、water: フェリー/水上バス。
+function buildEarthquakeTransportSafety(transport, userLang = 'ja') {
+  const water = transport === 'water';
+  const messages = water
+    ? {
+        ja: {
+          title: '🚨 【地震時：水上交通の安全確保】',
+          action: 'フェリー・水上バスの検索結果は運航可否を保証しないため、航路の利用・乗船を中止してください。',
+          guidance: [
+            '乗船前: 岸辺・桟橋・水面から離れ、自治体の避難情報に従って指定避難場所または高台へ避難してください。',
+            '乗船中: 自己判断で下船・入水せず、船長・乗組員の指示に従ってください。',
+            '津波警報・注意報や港の閉鎖情報を確認し、安全宣言まで水路での移動を再開しないでください。'
+          ]
+        },
+        en: {
+          title: '🚨 [Earthquake: Water-Transport Safety]',
+          action: 'Do not board or rely on ferry/water-bus routes: search results cannot confirm safe operation after an earthquake.',
+          guidance: [
+            'Before boarding: move away from shorelines, piers, and the water. Follow official evacuation information to designated shelters or higher ground.',
+            'On board: do not disembark or enter the water on your own. Follow the captain and crew instructions.',
+            'Do not resume water travel until tsunami/port-closure notices are lifted and safety is officially confirmed.'
+          ]
+        },
+        zh: {
+          title: '🚨 【地震时：水上交通安全】',
+          action: '地震后无法保证轮渡或水上巴士安全运行，请停止乘船和水路出行。',
+          guidance: [
+            '登船前：远离岸边、码头和水面，遵照官方避难信息前往指定避难场所或高处。',
+            '乘船中：不要自行下船或进入水中，请遵从船长和船员的指示。',
+            '在海啸、港口关闭等警报解除且官方确认安全前，不要恢复水路出行。'
+          ]
+        }
+      }
+    : {
+        ja: {
+          title: '🚨 【地震時：地上交通の安全確保】',
+          action: '鉄道・トラム・バス等は安全確認のため運転見合わせとなる可能性が高いため、通常経路の利用を中止してください。',
+          guidance: [
+            '揺れが収まるまで、落下物・ガラス・架線等から離れ、係員や自治体の指示に従ってください。',
+            '駅・停留所では勝手に線路、道路、ホーム端へ移動せず、安全な場所で情報を確認してください。',
+            '運転再開・代替輸送・避難情報が公式に発表されるまで、移動の継続や別経路への乗換を急がないでください。'
+          ]
+        },
+        en: {
+          title: '🚨 [Earthquake: Ground-Transport Safety]',
+          action: 'Rail, tram, and bus services may be suspended for safety checks. Do not proceed using normal route results.',
+          guidance: [
+            'Until shaking stops, stay clear of falling objects, glass, and overhead wires; follow staff and local-authority instructions.',
+            'At stations and stops, do not move onto tracks, roads, or platform edges. Remain in a safe place and check official information.',
+            'Do not rush to continue travel or change routes until official restart, substitute-service, or evacuation information is issued.'
+          ]
+        },
+        zh: {
+          title: '🚨 【地震时：地面交通安全】',
+          action: '铁路、有轨电车和公交可能因安全检查暂停运行，请停止按常规路线继续出行。',
+          guidance: [
+            '震动停止前请远离高空坠物、玻璃和架空电线，遵从工作人员及当地政府指示。',
+            '在车站和站点不要进入轨道、道路或站台边缘，应在安全处查看官方信息。',
+            '在官方发布恢复运行、替代交通或避难信息前，不要急于继续出行或换乘其他路线。'
+          ]
+        }
+      };
+  return messages[userLang] || messages.ja;
+}
+
+function isEarthquakeSimulation(testAdv) {
+  return testAdv?.failureAdviceKey === 'earthquake';
+}
+
+// 地震時に通常経路を提示せず、安全確保を最優先にする共通レスポンス。
+// search_route / search_bus / search_ferry の各入口で利用する。
+function buildEarthquakeSafetyResponse(transport, userLang = 'ja', context = {}) {
+  const safety = buildEarthquakeTransportSafety(transport, userLang);
+  const mode = transport === 'water' ? 'water' : 'ground';
+  const message = userLang === 'en'
+    ? 'Normal route guidance is suspended during an earthquake safety response.'
+    : userLang === 'zh'
+      ? '地震安全响应期间，已停止提供常规路线指引。'
+      : '地震時の安全確保を優先するため、通常の経路・航路案内を停止しています。';
+  return jsonResponse({
+    status: 'EMERGENCY_MODE_ACTIVE',
+    detected_language: userLang,
+    emergency_type: 'earthquake',
+    transport_mode: mode,
+    route_guidance_suspended: true,
+    message,
+    transport_safety: safety,
+    emergency_evacuation_search: {
+      link: EMERGENCY_EVACUATION_SEARCH_URL,
+      label: userLang === 'en' ? 'Find designated emergency shelters on Google Maps'
+        : userLang === 'zh' ? '在地图上查找指定紧急避难场所'
+        : '地図で指定緊急避難場所を確認'
+    },
+    ai_transit_advice: MULTILINGUAL_ADVICE.earthquake[userLang] || MULTILINGUAL_ADVICE.earthquake.ja,
+    test_mode: true,
+    simulated_failure_type: 'earthquake',
+    ...context
+  });
+}
+
 // ==========================================
 // ❌ 統一JSONエラーレスポンス（LLMフレンドリー）
 // ==========================================
@@ -2526,6 +2627,11 @@ async function searchRoute(args) {
     userLang = fL !== 'ja' ? fL : tL !== 'ja' ? tL : 'ja';
   }
 
+  // 地震時は鉄道・トラム・バス等の通常経路を提示せず、安全確保を優先する。
+  if (simulatedFailure && detectFailureType(simulatedFailure, userLang)?.adviceKey === 'earthquake') {
+    return buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
+  }
+
   if (!fromInput || !toInput) {
     return jsonResponse(buildErrorResponse('INVALID_INPUT', '出発駅と到着駅の両方を指定してください。', { userLang, from: fromInput, to: toInput }));
   }
@@ -3025,6 +3131,10 @@ async function searchFerry(args) {
   const userLang = resolveLang(args) || (fromLang !== 'ja' ? fromLang : (toLang !== 'ja' ? toLang : 'ja'));
   const parsedTest = parseTestMode({ from: rawFrom, to: rawTo, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
   const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
+  // 地震時はフェリー・水上バスの航路を提示しない。水面・岸辺から離れる避難を優先する。
+  if (isEarthquakeSimulation(testAdv)) {
+    return buildEarthquakeSafetyResponse('water', userLang, { from_port: rawFrom, to_port: rawTo });
+  }
   if (!fromPort || !toPort) {
     const errMsg = userLang === 'en' ? 'Please specify both origin and destination ports.' :
                    userLang === 'zh' ? '请同时指定出发港口和到达港口。' :
@@ -4535,6 +4645,10 @@ async function searchBus(args) {
     const userLang = resolveLang(args) || (fL !== 'ja' ? fL : tL !== 'ja' ? tL : 'ja');
     const parsedTest = parseTestMode({ from: fromInput, to: toInput, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
     const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
+    // 地震時はバス・トラム・鉄道を含む通常の乗り継ぎ結果を提示せず、安全確保を優先する。
+    if (isEarthquakeSimulation(testAdv)) {
+      return buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
+    }
     // searchBusTransfer 内で個別APIの障害を縮退処理する。
     // ここで早期 return すると、hard-coded / community-bus フォールバックまで遮断される。
     try {
@@ -4691,6 +4805,10 @@ async function searchBus(args) {
   const userLang = resolveLang(args) || detectLanguage(busstopName) || 'ja';
   const parsedTest = parseTestMode({ from: busstopName, to: '', '-test': args['-test'], test: args.test, test_mode: args.test_mode });
   const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
+  // バス停単体検索でも、地震時は通常の乗車候補を提示しない。
+  if (isEarthquakeSimulation(testAdv)) {
+    return buildEarthquakeSafetyResponse('ground', userLang, { busstop_name: busstopName });
+  }
   // ブレーカーOPENでもハードコード（JRバス関東・コミュニティバス）は fetchAllBuses 内で提供されるため、
   // ここでは弾かない（ODPT断でも ちぃばす 等のコミュニティバス検索は可能）。
   try {
