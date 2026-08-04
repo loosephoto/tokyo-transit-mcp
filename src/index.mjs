@@ -2157,6 +2157,148 @@ const LANDMARK_DEFS = {
     station: '永田町', walk_min: 5,
     note: { ja: '永田町駅から徒歩約5分（国会議事堂・日比谷公園も近接）', en: 'About 5 min walk from Nagatacho Stn (National Diet Building)', zh: '从永田町站步行约5分钟（国会议事堂）' },
     names: { ja: ['国会議事堂', '永田町'], en: ['National Diet Building', 'Diet Building'], zh: ['国会议事堂', '国会议事堂'] }
+  },
+  // ===== 主要公園・庭園（追加） =====
+  toneri_park: {
+    station: '舎人公園', walk_min: 1,
+    note: { ja: '日暮里・舎人ライナー「舎人公園駅」下車すぐ', en: 'Immediately outside Toneri-koen Stn on the Nippori-Toneri Liner', zh: '在日暮里・舍人线舍人公园站下车即到' },
+    names: { ja: ['舎人公園'], en: ['Toneri Park'], zh: ['舍人公园'] }
+  },
+  yoyogi_park: {
+    station: '原宿', walk_min: 10,
+    note: { ja: '原宿駅から徒歩約10分（明治神宮前駅・代々木公園駅も利用可）', en: 'About 10 min walk from Harajuku Stn (also near Meiji-jingumae and Yoyogi-koen)', zh: '从原宿站步行约10分钟（亦可使用明治神宫前站、代代木公园站）' },
+    names: { ja: ['代々木公園'], en: ['Yoyogi Park'], zh: ['代代木公园'] }
+  },
+  koishikawa_korakuen: {
+    station: '後楽園', walk_min: 8,
+    note: { ja: '後楽園駅から徒歩約8分（飯田橋駅からもアクセス可）', en: 'About 8 min walk from Korakuen Stn (also accessible from Iidabashi)', zh: '从后乐园站步行约8分钟（亦可从饭田桥站前往）' },
+    names: { ja: ['小石川後楽園'], en: ['Koishikawa Korakuen Gardens', 'Koishikawa Korakuen'], zh: ['小石川后乐园'] }
+  },
+  kiyose_garden: {
+    station: '清澄白河', walk_min: 3,
+    note: { ja: '清澄白河駅から徒歩約3分', en: 'About 3 min walk from Kiyosumi-shirakawa Stn', zh: '从清澄白河站步行约3分钟' },
+    names: { ja: ['清澄庭園'], en: ['Kiyosumi Gardens', 'Kiyosumi Teien'], zh: ['清澄庭园'] }
+  },
+  mizumoto_park: {
+    station: '松戸', walk_min: 20,
+    note: { ja: '松戸駅からバス等を利用（公園入口まで徒歩約20分の目安）', en: 'Bus recommended from Matsudo Stn; about 20 min walk to the park entrance', zh: '建议从松户站乘坐巴士；到公园入口步行约20分钟' },
+    names: { ja: ['水元公園'], en: ['Mizumoto Park'], zh: ['水元公园'] }
+  },
+  showa_kinen_park: {
+    station: '立川', walk_min: 15,
+    note: { ja: '立川駅から徒歩約15分（あけぼの口）。西立川駅は路線データ未登録のため立川を案内', en: 'About 15 min walk from Tachikawa Stn (Akebono Gate); Tachikawa is used because Nishitachikawa is not in the route graph', zh: '从立川站步行约15分钟（曙口）；由于西立川未登记在路线数据中，暂以立川站为目的地' },
+    names: { ja: ['国営昭和記念公園', '昭和記念公園'], en: ['Showa Kinen Park', 'Showa Memorial Park'], zh: ['国营昭和纪念公园', '昭和纪念公园'] }
+  },
+  kinuta_park: {
+    station: '用賀', walk_min: 20,
+    note: { ja: '用賀駅から徒歩約20分（バス利用可）', en: 'About 20 min walk from Yoga Stn; bus recommended', zh: '从用贺站步行约20分钟；建议乘坐巴士' },
+    names: { ja: ['砧公園'], en: ['Kinuta Park'], zh: ['砧公园'] }
+  },
+  komazawa_park: {
+    station: '駒沢大学', walk_min: 15,
+    note: { ja: '駒沢大学駅から徒歩約15分', en: 'About 15 min walk from Komazawa-daigaku Stn', zh: '从驹泽大学站步行约15分钟' },
+    names: { ja: ['駒沢オリンピック公園', '駒沢公園'], en: ['Komazawa Olympic Park', 'Komazawa Park'], zh: ['驹泽奥林匹克公园', '驹泽公园'] }
+  },
+  arisugawa_park: {
+    station: '広尾', walk_min: 3,
+    note: { ja: '広尾駅から徒歩約3分', en: 'About 3 min walk from Hiro-o Stn', zh: '从广尾站步行约3分钟' },
+    names: { ja: ['有栖川宮記念公園'], en: ['Arisugawa-no-miya Memorial Park'], zh: ['有栖川宫纪念公园'] }
+  },
+  hinokicho_park: {
+    station: '六本木', walk_min: 5,
+    note: { ja: '六本木駅から徒歩約5分（東京ミッドタウン隣接）', en: 'About 5 min walk from Roppongi Stn (next to Tokyo Midtown)', zh: '从六本木站步行约5分钟（毗邻东京中城）' },
+    names: { ja: ['檜町公園'], en: ['Hinokicho Park'], zh: ['桧町公园'] }
+  },
+  meguro_sky_park: {
+    station: '池尻大橋', walk_min: 7,
+    note: { ja: '池尻大橋駅から徒歩約7分', en: 'About 7 min walk from Ikejiri-ōhashi Stn', zh: '从池尻大桥站步行约7分钟' },
+    names: { ja: ['目黒天空庭園'], en: ['Meguro Sky Garden'], zh: ['目黑天空庭园'] }
+  },
+  wakasu_park: {
+    station: '新木場', walk_min: 15,
+    note: { ja: '新木場駅からバス利用（徒歩では距離があります）', en: 'Bus recommended from Shin-kiba Stn; it is a long walk', zh: '建议从新木场站乘坐巴士；步行距离较远' },
+    names: { ja: ['若洲海浜公園'], en: ['Wakasu Seaside Park'], zh: ['若洲海滨公园'] }
+  },
+  yumenoshima_park: {
+    station: '新木場', walk_min: 10,
+    note: { ja: '新木場駅から徒歩約10分', en: 'About 10 min walk from Shin-kiba Stn', zh: '从新木场站步行约10分钟' },
+    names: { ja: ['夢の島公園'], en: ['Yumenoshima Park'], zh: ['梦之岛公园'] }
+  },
+  oi_futo_park: {
+    station: '大井町', walk_min: 15,
+    note: { ja: '大井町駅からバス等を利用', en: 'Bus recommended from Oimachi Stn', zh: '建议从大井町站乘坐巴士' },
+    names: { ja: ['大井ふ頭中央海浜公園'], en: ['Oi Central Seaside Park'], zh: ['大井埠头中央海滨公园'] }
+  },
+  wadakura_park: {
+    station: '大手町', walk_min: 5,
+    note: { ja: '大手町駅から徒歩約5分（東京駅からもアクセス可）', en: 'About 5 min walk from Otemachi Stn (also accessible from Tokyo Stn)', zh: '从大手町站步行约5分钟（亦可从东京站前往）' },
+    names: { ja: ['和田倉噴水公園'], en: ['Wadakura Fountain Park'], zh: ['和田仓喷泉公园'] }
+  },
+  hibiyakoen: {
+    station: '日比谷', walk_min: 1,
+    note: { ja: '日比谷駅から徒歩約1分（霞ケ関駅・有楽町駅も利用可）', en: 'About 1 min walk from Hibiya Stn (also Kasumigaseki and Yurakucho)', zh: '从日比谷站步行约1分钟（亦可使用霞关站、有乐町站）' },
+    names: { ja: ['日比谷公園'], en: ['Hibiya Park'], zh: ['日比谷公园'] }
+  },
+  kogaine_park: {
+    station: '花小金井', walk_min: 20,
+    note: { ja: '花小金井駅から徒歩約20分（バス利用可）', en: 'About 20 min walk from Hanakoganei Stn; bus recommended', zh: '从花小金井站步行约20分钟；建议乘坐巴士' },
+    names: { ja: ['小金井公園'], en: ['Koganei Park'], zh: ['小金井公园'] }
+  },
+  // ===== 美術館・博物館・歴史文化施設（追加） =====
+  mori_art_museum: {
+    station: '六本木', walk_min: 5,
+    note: { ja: '六本木ヒルズ森タワー内。六本木駅から徒歩約5分', en: 'Inside Roppongi Hills Mori Tower; about 5 min walk from Roppongi Stn', zh: '位于六本木之丘森大厦内；从六本木站步行约5分钟' },
+    names: { ja: ['森美術館'], en: ['Mori Art Museum'], zh: ['森美术馆'] }
+  },
+  national_art_center: {
+    station: '乃木坂', walk_min: 1,
+    note: { ja: '乃木坂駅直結（六本木駅からも徒歩約10分）', en: 'Directly connected to Nogizaka Stn; about 10 min walk from Roppongi', zh: '与乃木坂站直接连通；从六本木站步行约10分钟' },
+    names: { ja: ['国立新美術館'], en: ['The National Art Center, Tokyo', 'National Art Center Tokyo'], zh: ['国立新美术馆'] }
+  },
+  teamlab_planets: {
+    station: '新豊洲', walk_min: 1,
+    note: { ja: '新豊洲駅から徒歩約1分', en: 'About 1 min walk from Shin-toyosu Stn', zh: '从新丰洲站步行约1分钟' },
+    names: { ja: ['チームラボプラネッツ', 'チームラボプラネッツTOKYO'], en: ['teamLab Planets', 'teamLab Planets TOKYO'], zh: ['teamLab Planets', 'teamLab行星'] }
+  },
+  teamlab_borderless: {
+    station: '神谷町', walk_min: 3,
+    note: { ja: '麻布台ヒルズ内。神谷町駅から徒歩約3分', en: 'Inside Azabudai Hills; about 3 min walk from Kamiyacho Stn', zh: '位于麻布台之丘内；从神谷町站步行约3分钟' },
+    names: { ja: ['チームラボボーダレス', '麻布台ヒルズチームラボ'], en: ['teamLab Borderless', 'teamLab Borderless Azabudai Hills'], zh: ['teamLab无界', '麻布台之丘teamLab'] }
+  },
+  kanda_myojin: {
+    station: '御茶ノ水', walk_min: 5,
+    note: { ja: '御茶ノ水駅から徒歩約5分（末広町駅・秋葉原駅からもアクセス可）', en: 'About 5 min walk from Ochanomizu Stn; also accessible from Suehirocho and Akihabara', zh: '从御茶之水站步行约5分钟；也可从末广町站、秋叶原站前往' },
+    names: { ja: ['神田明神', '神田神社'], en: ['Kanda Myojin', 'Kanda Shrine'], zh: ['神田明神', '神田神社'] }
+  },
+  tsukiji_honganji: {
+    station: '築地', walk_min: 1,
+    note: { ja: '築地駅から徒歩約1分（築地場外市場に隣接）', en: 'About 1 min walk from Tsukiji Stn, next to the Outer Market', zh: '从筑地站步行约1分钟，毗邻筑地场外市场' },
+    names: { ja: ['築地本願寺'], en: ['Tsukiji Hongwanji Temple'], zh: ['筑地本愿寺'] }
+  },
+  kabukiza: {
+    station: '東銀座', walk_min: 1,
+    note: { ja: '東銀座駅直結', en: 'Directly connected to Higashi-ginza Stn', zh: '与东银座站直接连通' },
+    names: { ja: ['歌舞伎座'], en: ['Kabukiza Theatre', 'Kabuki-za'], zh: ['歌舞伎座'] }
+  },
+  tokyo_metropolitan_gov: {
+    station: '都庁前', walk_min: 1,
+    note: { ja: '都庁前駅直結。展望室は東京都庁第一本庁舎', en: 'Directly connected to Tochomae Stn; observation decks are in the Tokyo Metropolitan Government Building No. 1', zh: '与都厅前站直接连通；展望室位于东京都厅第一本厅舍' },
+    names: { ja: ['東京都庁展望室', '東京都庁', '都庁展望台'], en: ['Tokyo Metropolitan Government Building', 'Tokyo Metropolitan Government Observation Deck'], zh: ['东京都厅展望室', '东京都厅'] }
+  },
+  sunshine_city: {
+    station: '池袋', walk_min: 8,
+    note: { ja: '池袋駅から徒歩約8分（サンシャイン水族館・展望台）', en: 'About 8 min walk from Ikebukuro Stn (aquarium and observatory)', zh: '从池袋站步行约8分钟（阳光水族馆・展望台）' },
+    names: { ja: ['サンシャインシティ', 'サンシャイン水族館', 'サンシャイン60'], en: ['Sunshine City', 'Sunshine Aquarium', 'Sunshine 60'], zh: ['太阳城', '阳光水族馆', 'Sunshine 60'] }
+  },
+  miraikan: {
+    station: '東京テレポート', walk_min: 5,
+    note: { ja: '東京テレポート駅から徒歩約5分（日本科学未来館）', en: 'About 5 min walk from Tokyo Teleport Stn', zh: '从东京电讯港站步行约5分钟' },
+    names: { ja: ['日本科学未来館'], en: ['Miraikan', 'National Museum of Emerging Science and Innovation'], zh: ['日本科学未来馆'] }
+  },
+  tokyo_station_marunouchi: {
+    station: '東京', walk_min: 1,
+    note: { ja: '東京駅丸の内側。丸の内中央口からすぐ', en: 'Marunouchi side of Tokyo Stn, just outside the Marunouchi Central Exit', zh: '东京站丸之内一侧，紧邻丸之内中央口' },
+    names: { ja: ['東京駅丸の内駅舎', '丸の内駅舎', '東京駅赤レンガ駅舎'], en: ['Tokyo Station Marunouchi Building', 'Tokyo Station Marunouchi'], zh: ['东京站丸之内站房', '东京站红砖站房'] }
   }
 };
 
