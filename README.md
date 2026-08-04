@@ -636,6 +636,30 @@ search_route(from: "Shibuya", to: "Shinjuku")
 - `language` (string, optional) — Force response language `ja` / `en` / `zh`. When omitted, the language is auto-detected from the station names; pass the user's query language to guarantee the response language (e.g. pass `language: "en"` when the user asked in English even if the station names are Japanese)
 - `user_location` (object, optional) — User's current location `{ lat: number, lon: number }`. When provided, bike-share guidance during service suspensions is based on the current location (otherwise on the departure station)
 
+> [!TIP]
+> **Search with attraction and landmark names**
+>
+> Use attraction, theme park, shrine, temple, park, or museum names in `from` / `to`; they are converted to the nearest station before route search. English and Chinese facility names, park names, and common aliases are supported.
+
+| Category | Examples |
+|:---|:---|
+| Theme parks & attractions | Tokyo Disneyland, Sanrio Puroland, Roppongi Hills, Imperial Palace, Hama-rikyu |
+| Shrines, temples & history | Meiji Shrine, Sensoji, Kanda Myojin, Naritasan Shinshoji, Kabukiza |
+| Parks & gardens | Toneri Park, Yoyogi Park, Koishikawa Korakuen, Kiyosumi Gardens, Showa Kinen Park |
+| Museums & cultural venues | Mori Art Museum, The National Art Center, teamLab, Tokyo National Museum, Miraikan |
+
+**Examples**:
+```text
+search_route(from: "Tokyo", to: "Sanrio Puroland", language: "en")
+search_route(from: "Tokyo", to: "Mori Art Museum", language: "en")
+search_route(from: "东京", to: "三丽鸥彩虹乐园", language: "zh")
+search_route(from: "Shibuya", to: "Yoyogi Park", language: "en")
+search_route(from: "涩谷", to: "代代木公园", language: "zh")
+```
+
+> [!NOTE]
+> When cultural or arts facilities are available around the arrival station, `destination_cultural_facilities` contains their names, categories, and walking estimates. It may include museums, theatres, traditional performing arts, shrines/temples, science museums, and aquariums.
+
 **Response Example**:
 ```json
 {
@@ -696,25 +720,26 @@ Searches the timetable of a station from ODPT data.
 get_timetable(station_name: "Shibuya", railway: "Yamanote Line")
 ```
 
-### 6. `search_bus` — Bus Route & Transfer Search (Toei / Seibu / Yokohama City + Community Bus)
+### 6. `search_bus` — Bus Route & Transfer Search
 
-Merges Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) from ODPT `odpt:Bus` in parallel, and adds JR Bus Kanto and Tokyo community buses (Chii-bus, Hachiko-bus, etc.) via individual GTFS-JP feeds. Community buses cover the **41-municipality directory** from the Tokyo Bus Association: passing a bus name or municipality to `busstop_name` (e.g. "Chii-bus", "Mu-Bus", "Sugimaru") returns the name, municipality, and official website URL (timetables/routes are on each municipal site).
+> [!TIP]
+> Search Toei, Seibu, Yokohama City, and community buses across 41 Tokyo municipalities. ODPT stop-order data also enables bus⇔train⇔bus cross-modal routes.
 
-- **Stop search** — `busstop_name` to find stops / routes
-- **Station ⇔ community bus access (barrier-free)** — specifying a station in `search_route` / `search_bus` shows which community buses serve it (station-access data for 10 major buses: Chii-bus, Hachiko Bus, Mu-Bus, Hanabus, Sugimaru, etc.). Supports mobility-impaired users' first/last mile (home → station / station → destination), with a caution pointing to the municipal site for wheelchair / low-floor availability. Transfers between community bus stops return real routes as `mode: 'community_bus'` segments (e.g. Shibuya Stn East Exit → Ebisu Stn = Hachiko Bus)
-- **Transfer search** — `from` + `to` builds shortest transfer routes from `odpt:BusroutePattern` stop order (cross-route / cross-operator transfers)
-- **🚌 Vehicle preference (`vehicle`)** — In transfer-search mode, set `vehicle` to prefer that mode: `bus` (bus-first) / `train` (train-first) / `community_bus` (community bus-first) / `ferry` (water bus-first) / `any` (auto = shortest, default). If the requested mode makes the route much worse (2+ extra transfers, or 10+ min longer by estimate), a `better_alternative` field recommends a better route (recommended mode, transfers saved, minutes saved). The time estimate is graph-based, using station and stop counts rather than live timetables or traffic.
-- **ODPT outage fallback** — Bus-stop search falls back to hard-coded community-bus/JR Bus data when the ODPT API is unavailable. Integrated transfer search still depends on ODPT stop-order data and may return no route when that data cannot be fetched.
-- **Cross-modal transfer** — bus stops and stations are linked by geo-coordinates and merged with the `odpt:Station` (train) graph, enabling bus→train→bus routes (e.g. Shibuya Station →(walk)→ Shibuya →(train)→ Shimbashi Station)
-- **Barrier-free** — `odpt:BusTimetable.isNonStepBus` (step-free / non-step buses) shown per route
+| What you can do | Parameter | Notes |
+|:---|:---|:---|
+| Find stops and routes | `busstop_name` | Bus and municipality names are accepted |
+| Find transfers | `from` + `to` | Supports transfers across routes and operators |
+| Prefer a mode | `vehicle` | `bus` / `train` / `community_bus` / `ferry` / `any` |
+| Check accessibility | Automatic | Shows non-step bus information and municipal guidance |
 
-Note: transfers cover Toei/Seibu/Yokohama City Bus plus community-bus station links (JR Bus Kanto lacks stop-order data, so it is excluded from transfers — stop search only). Fares are not available via ODPT.
-
-```
+```text
 search_bus(busstop_name: "Shibuya Station")
-search_bus(from: "Shibuya Station", to: "Shimbashi Station")   # bus→train→bus cross-modal
-search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(train)→Kawasaki cross-modal
+search_bus(from: "Shibuya Station", to: "Shimbashi Station")
+search_bus(from: "Asakusa", to: "Ueno", vehicle: "bus")
 ```
+
+> [!NOTE]
+> Stop search falls back to built-in community-bus/JR Bus data during ODPT outages. Integrated transfer search needs stop-order data and may not return a route during an ODPT outage. JR Bus Kanto supports stop search only.
 
 ### Development & regression checks
 
@@ -731,20 +756,24 @@ Use the exit code of `npm test` as the CI quality gate. A timeout in the live bu
 
 ### 7. `search_flight` — Airport Flight Times & Arrival Display
 
-- **Airport search** — `airport` (Haneda/Narita/HND/NRT etc.) lists arrival/departure flights
-- **Airport name normalization** — "Haneda"/"Narita"/"羽田"/"成田" etc. auto-normalized (trailing "Airport/空港/机场" stripped, ja/en/zh supported)
-- **Flight number search** — `flight_number` (NH001/JL000 etc.) for a specific flight
-- **Best for inbound/return travel** — specify `destination` (e.g. Tokyo Station) to auto-suggest the access route (train) from the arrival terminal. Without `destination`, arrival searches auto-show routes to major access stations (Haneda: Tokyo Stn/Shinagawa/Hamamatsucho, Narita: Tokyo Stn/Nippori/Shinjuku) via `access_routes`
-- **Fields** — flight no., airline, status (scheduled/active/landed/cancelled), terminal, gate, scheduled/actual time, delay (min)
-- **Graceful degradation** — without `FLIGHT_API_KEY`, shows airport access routes only (no flight times)
+> [!TIP]
+> Check Haneda/Narita arrivals or departures together with rail access to a destination. Airport names can be given in Japanese, English, Chinese, or as IATA codes.
 
-Note: flight times require the [AviationStack](https://aviationstack.com/) API (`FLIGHT_API_KEY`). The free plan covers current-day data only and does not support the date parameter (`flight_date`). Without a key, only airport access routes are shown.
+| What you can do | Parameter | Notes |
+|:---|:---|:---|
+| Look up arrivals/departures | `airport` + `direction` | Haneda / Narita / HND / NRT, etc. |
+| Look up a specific flight | `flight_number` | Example: `NH001` |
+| Find post-arrival access | `destination` | Suggests rail access from the arrival terminal |
+| See major-station access | Omit `destination` | Arrival searches auto-return `access_routes` |
 
+```text
+search_flight(airport: "Haneda Airport", direction: "arrival")
+search_flight(airport: "Narita Airport", direction: "arrival", destination: "Tokyo Station")
+search_flight(flight_number: "NH001", direction: "arrival")
 ```
-search_flight(airport: "Haneda Airport", direction: "arrival")                    # Haneda arrivals
-search_flight(airport: "Narita Airport", direction: "arrival", destination: "Tokyo Station")  # Narita→Tokyo access route
-search_flight(flight_number: "NH001", direction: "arrival")                       # by flight no.
-```
+
+> [!NOTE]
+> Flight times require the [AviationStack](https://aviationstack.com/) API (`FLIGHT_API_KEY`). The free plan supports current-day data only and does not support `flight_date`. Airport access routes remain available without a key.
 
 ### 8. `list_transit_operators` — Transit Operators List
 
@@ -963,24 +992,27 @@ MIT License
 | ✈️ 航班 | 羽田 (HND) / 成田 (NRT) 的到达/出发航班（AviationStack）。未配置密钥时仅显示机场接驳路线（优雅降级） |
 | 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878 个站点） |
 
-### 🛤️ 路线网络与 API 交叉核对
+### 🛤️ 路线覆盖与数据确认
 
-基于 `odpt:Railway`、公开铁路路线列表和日本国土数值信息铁路数据，v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线以及富士急行线。已同步核对车站顺序、支线、换乘站和日英中显示名称。API用于确认运营商与路线存在性，实际路线搜索由无需API密钥的内置图执行。
+项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
+
+### 🤖 AI 智能建议
 
 根据天气与运行状况，自动生成具体实用的出行建议。
 
 - **☀ 晴天** — 提供舒适的出行建议
 - **☔ 雨天** — 提醒站内及楼梯湿滑，推荐公交替代出行
-- **🌡 高温** — 中暑预警与补水提醒
-- **🚨 紧急** — 停运或发生灾害时自动显示避难所链接
+- **🌡 高温** — 提供中暑警报和补水提醒
+- **❄ 降雪** — 提醒路面结冰、延误和可能停运，并建议预留充足时间
+- **🚨 紧急情况** — 线路停运或检测到灾害时自动显示避难所/疏散链接
 
-### 🛡 安全与容错机制
+### 🛡 安全性与容错
 
-- **熔断器 (Circuit Breaker)** — 连续 3 次失败 → 60 秒冷却（逐步延长）
-- **统一缓存管理** — 降低外部 API 负载高达 80%（最长 24 小时缓存）
-- **降级模式** — 外部 API 发生故障时仍保持部分功能可用
-- **恶劣天气安全逻辑** — 台风或积水时自动隐藏共享单车引导
-- **LLM 友好型 JSON** — 所有错误均以结构化 JSON 格式输出
+- **断路器** — 连续 3 次失败后冷却 60 秒（逐步延长）
+- **统一缓存管理** — 最多降低 80% API 负载（最长缓存 24 小时）
+- **降级模式** — API 故障时保持部分功能运行
+- **恶劣天气安全逻辑** — 台风或洪水时自动隐藏自行车指引
+- **LLM 友好 JSON** — 以便 AI 理解当前状况、是否可重试和下一步选择的结构化数据输出所有错误
 
 ### 💬 自然语言轻松搜索
 
@@ -1085,6 +1117,29 @@ search_route(from: "渋谷", to: "新宿")
 - `language` (string, 可选) — 强制指定响应语言 `ja` / `en` / `zh`。省略时根据站名自动判定；若按用户的查询语言指定，可确保以该语言响应（例：用户用英语提问但站名为日语时，传入 `language: "en"` 即可获得英语回复）
 - `user_location` (object, 可选) — 用户当前位置 `{ lat: number, lon: number }`。指定时，运行中断期间的共享自行车指引以当前位置为基准（未指定时以出发站为基准）
 
+> [!TIP]
+> **也可用设施和地标名称搜索**
+>
+> 在 `from` / `to` 中填写景点、主题乐园、神社寺院、公园或美术馆名称，系统会先转换为最近车站再搜索路线。支持英语、中文的设施名、公园名和常用别名。
+
+| 分类 | 示例 |
+|:---|:---|
+| 主题乐园与景点 | 东京迪士尼乐园、三丽鸥彩虹乐园、六本木之丘、皇居、滨离宫 |
+| 神社寺院与历史 | 明治神宫、浅草寺、神田明神、成田山新胜寺、歌舞伎座 |
+| 公园与庭园 | 舍人公园、代代木公园、小石川后乐园、清澄庭园、昭和纪念公园 |
+| 美术馆与文化设施 | 森美术馆、国立新美术馆、teamLab、东京国立博物馆、日本科学未来馆 |
+
+**输入示例**:
+```text
+search_route(from: "东京", to: "三丽鸥彩虹乐园", language: "zh")
+search_route(from: "Tokyo", to: "Mori Art Museum", language: "en")
+search_route(from: "涩谷", to: "代代木公园", language: "zh")
+search_route(from: "Shibuya", to: "Yoyogi Park", language: "en")
+```
+
+> [!NOTE]
+> 若到达站周边有文化或艺术设施，`destination_cultural_facilities` 会显示其名称、分类和步行参考时间。可能包括美术馆、博物馆、剧场、传统艺能、神社寺院、科学馆和水族馆。
+
 **响应示例**:
 ```json
 {
@@ -1145,26 +1200,26 @@ search_fare(from: "渋谷", to: "新宿")
 get_timetable(station_name: "渋谷", railway: "山手線")
 ```
 
-### 6. `search_bus` — 公交路线与换乘查询（都营/西武/横滨市营 + 社区公交）
+### 6. `search_bus` — 公交路线与换乘查询
 
-从 ODPT 的 `odpt:Bus` 并行获取并合并都营公交、西武公交、横滨市交通局（横滨市营公交）3 家运营商的数据，并通过 **GTFS-JP 单独数据源** 追加 JR 巴士关东和东京社区公交（ちぃばす、ハチ公バス 等）。社区公交已覆盖东京巴士协会「东京巴士指南WEB」的 **41 自治体目录**：在 `busstop_name` 中指定巴士名称或自治体名（如「ムーバ斯」「すぎ丸」），即可返回名称、自治体与官方网址（时刻表与路线请在各自治体官网确认）。
+> [!TIP]
+> 可搜索都营、西武、横滨市营公交以及东京 41 个自治体的社区公交。利用 ODPT 的站点顺序数据，也支持公交⇔电车⇔公交的跨方式路线。
 
-- **公交站查询** — `busstop_name` 搜索公交站/线路
-- **车站 ⇔ 社区公交接驳（无障碍支持）** — 在 `search_route` / `search_bus` 中指定车站时，会显示该站可用的社区公交（主要 10 条线路的接驳数据：ちぃばす、哈奇公巴士、ムーバ斯、はな巴士、すぎ丸 等），支持行动不便者的「到站前/离站后」出行，并以注意提示引导确认轮椅/低地板车辆信息（附各自治体官网链接）。社区公交站之间的换乘将以 `mode: 'community_bus'` 区段返回实际路线（例：涩谷站东口 → 惠比寿站前 = 哈奇公巴士）
-- **换乘搜索** — `from` + `to` 基于 `odpt:BusroutePattern` 的站点顺序构建最短换乘路线（跨线路/跨运营商换乘）
-- **🚌 乘车工具优先（`vehicle`）** — 在换乘搜索模式下指定 `vehicle` 可优先该交通方式：`bus`（公交优先）/`train`（电车优先）/`community_bus`（社区公交优先）/`ferry`（水上巴士优先）/`any`（自动＝最短・默认）。若指定方式导致路线明显绕远（换乘多 2 次以上，或预计多耗时 10 分钟以上），将通过 `better_alternative` 字段建议更优路线（推荐方式、可节省换乘次数、可节省分钟数）。预计时间是基于车站数与公交站数的图模型概算，不是实时班次或道路交通时间。
-- **ODPT 故障时的降级** — 当 ODPT API 不可用时，公交站查询会降级使用内置的社区公交/JR 巴士数据。综合换乘查询仍依赖 ODPT 的站点顺序数据，数据无法获取时可能无法返回路线。
-- **跨方式换乘** — 公交站与车站通过经纬度关联，并与 `odpt:Station`（铁路）图合并，支持公交→电车→公交路线（例：渋谷站前→(步行)→渋谷→(电车)→新桥站前）
-- **无障碍** — `odpt:BusTimetable.isNonStepBus`（无障碍低地板/无台阶巴士）按线路显示
+| 可进行的操作 | 参数 | 说明 |
+|:---|:---|:---|
+| 查找公交站和线路 | `busstop_name` | 也可输入巴士名称或自治体名称 |
+| 查找换乘 | `from` + `to` | 支持跨线路、跨运营商换乘 |
+| 优先某种交通方式 | `vehicle` | `bus` / `train` / `community_bus` / `ferry` / `any` |
+| 查看无障碍信息 | 自动显示 | 显示无台阶巴士信息及自治体指引 |
 
-注：换乘覆盖都营/西武/横滨市营公交及社区公交接驳（JR 巴士关东缺少站点顺序数据，故不参与换乘、仅支持公交站查询）。ODPT 不提供公交票价数据。
-
+```text
+search_bus(busstop_name: "涩谷站前")
+search_bus(from: "涩谷站前", to: "新桥站前")
+search_bus(from: "浅草", to: "上野", vehicle: "bus")
 ```
-search_bus(busstop_name: "渋谷駅前")                      # 公交站查询
-search_bus(from: "渋谷駅前", to: "新橋駅前")            # 公交→电车→公交 跨方式换乘
-search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电车)→川崎 跨方式换乘
-search_bus(from: "浅草", to: "上野", vehicle: "bus")       # 公交优先（可能通过 better_alternative 建议电车）
-```
+
+> [!NOTE]
+> ODPT 发生故障时，公交站搜索会降级使用内置的社区公交/JR 巴士数据。综合换乘需要站点顺序数据，故障时可能无法返回路线。JR 巴士关东仅支持公交站搜索。
 
 ### 开发与回归验证
 
@@ -1179,22 +1234,26 @@ npm run test:vehicle # 乘车工具优先的确定性 mock 回归
 
 可以使用 `npm test` 的退出码作为 CI 质量门槛。实时公交换乘探针超时，应与确定性 mock 回归分开判断。
 
-### 7. `search_flight` — 机场航班时刻与到达时间显示
+### 7. `search_flight` — 机场航班时刻与到达信息
 
-- **机场查询** — `airport`（羽田/成田/HND/NRT 等）列出到达/出发航班
-- **机场名称规范化** — 「羽田」「成田」「Haneda」「Narita」等自动归一化（去除末尾「机场/Airport/空港」，支持日英中）
-- **航班号查询** — `flight_number`（NH001/JL000 等）查询特定航班
-- **海外来客/归国最佳** — 指定 `destination`（如：东京站）自动建议从到达航站楼到目的地的接驳路线（电车）。未指定时，到达搜索自动显示至主要接驳车站的路线（羽田：东京站/品川/浜松町，成田：东京站/日暮里/新宿），通过 `access_routes`
-- **显示项** — 航班号、航空公司、状态（准点/飞行中/已到达/取消）、航站楼、登机口、计划时间、实际时间、延误（分钟）
-- **优雅降级** — 未配置 `FLIGHT_API_KEY` 时仅显示机场接驳路线（无航班时刻）
+> [!TIP]
+> 可同时查看羽田/成田的到达或出发航班，以及前往目的地的铁路接驳。机场名称可使用日语、英语、中文或 IATA 代码。
 
-注：航班时刻需要 [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）。免费套餐仅支持当日数据，不支持日期参数（`flight_date`）。未配置时仅显示机场接驳路线。
+| 可进行的操作 | 参数 | 说明 |
+|:---|:---|:---|
+| 查询到达/出发航班 | `airport` + `direction` | 羽田 / 成田 / HND / NRT 等 |
+| 查询特定航班 | `flight_number` | 例如：`NH001` |
+| 查询到达后的接驳 | `destination` | 推荐从到达航站楼出发的铁路路线 |
+| 查看主要车站接驳 | 省略 `destination` | 到达查询自动返回 `access_routes` |
 
+```text
+search_flight(airport: "羽田机场", direction: "arrival")
+search_flight(airport: "成田机场", direction: "arrival", destination: "东京站")
+search_flight(flight_number: "NH001", direction: "arrival")
 ```
-search_flight(airport: "羽田空港", direction: "arrival")                        # 羽田到达航班
-search_flight(airport: "成田空港", direction: "arrival", destination: "東京駅")  # 成田→东京接驳路线
-search_flight(flight_number: "NH001", direction: "arrival")                    # 按航班号查询
-```
+
+> [!NOTE]
+> 航班时刻需要 [AviationStack](https://aviationstack.com/) API（`FLIGHT_API_KEY`）。免费套餐仅支持当日数据，且不支持 `flight_date`。未配置密钥时仍可显示机场接驳路线。
 
 ### 8. `list_transit_operators` — 交通运营商列表
 
