@@ -1034,13 +1034,15 @@ function getDisplayLineName(lineName, userLang) {
 const WEATHER_TERM_MAP = {
   en: [
     ['時々', 'occasionally'], ['一時', 'temporarily'], ['のち', 'then'], ['後', 'then'],
-    ['所により', 'in places'], ['所により雨', 'scattered rain'], ['所により雪', 'scattered snow'],
+    ['所により雨', 'scattered rain'], ['所により雪', 'scattered snow'], ['所により', 'in places'],
+    ['夕方', 'evening'], ['夜', 'night'], ['から', 'from'],
     ['晴れ', 'sunny'], ['くもり', 'cloudy'], ['曇り', 'cloudy'], ['雨', 'rain'],
     ['雪', 'snow'], ['雷', 'thunder'], ['風', 'wind'], ['強い', 'strong'], ['弱い', 'light']
   ],
   zh: [
     ['時々', '有时'], ['一時', '短暂'], ['のち', '转'], ['後', '转'],
-    ['所により', '局部'], ['所により雨', '局部有雨'], ['所により雪', '局部有雪'],
+    ['所により雨', '局部有雨'], ['所により雪', '局部有雪'], ['所により', '局部'],
+    ['夕方', '傍晚'], ['夜', '夜间'], ['から', '从'],
     ['晴れ', '晴'], ['くもり', '多云'], ['曇り', '多云'], ['雨', '雨'],
     ['雪', '雪'], ['雷', '雷'], ['風', '风'], ['強い', '强'], ['弱い', '弱']
   ]
@@ -1166,15 +1168,24 @@ function detectLanguage(text) {
   // 中国語シグナル: 簡体字専用字（日本語に存在しない字形。漢字は日本語でも使われるため、
   // 「日本語に無い字形」のみを判定に使う。例: 場→场、東→东、線→线、関→关）
   const zhChars = /[场东车机门银视动关风积灾电号涩沪这吗呢很从您请让说时颱澀灣這嗎從請讓]/;
-  // 中国語の語彙・機能語
+  // 中国語の語彙・機能語（地名・交通・天候・機能語を広くカバー）
   const zhWords = ['台风','积水','淹水','火灾','停电','酷暑','中暑','积雪','暴雨','海啸','海嘯',
     '地震','人身事故','信号故障','降雪','台场','站台','换乘','票价','时刻表','地铁','电车',
     '巴士','机场','车站','线路','路线','前往','出发','到达','查询','怎么','如何','最近','附近',
-    '几点','多少','航班','列车','天气','码头','碼頭','渡轮','轮渡','要多久','多少钱'];
-  if (zhChars.test(str) || zhWords.some(w => str.includes(w))) return 'zh';
+    '几点','多少','航班','列车','天气','码头','碼頭','渡轮','轮渡','要多久','多少钱',
+    // 交通・地名拡充（中国語ユーザーがよく使う表記。ただし東京/大阪等の大都市名は
+    // 日中で表記が共通するため判定シグナルには使わない）
+    '合羽桥','合羽橋','道具街','坐巴士','坐车','坐地铁',' bus','坐','去','到','从','巴士站',
+    '公交车','公车','捷运','高铁','火车','怎么去','怎么走','多长时间','多久','几点发车','首班车','末班车',
+    '浅草寺','雷门','雷門','晴空塔','天空树'];
+  if (zhWords.some(w => str.includes(w))) return 'zh';
+  if (zhChars.test(str)) return 'zh';
   // かな無し・漢字のみの入力で中国語の方向助詞を含む場合 → 中国語
   // （例: 品川到新宿 / 从浅草出发。日本語は「から」「まで」「へ」をかなで書くため競合しない）
-  if (/(从|到(?!着)|去|请|您)/.test(str)) return 'zh';
+  if (/(从|到(?!着)|去|请|您|怎|吗|呢)/.test(str)) return 'zh';
+  // かな無し・漢字のみ（英字・かな・簡体字専用字なし）の入力:
+  // 日本語地名（浅草・新宿等）と中国語地名（合羽桥・道具街等）が混在し判定困難なため、
+  // このヒューリスティクスでは「中国語らしい語彙/字形/助詞が無い」= 日本語（ja）とする。
   return 'ja';
 }
 
@@ -1842,14 +1853,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     { name: 'search_bus',
       description: '🚌🚃 バス路線・乗り継ぎ・横断乗り継ぎ検索 - 都営・西武・横浜市営バス（ODPT）。busstop_name でバス停/系統を検索、from+to で乗り継ぎ経路（バス内のみならず、バス→電車→バスの横断乗り継ぎも対応）を探索。足の悪い方へノンステップバス情報を含む。コミュニティバスは駅接続ルートで乗り継ぎ可能（JRバス関東は停留所順序データがなく対象外）。language（ja/en/zh）指定で応答言語を強制可能。',
-      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定・バス→電車→バスも可）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時はバス停名から自動判定）' } }, required: [] } }
+      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定・バス→電車→バスも可）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' }, vehicle: { type: 'string', enum: ['bus', 'train', 'community_bus', 'ferry', 'any'], description: '優先する乗り物（乗り継ぎ検索モードのみ）。bus=バス優先, train=電車優先, community_bus=コミュニティバス優先, ferry=水上バス優先, any=自動（最短）。指定乗り物が極端に遠回りになる場合は better_alternative でより良い経路を進言。' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時はバス停名から自動判定）' } }, required: [] } }
   ]
 }));
 
 // ツール実行ハンドラ
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  const userLang = resolveLang(args) || detectLanguage(args?.from) || detectLanguage(args?.area_name) || detectLanguage(args?.from_port) || 'ja';
+  // 言語決定: 明示指定(resolveLang) > from/to の自動判定（いずれかが zh/en なら採用）> ja
+  // 中国語/英語で検索された際は検索言語で返す（ユーザー要求）。
+  const autoLang =
+    detectLanguage(args?.from) === 'ja' && detectLanguage(args?.to) === 'ja' && detectLanguage(args?.area_name) === 'ja' && detectLanguage(args?.from_port) === 'ja'
+      ? 'ja'
+      : (detectLanguage(args?.from) !== 'ja' ? detectLanguage(args?.from)
+        : detectLanguage(args?.to) !== 'ja' ? detectLanguage(args?.to)
+        : detectLanguage(args?.area_name) !== 'ja' ? detectLanguage(args?.area_name)
+        : detectLanguage(args?.from_port));
+  const userLang = resolveLang(args) || autoLang || 'ja';
   try {
     switch (name) {
       case 'search_route': return await searchRoute(args);
@@ -1925,7 +1945,10 @@ async function searchRoute(args) {
     // 駅名が日本語（ja）の場合は userLang を 'ja' のままにする。
     // （ja/zh 共通キーワードの場合、駅名の言語を信頼する）
   } else {
-    userLang = detectLanguage(fromInput) || detectLanguage(toInput) || 'ja';
+    // 明示指定なし: from/to 双方を判定し、いずれかが zh/en ならその言語を採用（中国語/英語検索に検索言語で応答）
+    const fL = detectLanguage(fromInput);
+    const tL = detectLanguage(toInput);
+    userLang = fL !== 'ja' ? fL : tL !== 'ja' ? tL : 'ja';
   }
 
   if (!fromInput || !toInput) {
@@ -2111,7 +2134,10 @@ async function searchRoute(args) {
       note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
             userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
             "🏛️ 【現在地周辺の公的機関の検索】",
-      link: GOV_FACILITY_SEARCH_URL
+      link: GOV_FACILITY_SEARCH_URL,
+      link_label: userLang === 'en' ? "📍 Show public facilities near current location on Google Maps" :
+                  userLang === 'zh' ? "📍 在地图上查看当前位置周边的公共设施" :
+                  "📍 現在地周辺の公的機関を地図で確認"
     },
     // 🚌 駅⇔コミュニティバス接続（足の悪いユーザーの駅までの足・駅からの足）
     community_bus_access: communityBusAccessOut
@@ -2291,7 +2317,10 @@ async function getWeather(args) {
       note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
           userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
           "🏛️ 【現在地周辺の公的機関の検索】",
-      link: GOV_FACILITY_SEARCH_URL
+      link: GOV_FACILITY_SEARCH_URL,
+      link_label: userLang === 'en' ? "📍 Show public facilities near current location on Google Maps" :
+                  userLang === 'zh' ? "📍 在地图上查看当前位置周边的公共设施" :
+                  "📍 現在地周辺の公的機関を地図で確認"
     }
   });
 }
@@ -2877,13 +2906,41 @@ const COMMUNITY_BUS_ROUTES = [
   {
     bus: 'めぐりん', municipality: '台東区',
     url: 'https://www.city.taito.lg.jp/index/kurashi/kotsu/megurin/index.html',
+    // 公式路線図(JORUDAN/台東区)に基づく5路線。いずれも一方向循環。
+    // かっぱ橋道具街（合羽橋）最寄りは「南めぐりん」の松が谷（24番）。
     routes: [
+      // 北めぐりん（浅草回り）：浅草駅→隅田公園→吉原大門→…→浅草四丁目→浅草寺北→二天門→浅草松屋西→浅草駅
+      { name: '北めぐりん（浅草回り）', stops: [
+        '浅草駅前', '花川戸', '隅田公園', 'リバーサイドスポーツセンター前', '今戸一丁目', '今戸二丁目',
+        '橋場老人福祉館西', '橋場一丁目', '清川一丁目', '東浅草二丁目', '吉原大門', '竜泉三丁目',
+        '三ノ輪二丁目', '三ノ輪駅前', '一葉記念館入口', '千束三丁目', '台東病院', '千束小学校前',
+        '浅草五丁目', '浅草警察署前', '浅草四丁目', '浅草寺北', '二天門', '浅草松屋西', '浅草駅前'
+      ] },
+      // 北めぐりん（根岸回り）：浅草駅→入谷→鶯谷→根岸→三ノ輪→浅草
+      { name: '北めぐりん（根岸回り）', stops: [
+        '浅草駅前', '入谷鬼子母神前', '下谷二丁目', '鶯谷駅南', '松が谷（かっぱ橋道具街）', '根岸三丁目', '上野駅入谷口',
+        '台東区役所', '下谷神社', '入谷駅入口', '千束三丁目', '台東病院', '浅草五丁目',
+        '浅草警察署前', '浅草四丁目', '浅草寺北', '二天門', '浅草松屋西', '浅草駅前'
+      ] },
+      // 南めぐりん：上野駅→田原町駅→浅草菊水通り→西浅草→台東区役所→松が谷→…（かっぱ橋道具街最寄り=松が谷）
+      { name: '南めぐりん', stops: [
+        '上野駅', '永寿総合病院', '御徒町', '新御徒町駅', '台東三丁目', '台東地区センター',
+        '三井記念病院前', '柳北スポーツプラザ', '浅草橋駅北', '柳橋中央通り', '柳橋分院入口',
+        '鳥越神社前', '環境ふれあい館ひまわり入口', '三筋老人福祉館東', '南部区民事務所',
+        '大江戸線蔵前駅', '田原町駅前', '浅草菊水通り', '西浅草', '菊屋橋', '台東区役所',
+        '上野学園', '北上野二丁目', '松が谷（かっぱ橋道具街）', '生涯学習センター南', '生涯学習センター北',
+        '千束二丁目', '千束三丁目', '台東病院', '大正小学校前', '入谷地区センター',
+        '入谷南公園', '北上野', '上野学園', '台東保健所', '台東区役所', '上野駅'
+      ] },
+      // 東西めぐりん
       { name: '東西めぐりん', stops: ['上野駅入谷口', '浅草駅前', '上野駅入谷口'] },
-      { name: '南北めぐりん', stops: ['上野駅入谷口', '三ノ輪駅前', '上野駅入谷口'] },
+      // ぐるーりめぐりん
       { name: 'ぐるーりめぐりん', stops: ['浅草駅前', '田原町駅前', '浅草駅前'] }
     ],
     stations: {
-      '上野': '上野駅入谷口', '浅草': '浅草駅前', '田原町': '田原町駅前', '三ノ輪': '三ノ輪駅前'
+      '上野': '上野駅入谷口', '浅草': '浅草駅前', '田原町': '田原町駅前', '三ノ輪': '三ノ輪駅前',
+      '入谷': '入谷鬼子母神前', '鶯谷': '鶯谷駅南', '新御徒町': '新御徒町駅', '蔵前': '大江戸線蔵前駅',
+      '浅草橋': '浅草橋駅北', '御徒町': '御徒町', '松が谷': '松が谷'
     }
   }
 ];
@@ -3076,10 +3133,13 @@ async function fetchAllBuses(userLang) {
       failCount++;
     }
   });
-  // 🔴 odpt:Bus が空（ODPT が odpt:Bus エンドポイントを提供していない/無料キーで空を返す）場合のフォールバック:
-  // odpt:BusroutePattern の停留所名（busstopPoleOrder[].odpt:note）をバス停検索キーとして合成する。
-  // これによりバス停検索モード（busstop_name）が「系統名のみ」でなく停留所名でもヒットする。
-  if (merged.length === 0 && okCount > 0) {
+  // 🔴 odpt:Bus は「リアルタイムのバス位置情報」のみを返し、系統・停留所一覧は持たない
+  // （無料キーでも 4件程度の現在位置が返るため merged.length===0 にならない）。
+  // そのため odpt:Bus の _searchKeys だけでは「浅草雷門」等の停名検索がヒットしない。
+  // 停名検索モード（busstop_name）を実用化するため、ODPT が応答していれば問わず
+  // odpt:BusroutePattern の停留所名（busstopPoleOrder[].odpt:note）を検索キーとして合成する。
+  // （odpt:Bus リアルタイム便のレコードは merged に残したまま、停名レコードを追加マージする）
+  if (okCount > 0) {
     try {
       const { patterns } = await fetchBusGraph();
       const stopMap = new Map(); // stopName -> { operator, label }
@@ -3490,17 +3550,177 @@ function findBusSegment(busGraph, a, b, nonStepByPattern, nonStepByStop) {
   };
 }
 
-async function searchBusTransfer(fromInput, toInput) {
+// ============================================================
+// 🚌 乗り物指定優先定数
+// ============================================================
+// vehicle 指定時のエッジ重みマップ（キー: 指定乗り物 → 各モードの重み）
+// 非指定モードに重み 3（乗換1回相当）を乗せることで優先を実現。
+const VEHICLE_WEIGHTS = {
+  bus:            { bus: 1, train: 3, link: 1, community_bus: 1, ferry: 3 },
+  train:          { train: 1, bus: 3, link: 1, community_bus: 3, ferry: 3 },
+  community_bus:  { community_bus: 1, bus: 2, train: 3, link: 1, ferry: 3 },
+  ferry:          { ferry: 1, bus: 3, train: 3, link: 1, community_bus: 3 },
+  any:            { bus: 1, train: 1, link: 1, community_bus: 1, ferry: 1 }
+};
+const VALID_VEHICLES = ['bus', 'train', 'community_bus', 'ferry', 'any'];
+
+// エッジの type から mode キーを取得（transfer は link 扱い）
+function edgeTypeToMode(type) {
+  if (type === 'link' || type === 'transfer') return 'link';
+  return type; // bus / train / community_bus / ferry はそのまま
+}
+
+// 重み付きダイクストラ（最小コスト経路探索）
+// adj: Map<nodeName, [{to, type}]>, weights: mode->cost
+// 戻り値: { found, nodePath, segments, score }
+function findWeightedPath(adj, fromNode, toNode, weights, busGraph, nonStepByPattern, nonStepByStop, cbStopToBus) {
+  const dist = new Map(); // node -> best cost
+  const prev = new Map(); // node -> parentNode
+  const pq = [{ node: fromNode, cost: 0 }];
+  dist.set(fromNode, 0);
+  prev.set(fromNode, null);
+  while (pq.length) {
+    // 最小コスト要素を取り出し（簡易実装: 毎回 sort して先頭）
+    pq.sort((a, b) => a.cost - b.cost);
+    const { node: cur, cost: curCost } = pq.shift();
+    if (curCost > (dist.get(cur) || Infinity)) continue;
+    if (cur === toNode) break;
+    for (const e of (adj.get(cur) || [])) {
+      const mode = edgeTypeToMode(e.type);
+      const w = weights[mode] !== undefined ? weights[mode] : 1;
+      const nc = curCost + w;
+      if (nc < (dist.get(e.to) || Infinity)) {
+        dist.set(e.to, nc);
+        prev.set(e.to, { from: cur, edgeType: e.type });
+        pq.push({ node: e.to, cost: nc });
+      }
+    }
+  }
+  if (!prev.has(toNode)) return { found: false, score: Infinity };
+  // ノード列を復元
+  const nodePath = [];
+  const edgePath = [];
+  let cur = toNode;
+  while (cur !== null) {
+    nodePath.unshift(cur);
+    const p = prev.get(cur);
+    if (p) edgePath.unshift({ from: p.from, to: cur, type: p.edgeType });
+    cur = p ? p.from : null;
+  }
+  // 探索時に選択したエッジ種別をそのまま使ってセグメント化する。
+  // 同一ノード間に train/link 等が複数存在しても、隣接リストの先頭を再推測しない。
+  const segments = buildSegmentsFromPath(nodePath, edgePath, adj, busGraph, nonStepByPattern, nonStepByStop, cbStopToBus);
+  return { found: true, nodePath, edgePath, segments, score: dist.get(toNode) };
+}
+
+// ノード列 → セグメント配列（searchBusTransfer のセグメント化を関数化）
+function buildSegmentsFromPath(nodePath, edgePath, adj, busGraph, nonStepByPattern, nonStepByStop, cbStopToBus) {
+  const segments = [];
+  let i = 0;
+  while (i < nodePath.length - 1) {
+    const a = nodePath[i], b = nodePath[i + 1];
+    const selectedEdge = edgePath?.[i];
+    const type = selectedEdge?.type || 'bus';
+    if (type === 'link') {
+      segments.push({ mode: 'transfer', fromStop: a, toStop: b, note: '徒歩乗り継ぎ' });
+      i++;
+    } else if (type === 'train') {
+      let end = i + 1;
+      while (end < nodePath.length - 1) {
+        const nextType = edgePath?.[end]?.type;
+        if (nextType === 'train') end++;
+        else break;
+      }
+      const stops = nodePath.slice(i, end + 1);
+      segments.push({ mode: 'train', fromStop: stops[0], toStop: stops[stops.length - 1], stops });
+      i = end + 1;
+    } else if (type === 'community_bus') {
+      let end = i + 1;
+      while (end < nodePath.length - 1) {
+        const nextType = edgePath?.[end]?.type;
+        if (nextType && (nextType === 'community_bus' || end + 1 === nodePath.length - 1)) end++;
+        else break;
+      }
+      const stops = nodePath.slice(i, end + 1);
+      const meta = cbStopToBus[stops[0]] || cbStopToBus[stops[stops.length - 1]] || {};
+      segments.push({
+        mode: 'community_bus', fromStop: stops[0], toStop: stops[stops.length - 1], stops,
+        bus: meta.bus, municipality: meta.municipality, website: meta.url, route: meta.route, non_step_bus: null
+      });
+      i = end + 1;
+    } else {
+      // bus区間
+      const busSeg = findBusSegment(busGraph, a, b, nonStepByPattern, nonStepByStop);
+      if (busSeg) {
+        segments.push({ mode: 'bus', ...busSeg });
+        i++;
+      } else {
+        segments.push({ mode: 'bus', fromStop: a, toStop: b, stops: [a, b], non_step_bus: null });
+        i++;
+      }
+    }
+  }
+  return segments;
+}
+
+// 指定乗り物が経路に含まれるか
+function pathHasMode(segments, mode) {
+  return segments.some(s => s.mode === mode);
+}
+
+// 経路の簡易スコア（乗換回数 + モード内訳）— better_alternative 比較用
+function scorePath(segments) {
+  let transfers = 0, busStops = 0, trainStops = 0;
+  for (const s of segments) {
+    if (s.mode === 'bus' || s.mode === 'community_bus' || s.mode === 'ferry') {
+      transfers++;
+      if (s.mode === 'bus' || s.mode === 'community_bus') {
+        busStops += Math.max(1, (s.stops ? s.stops.length : 2) - 1);
+      }
+    } else if (s.mode === 'train') {
+      transfers++;
+      trainStops += (s.stops ? s.stops.length : 2) - 1;
+    } else if (s.mode === 'transfer') { /* link — 乗換カウント外 */ }
+  }
+  const estimatedMinutes = trainStops * 2 + busStops * 3;
+  return { transfers: Math.max(0, transfers - 1), estimated_minutes: estimatedMinutes, bus_count: segments.filter(s => s.mode === 'bus').length, train_count: segments.filter(s => s.mode === 'train').length };
+}
+
+// 重み付き探索 + 通常探索の2回実行 + better_alternative 進言
+async function searchBusTransfer(fromInput, toInput, vehiclePref) {
   const from = normalizeBusStop(fromInput);
   const to = normalizeBusStop(toInput);
-  const { patterns } = await fetchBusGraph();
-  const { nonStepByPattern, nonStepByStop } = await fetchBusTimetable();
+  // 🔴 タイムアウト緩和: 直列 await を Promise.all で並列化（ODPT 4 API + 駅geo を同時取得）
+  // さらに全体タイムアウト(25s)ガードを設け、個別フェッチが沈黙しても MCP クライアントの
+  // 300s タイムアウトに到達しないよう、空データでフォールバックする。
+  const BUS_TRANSFER_FETCH_TIMEOUT_MS = 25000;
+  let graphData, ttData, links, stationGeoMap;
+  try {
+    const withTimeout = (p, label) => Promise.race([
+      p,
+      new Promise((_, rej) => setTimeout(() => rej(new Error(`bus transfer fetch timeout: ${label}`)), BUS_TRANSFER_FETCH_TIMEOUT_MS))
+    ]);
+    [graphData, ttData, links, stationGeoMap] = await Promise.all([
+      withTimeout(fetchBusGraph(), 'BusroutePattern'),
+      withTimeout(fetchBusTimetable(), 'BusTimetable'),
+      withTimeout(fetchBusStopStationLinks(), 'BusstopStationLinks'),
+      withTimeout(fetchStationGeo(), 'StationGeo')
+    ]);
+  } catch (timeoutErr) {
+    // タイムアウト時は空データで継続（グラフは空＝NOT_FOUND を返し、コミュニティバス接続案内は維持）
+    console.error('[searchBusTransfer] fetch guard triggered:', timeoutErr.message);
+    graphData = graphData || { patterns: [] };
+    ttData = ttData || { nonStepByPattern: {}, nonStepByStop: {} };
+    links = links || {};
+    stationGeoMap = stationGeoMap || {};
+  }
+  const { patterns } = graphData;
+  const { nonStepByPattern, nonStepByStop } = ttData;
   const busGraph = buildTransferGraph(patterns);
   const trainAdj = buildTrainNameGraph();
-  const links = await fetchBusStopStationLinks();
+  const trainLinks = links;
   // 駅ノードを trainAdj に確保（RAILWAY_LINES にない駅でも link エッジを張れるよう）
-  const stationGeo = await fetchStationGeo();
-  for (const stName of Object.keys(stationGeo)) {
+  for (const stName of Object.keys(stationGeoMap)) {
     if (!trainAdj.has(stName)) trainAdj.set(stName, new Set());
   }
   // 統合グラフ: bus停ノード + 駅ノード + link(バス停→駅 徒歩乗り継ぎ) エッジ
@@ -3518,7 +3738,7 @@ async function searchBusTransfer(fromInput, toInput) {
     for (const n of neighbors) addEdge(s, n, 'train');
   }
   // バス停→駅 の link エッジ（バス停と同一名の駅があれば結ぶ）
-  for (const [busStop, station] of Object.entries(links)) {
+  for (const [busStop, station] of Object.entries(trainLinks)) {
     if (busGraph.adj.has(busStop) && trainAdj.has(station)) {
       addEdge(busStop, station, 'link');
       addEdge(station, busStop, 'link');
@@ -3593,79 +3813,53 @@ async function searchBusTransfer(fromInput, toInput) {
   const fNode = resolve(from);
   const tNode = resolve(to);
   if (!fNode || !tNode) {
-    return { found: false, fromNode: fNode, toNode: tNode };
+    return { found: false, fromNode: fNode, toNode: tNode, allNodeNames: [...allNodes] };
   }
-  // BFS（最初に到達した親を固定。重み無視＝最小エッジ数優先）
-  const prev = new Map();
-  const q = [fNode];
-  prev.set(fNode, null);
-  while (q.length) {
-    const cur = q.shift();
-    if (cur === tNode) break;
-    for (const e of (adj.get(cur) || [])) {
-      if (!prev.has(e.to)) {
-        prev.set(e.to, cur);
-        q.push(e.to);
-      }
+  // 🚌🚃 乗り物指定優先: 優先探索（重み付き）+ 通常探索（無重み）の2回実行
+  const validPref = (VALID_VEHICLES.includes(vehiclePref)) ? vehiclePref : 'any';
+  // 第1パス: 指定優先（vehiclePref が any でなければ重み付き）
+  const prefWeights = VEHICLE_WEIGHTS[validPref] || VEHICLE_WEIGHTS.any;
+  const prefResult = (validPref === 'any')
+    ? null // any の場合は通常探索1回のみ
+    : findWeightedPath(adj, fNode, tNode, prefWeights, busGraph, nonStepByPattern, nonStepByStop, cbStopToBus);
+  // 第2パス: 通常探索（無重み＝最小エッジ数）
+  const anyResult = findWeightedPath(adj, fNode, tNode, VEHICLE_WEIGHTS.any, busGraph, nonStepByPattern, nonStepByStop, cbStopToBus);
+  if (!anyResult.found) {
+    // どちらも見つからない
+    return { found: false, fromNode: fNode, toNode: tNode, allNodeNames: [...allNodes] };
+  }
+  // 優先探索の結果を採用（ただし any の場合は anyResult をそのまま）
+  const primaryResult = (prefResult && prefResult.found) ? prefResult : anyResult;
+  const segments = primaryResult.segments;
+  // better_alternative 進言: 指定優先経路が、通常最短路より明らかに劣る場合
+  let betterAlternative = null;
+  if (validPref !== 'any' && prefResult && prefResult.found && anyResult.found) {
+    const prefScore = scorePath(segments);
+    const altScore = scorePath(anyResult.segments);
+    const transferDiff = prefScore.transfers - altScore.transfers;
+    const minuteDiff = prefScore.estimated_minutes - altScore.estimated_minutes;
+    // 乗換が2回以上多い、または所要目測が10分以上長い場合に進言
+    if (transferDiff >= 2 || minuteDiff >= 10) {
+      const altMode = anyResult.segments.some(s => s.mode === 'train') ? 'train'
+        : anyResult.segments.some(s => s.mode === 'community_bus') ? 'community_bus'
+        : anyResult.segments.some(s => s.mode === 'ferry') ? 'ferry' : 'bus';
+      betterAlternative = {
+        exists: true,
+        recommended_mode: altMode,
+        preferred_mode: validPref,
+        transfers_saved: transferDiff,
+        estimated_minutes_saved: minuteDiff,
+        alt_segments: anyResult.segments,
+        alt_score: altScore
+      };
     }
   }
-  if (!prev.has(tNode)) return { found: false, fromNode: fNode, toNode: tNode };
-  // 最短ノード列を復元
-  const nodePath = [];
-  let cur = tNode;
-  while (cur !== null) { nodePath.unshift(cur); cur = prev.get(cur); }
-  // セグメント化: bus区間 / train区間 / link(徒歩)
-  const segments = [];
-  let i = 0;
-  while (i < nodePath.length - 1) {
-    const a = nodePath[i], b = nodePath[i + 1];
-    const edge = (adj.get(a) || []).find(e => e.to === b);
-    const type = edge ? edge.type : 'bus';
-    if (type === 'link') {
-      segments.push({ mode: 'transfer', fromStop: a, toStop: b, note: '徒歩乗り継ぎ' });
-      i++;
-    } else if (type === 'train') {
-      // 連続する駅を1電車セグメントにまとめる（最後の要素も含む）
-      let end = i + 1;
-      while (end < nodePath.length - 1) {
-        const c = nodePath[end], d = nodePath[end + 1];
-        const e2 = (adj.get(c) || []).find(x => x.to === d);
-        if (e2 && (e2.type === 'train' || end + 1 === nodePath.length - 1)) end++;
-        else break;
-      }
-      const stops = nodePath.slice(i, end + 1);
-      segments.push({ mode: 'train', fromStop: stops[0], toStop: stops[stops.length - 1], stops });
-      i = end + 1;
-    } else if (type === 'community_bus') {
-      // 連続するコミュニティバス区間を1セグメントにまとめる
-      let end = i + 1;
-      while (end < nodePath.length - 1) {
-        const c = nodePath[end], d = nodePath[end + 1];
-        const e2 = (adj.get(c) || []).find(x => x.to === d);
-        if (e2 && (e2.type === 'community_bus' || end + 1 === nodePath.length - 1)) end++;
-        else break;
-      }
-      const stops = nodePath.slice(i, end + 1);
-      const meta = cbStopToBus[stops[0]] || cbStopToBus[stops[stops.length - 1]] || {};
-      segments.push({
-        mode: 'community_bus', fromStop: stops[0], toStop: stops[stops.length - 1], stops,
-        bus: meta.bus, municipality: meta.municipality, website: meta.url, route: meta.route, non_step_bus: null
-      });
-      i = end + 1;
-    } else {
-      // bus区間: 既存 findTransferPath ロジックで nonStep 付与
-      const busSeg = findBusSegment(busGraph, a, b, nonStepByPattern, nonStepByStop);
-      if (busSeg) {
-        segments.push({ mode: 'bus', ...busSeg });
-        i++;
-      } else {
-        // bus エッジだが stopToPatterns にない場合（例: 入力自体が駅でlinkを飛ばした等）
-        segments.push({ mode: 'bus', fromStop: a, toStop: b, stops: [a, b], non_step_bus: null });
-        i++;
-      }
-    }
-  }
-  return { found: true, fromNode: fNode, toNode: tNode, segments, isCrossModal: segments.some(s => s.mode === 'train') };
+  return {
+    found: true, fromNode: fNode, toNode: tNode, segments,
+    isCrossModal: segments.some(s => s.mode === 'train'),
+    vehicleRequested: validPref,
+    betterAlternative
+  };
 }
 // ============================================================
 // 🚌 コミュニティバス案内ブロック（Phase 1: 駅までの足・駅からの足）
@@ -3707,20 +3901,49 @@ async function searchBus(args) {
   const busstopName = (args.busstop_name || '').trim();
   const fromInput = (args.from || '').trim();
   const toInput = (args.to || '').trim();
+  const vehicleInput = (args.vehicle || '').trim();
   // 乗り継ぎ探索モード（from + to 指定時）。案B: 異系統・異事業者間の最短経路。
   if (fromInput && toInput) {
-    const userLang = resolveLang(args) || detectLanguage(fromInput) || detectLanguage(toInput) || 'ja';
+    const fL = detectLanguage(fromInput);
+    const tL = detectLanguage(toInput);
+    const userLang = resolveLang(args) || (fL !== 'ja' ? fL : tL !== 'ja' ? tL : 'ja');
     const parsedTest = parseTestMode({ from: fromInput, to: toInput, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
     const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
-    if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
+    // searchBusTransfer 内で個別APIの障害を縮退処理する。
+    // ここで早期 return すると、hard-coded / community-bus フォールバックまで遮断される。
     try {
-      const result = await searchBusTransfer(fromInput, toInput);
+      const result = await searchBusTransfer(fromInput, toInput, vehicleInput);
       // 駅⇔コミュニティバス接続（Phase 1: 足の悪いユーザーの駅までの足・駅からの足）
       const cbAccess = [
         buildCommunityBusAccessBlock(fromInput, userLang),
         buildCommunityBusAccessBlock(toInput, userLang)
       ].filter(Boolean);
       if (!result.found) {
+        // 🔴 案内改善: 入力量の類似バス停を提示し、見つからない場合は徒歩・現実的アクセスを勧める
+        const similarStops = [];
+        const seen = new Set();
+        // 乗り継ぎモードでは ODPT バス停リスト(buses) はスコープ外になるため、
+        // searchBusTransfer が返す統合グラフの全ノード名(allNodeNames)をソースに使う。
+        const busPool = (result.allNodeNames && result.allNodeNames.length)
+          ? result.allNodeNames
+          : (typeof buses !== 'undefined' ? (buses || []) : []);
+        if (fromInput && toInput) {
+          for (const q of [fromInput, toInput]) {
+            const qn = String(q || '').replace(/(停留所|バス停|駅)$/, '');
+            for (const k of busPool) {
+              if (!k || seen.has(k)) continue;
+              if ((qn && k.includes(qn)) || (k.length >= 2 && qn.length >= 1 && k.includes(qn.slice(0, Math.max(1, qn.length - 1))))) {
+                seen.add(k); similarStops.push(k);
+              }
+            }
+          }
+        }
+        const simNote = userLang === 'en' ? 'No exact bus/train-transfer route found. Similar existing stops you can try:'
+          : userLang === 'zh' ? '未找到精确的公交/电车换乘路线。可尝试以下相近的现有站名：'
+          : '該当する乗り継ぎ経路が見つかりませんでした。代わりに以下の実在バス停名が利用できます：';
+        const walkNote = userLang === 'en' ? 'This pair may be shorter on foot — consider walking, or search a nearby stop above.'
+          : userLang === 'zh' ? '这段区间步行可能更近——建议步行，或改用上方相近的站点检索。'
+          : 'この区間は徒歩の方が早い場合があります——徒歩での移動、または上記の近隣バス停での再検索をご検討ください。';
         return jsonResponse({
           status: 'NOT_FOUND', detected_language: userLang,
           message: userLang === 'en' ? `No bus transfer route found from "${fromInput}" to "${toInput}".`
@@ -3729,11 +3952,18 @@ async function searchBus(args) {
           note: userLang === 'en' ? 'Transfer covers Toei/Seibu/Yokohama City Bus (ODPT BusroutePattern data) plus community-bus station links. JR Bus Kanto is not included (no stop-order data).'
             : userLang === 'zh' ? '换乘覆盖都营/西武/横滨市营公交（ODPT BusroutePattern 数据）及社区公交接驳。JR巴士关东不包含在内（缺少站点顺序数据）。'
             : '乗り継ぎは都営・西武・横浜市営バス＋コミュニティバス駅接続が対象（ODPT BusroutePattern データ）。JRバス関東は停留所順序データがないため対象外です。',
-            data_source: 'ODPT BusroutePattern + BusTimetable',
-            ai_transit_advice: testAdv.aiAdvice,
-            community_bus_access: cbAccess.length ? cbAccess : undefined,
-            test_mode: testAdv.testMode,
-            simulated_failure_type: testAdv.failureType || undefined
+          data_source: 'ODPT BusroutePattern + BusTimetable',
+          ai_transit_advice: testAdv.aiAdvice,
+          community_bus_access: cbAccess.length ? cbAccess : undefined,
+          similar_stops: similarStops.length ? (() => {
+            const localized = similarStops.slice(0, 10)
+              .map(s => getDisplayStationName(s, userLang))
+              .filter(s => userLang === 'ja' || !/[\u3040-\u30ff\u3400-\u9fff]/.test(s));
+            return localized.length ? { note: simNote, stops: localized } : undefined;
+          })() : undefined,
+          walk_suggestion: walkNote,
+          test_mode: testAdv.testMode,
+          simulated_failure_type: testAdv.failureType || undefined
             });
       }
       const opLabel = (opId) => {
@@ -3775,6 +4005,40 @@ async function searchBus(args) {
             ? '全区間でノンステップバス（段差なし）が運行されています。足の悪い方の乗車が容易です。'
             : '一部区間でノンステップバスが運行されていない可能性があります。各事業者へご確認いただくか、ノンステップ指定便をご利用ください。');
       const crossModal = result.isCrossModal ? (userLang === 'en' ? ' (bus→train→bus cross-modal)' : userLang === 'zh' ? '（公交→电车→公交 跨方式换乘）' : '（バス→電車→バスの横断乗り継ぎ）') : '';
+      // 🚌 乗り物指定優先の進言ブロック（better_alternative）
+      let betterAlternativeBlock = undefined;
+      if (result.betterAlternative && result.betterAlternative.exists) {
+        const ba = result.betterAlternative;
+        const modeLabelFor = (m) => userLang === 'en'
+          ? (m === 'train' ? 'Train' : m === 'community_bus' ? 'Community bus' : m === 'ferry' ? 'Ferry' : 'Bus')
+          : userLang === 'zh'
+            ? (m === 'train' ? '电车' : m === 'community_bus' ? '社区公交' : m === 'ferry' ? '水上巴士' : '公交')
+            : (m === 'train' ? '電車' : m === 'community_bus' ? 'コミュニティバス' : m === 'ferry' ? '水上バス' : 'バス');
+        const prefLabel = modeLabelFor(ba.preferred_mode);
+        const altLabel = modeLabelFor(ba.recommended_mode);
+        const reason = userLang === 'en'
+          ? `💡 Better alternative: ${altLabel} saves ${ba.transfers_saved} transfer(s) and ~${ba.estimated_minutes_saved} min vs. your requested ${prefLabel}.`
+          : userLang === 'zh'
+            ? `💡 更优方案：相比您指定的${prefLabel}，使用${altLabel}可减少 ${ba.transfers_saved} 次换乘、约 ${ba.estimated_minutes_saved} 分钟。`
+            : `💡 より良い案：${prefLabel}指定より${altLabel}の方が乗換 ${ba.transfers_saved} 回・約 ${ba.estimated_minutes_saved} 分短縮できます。`;
+        const altSegs = (ba.alt_segments || []).map((s, i) => {
+          const stops = (s.stops && s.stops.length ? s.stops : [s.fromStop, s.toStop]).map(n => getDisplayStationName(n, userLang));
+          const base = { step: i + 1, mode: s.mode, mode_label: modeLabel(s.mode), from: getDisplayStationName(s.fromStop, userLang), to: getDisplayStationName(s.toStop, userLang), stops };
+          if (s.mode === 'bus') { base.operator = opLabel(s.operator); base.non_step_bus = s.non_step_bus; }
+          else if (s.mode === 'train') { base.operator = userLang === 'en' ? 'Railway' : userLang === 'zh' ? '铁路' : '鉄道'; }
+          else if (s.mode === 'community_bus') { base.operator = s.bus; base.municipality = s.municipality; base.website = s.website; base.non_step_bus = null; }
+          else if (s.mode === 'transfer') { base.note = userLang === 'en' ? 'Walk transfer' : userLang === 'zh' ? '步行换乘' : s.note; }
+          return base;
+        });
+        betterAlternativeBlock = {
+          note: reason,
+          recommended_mode: ba.recommended_mode,
+          preferred_mode: ba.preferred_mode,
+          transfers_saved: ba.transfers_saved,
+          estimated_minutes_saved: ba.estimated_minutes_saved,
+          route: altSegs
+        };
+      }
       return jsonResponse({
         status: 'SUCCESS', detected_language: userLang,
         transfer: true,
@@ -3784,6 +4048,8 @@ async function searchBus(args) {
         route: segments,
         barrier_free_note: barrierFreeNote,
         note: crossModal || undefined,
+        vehicle_requested: result.vehicleRequested || 'any',
+        better_alternative: betterAlternativeBlock,
         community_bus_access: cbAccess.length ? cbAccess : undefined,
         community_bus_note: communityBusNote,
         data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link) + コミュニティバス駅接続(自治体公式データ)',
@@ -3872,11 +4138,41 @@ async function searchBus(args) {
         return b._searchKeys.some(k => k.includes(v) || (stripped !== v && k.includes(stripped)));
       });
     });
+    // 🔴 0件時の案内改善: 入力に部分一致する実在バス停を類似候補として提示
+    // （例: 「合羽橋」→「合羽坂下」「浅草」→「浅草雷門」等）。
+    // ODPT に同名バス停が無い場合でも、最寄りの実在バス停名を教えることで
+    // ユーザーが正しい乗車バス停を特定できる。
+    let nearbySuggestions = undefined;
+    if (matched.length === 0) {
+      const q = resolvedBusstop.replace(/(停留所|バス停|駅)$/, '');
+      const seen = new Set();
+      const cands = [];
+      for (const b of buses) {
+        for (const k of (b._searchKeys || [])) {
+          if (!k || seen.has(k)) continue;
+          // 入力の先頭N文字に一致、または入力が停名に含まれる
+          if ((q && k.includes(q)) || (k.length >= 2 && q.length >= 1 && k.includes(q.slice(0, Math.max(1, q.length - 1))))) {
+            seen.add(k);
+            cands.push(k);
+          }
+        }
+        if (cands.length >= 20) break;
+      }
+      if (cands.length) {
+        const label = userLang === 'en' ? 'Similar nearby bus stops'
+          : userLang === 'zh' ? '相近的公交站名' : '類似する近隣のバス停';
+        const localized = cands.slice(0, 10)
+          .map(s => getDisplayStationName(s, userLang))
+          .filter(s => userLang === 'ja' || !/[\u3040-\u30ff\u3400-\u9fff]/.test(s));
+        nearbySuggestions = localized.length ? { note: label, stops: localized } : undefined;
+      }
+    }
     return jsonResponse({
       status: "SUCCESS", detected_language: userLang,
       busstop: busstopName,
       resolved_busstop: resolvedBusstop !== busstopName ? resolvedBusstop : undefined,
       total: matched.length,
+      nearby_suggestions: nearbySuggestions,
       operators: operatorSumm,
       bus_routes: matched.slice(0, 20).map(b => ({
         note: getDisplayStationName(b['odpt:note'] || b._displayNote, userLang), route: b['odpt:busroute'], number: b['odpt:busNumber'],

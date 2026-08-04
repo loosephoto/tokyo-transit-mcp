@@ -8,7 +8,10 @@
     "tokyo-transit-mcp": "./src/index.mjs"
   },
   "scripts": {
-    "build": "echo 'Use src/index.mjs directly'",
+    "build": "node --check src/index.mjs",
+    "test": "node scripts/probe-all-lang.mjs",
+    "test:bus": "node scripts/probe-bus-transfer-lang.mjs",
+    "test:vehicle": "node scripts/probe-bus-vehicle-mock.mjs",
     "start": "node src/index.mjs",
     "dev": "node src/index.mjs"
   },

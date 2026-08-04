@@ -217,6 +217,8 @@ ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横
 - **バス停検索** — `busstop_name` でバス停・系統を検索
 - **駅⇔コミュニティバス接続（バリアフリー対応）** — `search_route` / `search_bus` で駅を指定すると「この駅はどのコミュニティバスが使えるか」を表示（主要10件の駅接続データ: ちぃばす・ハチ公バス・ムーバス・はなバス・すぎ丸 等）。足の悪いユーザーの「駅までの足・駅からの足」を支援し、車椅子・低床バスの確認先（自治体公式サイトURL）を注意喚起として案内。コミュニティバス停同士の乗り継ぎは `mode: 'community_bus'` セグメントとして実経路を返します（例: 渋谷駅東口→恵比寿駅前 = ハチ公バス）
 - **乗り継ぎ探索** — `from` + `to` で `odpt:BusroutePattern` の停留所順序から最短乗り継ぎ経路を探索（異系統・異事業者間の乗り継ぎ対応）
+- **🚌 乗り物指定優先（`vehicle`）** — 乗り継ぎ探索モードで `vehicle` を指定すると、その乗り物を優先した経路を探索します。`bus`（バス優先）/`train`（電車優先）/`community_bus`（コミュニティバス優先）/`ferry`（水上バス優先）/`any`（自動＝最短・デフォルト）。指定した乗り物が極端に遠回りになる場合（乗換が2回以上多い、または所要目測が10分以上長い）、`better_alternative` フィールドでより良い経路（推奨乗り物・節約できる乗換回数・分数）を進言します。所要時間は駅数・停留所数を基にしたグラフ上の概算です。
+- **ODPT障害時の縮退** — `search_bus` のバス停検索は、ODPT APIが利用できない場合でも hard-coded のコミュニティバス/JRバスデータへ縮退します。一方、ODPTの停留所順序を必要とする統合乗り継ぎ探索は、データ取得失敗時に経路を返せない場合があります。
 - **横断乗り継ぎ** — バス停と駅を緯度経度で紐付け、`odpt:Station`（電車）グラフと統合。バス→電車→バスの横断ルートも探索（例: 渋谷駅前→（徒歩）→渋谷→（電車）→新橋駅前）
 - **バリアフリー** — `odpt:BusTimetable.isNonStepBus`（ノンステップバス・段差なし）を系統ごとに表示
 
@@ -226,7 +228,21 @@ ODPT の `odpt:Bus` から都営バス・西武バス・横浜市交通局（横
 search_bus(busstop_name: "渋谷駅前")                    # バス停検索
 search_bus(from: "渋谷駅前", to: "新橋駅前")            # バス→電車→バス 横断乗り継ぎ
 search_bus(from: "横浜駅前", to: "川崎駅前")            # 横浜→（電車）→川崎 横断乗り継ぎ
+search_bus(from: "浅草", to: "上野", vehicle: "bus")       # バス優先（better_alternative で電車案内の可能性あり）
 ```
+
+### 開発・回帰検証
+
+コード変更後は、構文チェックと多言語回帰プローブを実行します。`npm test` は検索結果だけでなく、`weather_text`、`nearby_suggestions`、駅名・路線名などの補助表示も検査します。
+
+```bash
+npm run build       # node --check src/index.mjs
+npm test            # 全26ケースの日本語・英語・中国語回帰
+npm run test:bus    # バス乗り継ぎ実APIプローブ（API状況により長時間化）
+npm run test:vehicle # vehicle優先の決定的モック回帰
+```
+
+`npm test` の終了コードをCIの品質ゲートに使用できます。実APIを使うバス乗り継ぎプローブがタイムアウトしても、決定的なモック回帰とは別に評価してください。
 
 ### 7. `search_flight` — 空港フライト時刻・到着時刻表示
 
@@ -649,6 +665,8 @@ Merges Toei Bus, Seibu Bus, and Yokohama City Bus (Yokohama Municipal) from ODPT
 - **Stop search** — `busstop_name` to find stops / routes
 - **Station ⇔ community bus access (barrier-free)** — specifying a station in `search_route` / `search_bus` shows which community buses serve it (station-access data for 10 major buses: Chii-bus, Hachiko Bus, Mu-Bus, Hanabus, Sugimaru, etc.). Supports mobility-impaired users' first/last mile (home → station / station → destination), with a caution pointing to the municipal site for wheelchair / low-floor availability. Transfers between community bus stops return real routes as `mode: 'community_bus'` segments (e.g. Shibuya Stn East Exit → Ebisu Stn = Hachiko Bus)
 - **Transfer search** — `from` + `to` builds shortest transfer routes from `odpt:BusroutePattern` stop order (cross-route / cross-operator transfers)
+- **🚌 Vehicle preference (`vehicle`)** — In transfer-search mode, set `vehicle` to prefer that mode: `bus` (bus-first) / `train` (train-first) / `community_bus` (community bus-first) / `ferry` (water bus-first) / `any` (auto = shortest, default). If the requested mode makes the route much worse (2+ extra transfers, or 10+ min longer by estimate), a `better_alternative` field recommends a better route (recommended mode, transfers saved, minutes saved). The time estimate is graph-based, using station and stop counts rather than live timetables or traffic.
+- **ODPT outage fallback** — Bus-stop search falls back to hard-coded community-bus/JR Bus data when the ODPT API is unavailable. Integrated transfer search still depends on ODPT stop-order data and may return no route when that data cannot be fetched.
 - **Cross-modal transfer** — bus stops and stations are linked by geo-coordinates and merged with the `odpt:Station` (train) graph, enabling bus→train→bus routes (e.g. Shibuya Station →(walk)→ Shibuya →(train)→ Shimbashi Station)
 - **Barrier-free** — `odpt:BusTimetable.isNonStepBus` (step-free / non-step buses) shown per route
 
@@ -659,6 +677,19 @@ search_bus(busstop_name: "Shibuya Station")
 search_bus(from: "Shibuya Station", to: "Shimbashi Station")   # bus→train→bus cross-modal
 search_bus(from: "Yokohama Station", to: "Kawasaki Station")    # Yokohama→(train)→Kawasaki cross-modal
 ```
+
+### Development & regression checks
+
+After code changes, run the syntax check and multilingual regression probes. `npm test` checks not only the main results but also auxiliary fields such as `weather_text`, `nearby_suggestions`, station names, and line names.
+
+```bash
+npm run build        # node --check src/index.mjs
+npm test             # 26 Japanese / English / Chinese regression cases
+npm run test:bus     # live bus-transfer probe; may take a long time depending on the API
+npm run test:vehicle # deterministic vehicle-preference mock regression
+```
+
+Use the exit code of `npm test` as the CI quality gate. A timeout in the live bus-transfer probe should be evaluated separately from the deterministic mock regressions.
 
 ### 7. `search_flight` — Airport Flight Times & Arrival Display
 
@@ -1081,6 +1112,8 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 - **公交站查询** — `busstop_name` 搜索公交站/线路
 - **车站 ⇔ 社区公交接驳（无障碍支持）** — 在 `search_route` / `search_bus` 中指定车站时，会显示该站可用的社区公交（主要 10 条线路的接驳数据：ちぃばす、哈奇公巴士、ムーバ斯、はな巴士、すぎ丸 等），支持行动不便者的「到站前/离站后」出行，并以注意提示引导确认轮椅/低地板车辆信息（附各自治体官网链接）。社区公交站之间的换乘将以 `mode: 'community_bus'` 区段返回实际路线（例：涩谷站东口 → 惠比寿站前 = 哈奇公巴士）
 - **换乘搜索** — `from` + `to` 基于 `odpt:BusroutePattern` 的站点顺序构建最短换乘路线（跨线路/跨运营商换乘）
+- **🚌 乘车工具优先（`vehicle`）** — 在换乘搜索模式下指定 `vehicle` 可优先该交通方式：`bus`（公交优先）/`train`（电车优先）/`community_bus`（社区公交优先）/`ferry`（水上巴士优先）/`any`（自动＝最短・默认）。若指定方式导致路线明显绕远（换乘多 2 次以上，或预计多耗时 10 分钟以上），将通过 `better_alternative` 字段建议更优路线（推荐方式、可节省换乘次数、可节省分钟数）。预计时间是基于车站数与公交站数的图模型概算，不是实时班次或道路交通时间。
+- **ODPT 故障时的降级** — 当 ODPT API 不可用时，公交站查询会降级使用内置的社区公交/JR 巴士数据。综合换乘查询仍依赖 ODPT 的站点顺序数据，数据无法获取时可能无法返回路线。
 - **跨方式换乘** — 公交站与车站通过经纬度关联，并与 `odpt:Station`（铁路）图合并，支持公交→电车→公交路线（例：渋谷站前→(步行)→渋谷→(电车)→新桥站前）
 - **无障碍** — `odpt:BusTimetable.isNonStepBus`（无障碍低地板/无台阶巴士）按线路显示
 
@@ -1090,7 +1123,21 @@ get_timetable(station_name: "渋谷", railway: "山手線")
 search_bus(busstop_name: "渋谷駅前")                      # 公交站查询
 search_bus(from: "渋谷駅前", to: "新橋駅前")            # 公交→电车→公交 跨方式换乘
 search_bus(from: "横浜駅前", to: "川崎駅前")            # 横滨→(电车)→川崎 跨方式换乘
+search_bus(from: "浅草", to: "上野", vehicle: "bus")       # 公交优先（可能通过 better_alternative 建议电车）
 ```
+
+### 开发与回归验证
+
+代码变更后，请运行语法检查和多语言回归探针。`npm test` 不仅检查主要结果，也会检查 `weather_text`、`nearby_suggestions`、车站名和线路名等辅助显示字段。
+
+```bash
+npm run build        # node --check src/index.mjs
+npm test             # 26 个日文/英文/中文回归用例
+npm run test:bus     # 公交换乘实时 API 探针，可能因 API 状况耗时较长
+npm run test:vehicle # 乘车工具优先的确定性 mock 回归
+```
+
+可以使用 `npm test` 的退出码作为 CI 质量门槛。实时公交换乘探针超时，应与确定性 mock 回归分开判断。
 
 ### 7. `search_flight` — 机场航班时刻与到达时间显示
 
