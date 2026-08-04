@@ -2135,8 +2135,8 @@ const LANDMARK_DEFS = {
   },
   hamarikyu: {
     station: '竹芝', walk_min: 5,
-    note: { ja: '竹芝駅から徒歩約5分（浜離宮恩賜庭園）。浜松町駅からもアクセス可', en: 'About 5 min walk from Takeshiba Stn (Hama-rikyu Gardens); also reachable from Hamamatsucho Stn', zh: '从竹芝站步行约5分钟（浜离宫恩赐庭园）；亦可从滨松町站前往' },
-    names: { ja: ['浜離宮', '浜離宮恩賜庭園'], en: ['Hama-rikyu', 'Hama Rikyu Gardens'], zh: ['浜离宫', '浜离宫恩赐庭园'] }
+    note: { ja: '水上バス（東京クルーズ）の「浜離宮」発着場が最も近い。陸路なら竹芝駅から徒歩約5分（浜松町駅からもアクセス可）', en: 'The "Hama-rikyu" water bus (Tokyo Cruise) stop is the closest. By land, about 5 min walk from Takeshiba Stn (also Hamamatsucho Stn)', zh: '水上巴士（东京巡航）「滨离宫」码头最近。陆路则从竹芝站步行约5分钟（亦可从滨松町站前往）' },
+    names: { ja: ['浜離宮', '浜離宮恩賜庭園', '浜離宮発着場', '水上バス浜離宮'], en: ['Hama-rikyu', 'Hama Rikyu Gardens', 'Hama-rikyu Water Bus'], zh: ['浜离宫', '浜离宫恩赐庭园', '滨离宫水上巴士'] }
   },
   tsukiji: {
     station: '築地', walk_min: 3,
