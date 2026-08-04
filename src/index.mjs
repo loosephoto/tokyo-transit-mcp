@@ -1482,6 +1482,14 @@ function resolveStation(rawName) {
   if (!rawName) return { station: null, candidates: [], ambiguous: false, exact: false, landmark: null };
   const key = rawName.trim();
   if (STATION_TO_LINES[key]) return { station: key, candidates: [key], ambiguous: false, exact: true, landmark: null };
+
+  // ランドマーク完全一致を駅名エイリアス正規化より先に評価する。
+  // 例: Yomiuriland は「読売ランド前」ではなく「京王よみうりランド」を優先。
+  const landmarkExact = resolveLandmark(key);
+  if (landmarkExact && STATION_TO_LINES[landmarkExact.station]) {
+    return { station: landmarkExact.station, candidates: [landmarkExact.station], ambiguous: false, exact: false, landmark: landmarkExact.landmark, landmarkNote: landmarkExact.note, walk_min: landmarkExact.walk_min };
+  }
+
   // 完全一致（正規化後）
   const norm = normalizeStationName(key);
   if (STATION_TO_LINES[norm]) return { station: norm, candidates: [norm], ambiguous: false, exact: true, landmark: null };
@@ -2299,6 +2307,27 @@ const LANDMARK_DEFS = {
     station: '東京', walk_min: 1,
     note: { ja: '東京駅丸の内側。丸の内中央口からすぐ', en: 'Marunouchi side of Tokyo Stn, just outside the Marunouchi Central Exit', zh: '东京站丸之内一侧，紧邻丸之内中央口' },
     names: { ja: ['東京駅丸の内駅舎', '丸の内駅舎', '東京駅赤レンガ駅舎'], en: ['Tokyo Station Marunouchi Building', 'Tokyo Station Marunouchi'], zh: ['东京站丸之内站房', '东京站红砖站房'] }
+  },
+  // ===== 首都圏の主要テーマパーク（追加） =====
+  sanrio_puroland: {
+    station: '多摩センター', walk_min: 5,
+    note: { ja: '多摩センター駅から徒歩約5分（京王線・小田急線・多摩モノレール）', en: 'About 5 min walk from Tama Center Stn (Keio, Odakyu and Tama Monorail)', zh: '从多摩中心站步行约5分钟（京王线・小田急线・多摩单轨电车）' },
+    names: { ja: ['サンリオピューロランド', 'サンリオ ピューロランド', 'ピューロランド'], en: ['Sanrio Puroland', 'Puroland'], zh: ['三丽鸥彩虹乐园', '三丽鸥彩虹乐园 Puroland'] }
+  },
+  yomiuriland: {
+    station: '京王よみうりランド', walk_min: 10,
+    note: { ja: '京王よみうりランド駅からゴンドラまたはバス等を利用', en: 'Use the gondola or bus from Keio-yomiuriland Stn', zh: '从京王读卖乐园站乘坐缆车或巴士前往' },
+    names: { ja: ['よみうりランド', 'よみうりランド遊園地', 'HANA・BIYORI'], en: ['Yomiuriland', 'Yomiuri Land', 'HANA・BIYORI'], zh: ['读卖乐园', '读卖乐园游乐园'] }
+  },
+  moomin_valley_park: {
+    station: '飯能', walk_min: 30,
+    note: { ja: '飯能駅からバス利用（メッツァ・ムーミンバレーパーク）', en: 'Take a bus from Hanno Stn to Metsä / Moominvalley Park', zh: '从饭能站乘坐巴士前往Metsa・姆明谷公园' },
+    names: { ja: ['ムーミンバレーパーク', 'メッツァ', 'メッツァビレッジ'], en: ['Moominvalley Park', 'Metsa', 'Metsa Village'], zh: ['姆明谷公园', 'Metsa'] }
+  },
+  tobu_zoo: {
+    station: '東武動物公園', walk_min: 10,
+    note: { ja: '東武動物公園駅から徒歩約10分（バスも利用可）', en: 'About 10 min walk from Tobu-dobutsu-koen Stn; bus also available', zh: '从东武动物公园站步行约10分钟；也可乘坐巴士' },
+    names: { ja: ['東武動物公園', '東武スーパープール'], en: ['Tobu Zoo', 'Tobu Dobutsu Koen'], zh: ['东武动物公园'] }
   }
 };
 
@@ -2310,6 +2339,58 @@ for (const [defKey, def] of Object.entries(LANDMARK_DEFS)) {
       LANDMARK_LOOKUP[n.toLowerCase()] = { defKey, lang, original: n };
     }
   }
+}
+
+// 降車駅周辺の文化・芸能・芸術施設（厳選ローカル表示）
+// 将来、東京都オープンデータAPI／文化庁文化情報プラットフォームの同期先に置き換え可能。
+const DESTINATION_CULTURAL_FACILITIES = {
+  '六本木': [
+    ['森美術館', 'Mori Art Museum', '森美术馆', '美術館', 5],
+    ['東京ミッドタウン', 'Tokyo Midtown', '东京中城', '複合文化施設', 5]
+  ],
+  '乃木坂': [['国立新美術館', 'The National Art Center, Tokyo', '国立新美术馆', '美術館', 1]],
+  '神谷町': [['チームラボボーダレス', 'teamLab Borderless', 'teamLab无界', 'デジタルアート', 3], ['麻布台ヒルズ', 'Azabudai Hills', '麻布台之丘', '複合文化施設', 3]],
+  '御茶ノ水': [['神田明神', 'Kanda Myojin Shrine', '神田明神', '神社', 5], ['湯島聖堂', 'Yushima Seido', '汤岛圣堂', '史跡・文化施設', 5]],
+  '築地': [['築地本願寺', 'Tsukiji Hongwanji Temple', '筑地本愿寺', '寺院', 1], ['築地場外市場', 'Tsukiji Outer Market', '筑地场外市场', '市場・食文化', 3]],
+  '東銀座': [['歌舞伎座', 'Kabukiza Theatre', '歌舞伎座', '伝統芸能', 1]],
+  '都庁前': [['東京都庁展望室', 'Tokyo Metropolitan Government Observation Deck', '东京都厅展望室', '展望・建築', 1], ['SOMPO美術館', 'SOMPO Museum of Art', 'SOMPO美术馆', '美術館', 10]],
+  '池袋': [['サンシャイン水族館', 'Sunshine Aquarium', '阳光水族馆', '水族館', 8], ['東京芸術劇場', 'Tokyo Metropolitan Theatre', '东京艺术剧场', '劇場', 2]],
+  '東京テレポート': [['日本科学未来館', 'Miraikan', '日本科学未来馆', '科学館', 5], ['東京ジョイポリス', 'Tokyo Joypolis', '东京欢乐世界', '屋内型遊園地', 5]],
+  '東京': [['東京駅丸の内駅舎', 'Tokyo Station Marunouchi Building', '东京站丸之内站房', '歴史建築', 1], ['三菱一号館美術館', 'Mitsubishi Ichigokan Museum', '三菱一号馆美术馆', '美術館', 5]],
+  '上野': [['東京国立博物館', 'Tokyo National Museum', '东京国立博物馆', '博物館', 5], ['国立科学博物館', 'National Museum of Nature and Science', '国立科学博物馆', '博物館', 5], ['東京都美術館', 'Tokyo Metropolitan Art Museum', '东京都美术馆', '美術館', 7]],
+  '浅草': [['浅草寺', 'Sensoji Temple', '浅草寺', '寺院', 5], ['浅草花やしき', 'Hanayashiki Amusement Park', '浅草花屋敷', '遊園地', 5]],
+  '清澄白河': [['東京都現代美術館', 'Museum of Contemporary Art Tokyo', '东京都现代美术馆', '美術館', 10], ['清澄庭園', 'Kiyosumi Gardens', '清澄庭园', '庭園', 3]],
+  '両国': [['江戸東京博物館', 'Edo-Tokyo Museum', '江户东京博物馆', '博物館', 3], ['すみだ北斎美術館', 'The Sumida Hokusai Museum', '墨田北斋美术馆', '美術館', 8]],
+  '竹橋': [['東京国立近代美術館', 'The National Museum of Modern Art, Tokyo', '东京国立近代美术馆', '美術館', 3]]
+};
+
+const CULTURAL_CATEGORY_NAMES = {
+  '美術館': { en: 'Museum', zh: '美术馆' },
+  '複合文化施設': { en: 'Cultural complex', zh: '综合文化设施' },
+  'デジタルアート': { en: 'Digital art', zh: '数字艺术' },
+  '神社': { en: 'Shrine', zh: '神社' },
+  '史跡・文化施設': { en: 'Historic cultural site', zh: '历史文化遗址' },
+  '寺院': { en: 'Temple', zh: '寺院' },
+  '市場・食文化': { en: 'Market and food culture', zh: '市场・饮食文化' },
+  '伝統芸能': { en: 'Traditional performing arts', zh: '传统艺能' },
+  '展望・建築': { en: 'Viewpoint and architecture', zh: '展望・建筑' },
+  '水族館': { en: 'Aquarium', zh: '水族馆' },
+  '劇場': { en: 'Theatre', zh: '剧场' },
+  '科学館': { en: 'Science museum', zh: '科学馆' },
+  '屋内型遊園地': { en: 'Indoor amusement park', zh: '室内游乐园' },
+  '歴史建築': { en: 'Historic architecture', zh: '历史建筑' },
+  '博物館': { en: 'Museum', zh: '博物馆' },
+  '遊園地': { en: 'Amusement park', zh: '游乐园' },
+  '庭園': { en: 'Garden', zh: '庭园' }
+};
+
+function getDestinationCulturalFacilities(station, userLang = 'ja') {
+  const langIndex = userLang === 'en' ? 1 : userLang === 'zh' ? 2 : 0;
+  return (DESTINATION_CULTURAL_FACILITIES[station] || []).map(([ja, en, zh, category, walk_min]) => ({
+    name: [ja, en, zh][langIndex],
+    category: userLang === 'ja' ? category : (CULTURAL_CATEGORY_NAMES[category]?.[userLang] || category),
+    walk_min
+  }));
 }
 
 // ランドマーク名（別名・訳名・略称・多言語）で最寄り駅を解決。
@@ -2609,6 +2690,10 @@ async function searchRoute(args) {
     routes: routesPayload,
     // ランドマーク（施設名）入力時の最寄り駅案内
     landmark_info: Object.keys(landmarkInfo).length ? landmarkInfo : undefined,
+    // 降車駅周辺の文化・芸能・芸術施設（到着地側のみ表示）
+    destination_cultural_facilities: getDestinationCulturalFacilities(routeResult.to, userLang).length
+      ? getDestinationCulturalFacilities(routeResult.to, userLang)
+      : undefined,
     route_note: userLang === 'en' ? "Route computed by the built-in route engine." :
                 userLang === 'zh' ? "路线由内置路线引擎计算。" :
                 "経路は自己完結型エンジンで算出。",
