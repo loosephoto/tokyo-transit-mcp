@@ -2106,6 +2106,57 @@ const LANDMARK_DEFS = {
     station: '日暮里', walk_min: 5,
     note: { ja: '日暮里駅から徒歩約5分（谷中霊園・谷中銀座・根津・千駄木の古い町並み）', en: 'About 5 min walk from Nippori Stn (Yanaka Cemetery, Yanaka Ginza, historic town)', zh: '从日暮里站步行约5分钟（谷中灵园・谷中银座・根津・千駄木老街）' },
     names: { ja: ['谷中霊園', '谷中銀座', '谷中', '根津', '千駄木'], en: ['Yanaka', 'Yanaka Cemetery', 'Yanaka Ginza'], zh: ['谷中灵园', '谷中银座', '谷中'] }
+  },
+  // ===== 東京近郊の主要観光スポット（追加） =====
+  tokyo_dome_city: {
+    station: '後楽園', walk_min: 2,
+    note: { ja: '後楽園駅から徒歩約2分（東京ドーム・ラクーア・ユニークビューホテル）', en: 'About 2 min walk from Korakuen Stn (Tokyo Dome, LaQua)', zh: '从后乐园站步行约2分钟（东京巨蛋・LaQua）' },
+    names: { ja: ['後楽園', '東京ドームシティ', 'ラクーア', '東京ドームシティアトラクションズ'], en: ['Tokyo Dome City', 'Korakuen', 'LaQua'], zh: ['后乐园', '东京巨蛋城', '东京巨蛋之城'] }
+  },
+  roppongi_hills: {
+    station: '六本木', walk_min: 5,
+    note: { ja: '六本木駅から徒歩約5分（六本木ヒルズ・毛利庭園）', en: 'About 5 min walk from Roppongi Stn (Roppongi Hills, Mohri Garden)', zh: '从六本木站步行约5分钟（六本木之丘・毛利庭园）' },
+    names: { ja: ['六本木ヒルズ', '六本木之丘', '毛利庭園', '六本木'], en: ['Roppongi Hills', 'Roppongi'], zh: ['六本木之丘', '六本木新城', '六本木'] }
+  },
+  azabu_juban: {
+    station: '麻布十番', walk_min: 3,
+    note: { ja: '麻布十番駅から徒歩約3分（麻布十番商店街・東京タワーも近接）', en: 'About 3 min walk from Azabu-juban Stn (shopping street; near Tokyo Tower)', zh: '从麻布十番站步行约3分钟（麻布十番商店街・邻近东京塔）' },
+    names: { ja: ['麻布十番', '麻布十番商店街'], en: ['Azabu-juban', 'Azabu Juban'], zh: ['麻布十番', '麻布十番商店街'] }
+  },
+  omotesando: {
+    station: '表参道', walk_min: 3,
+    note: { ja: '表参道駅から徒歩約3分（表参道・青山・キラー通り）', en: 'About 3 min walk from Omotesando Stn (Omotesando, Aoyama)', zh: '从表参道站步行约3分钟（表参道・青山）' },
+    names: { ja: ['表参道', 'オモテソウリョウ', '青山'], en: ['Omotesando', 'Omotesando', 'Aoyama'], zh: ['表参道', '青山'] }
+  },
+  zojoji: {
+    station: '芝公園', walk_min: 3,
+    note: { ja: '芝公園駅から徒歩約3分（増上寺・東京タワーも近接）', en: 'About 3 min walk from Shiba-koen Stn (Zojoji Temple; near Tokyo Tower)', zh: '从芝公园站步行约3分钟（增上寺・邻近东京塔）' },
+    names: { ja: ['増上寺', '芝公園'], en: ['Zojoji', 'Zojo-ji Temple'], zh: ['增上寺', '芝公园'] }
+  },
+  hamarikyu: {
+    station: '竹芝', walk_min: 5,
+    note: { ja: '竹芝駅から徒歩約5分（浜離宮恩賜庭園）。浜松町駅からもアクセス可', en: 'About 5 min walk from Takeshiba Stn (Hama-rikyu Gardens); also reachable from Hamamatsucho Stn', zh: '从竹芝站步行约5分钟（浜离宫恩赐庭园）；亦可从滨松町站前往' },
+    names: { ja: ['浜離宮', '浜離宮恩賜庭園'], en: ['Hama-rikyu', 'Hama Rikyu Gardens'], zh: ['浜离宫', '浜离宫恩赐庭园'] }
+  },
+  tsukiji: {
+    station: '築地', walk_min: 3,
+    note: { ja: '築地駅から徒歩約3分（築地場外市場・新規飲食店街）', en: 'About 3 min walk from Tsukiji Stn (Outer Market)', zh: '从筑地站步行约3分钟（筑地场外市场）' },
+    names: { ja: ['築地', '築地場外市場', '築地市場'], en: ['Tsukiji', 'Tsukiji Market'], zh: ['筑地', '筑地场外市场'] }
+  },
+  toyosu: {
+    station: '豊洲', walk_min: 5,
+    note: { ja: '豊洲駅から徒歩約5分（豊洲市場・チームラボボーダレス）', en: 'About 5 min walk from Toyosu Stn (Toyosu Market, teamLab)', zh: '从丰洲站步行约5分钟（丰洲市场・teamLab）' },
+    names: { ja: ['豊洲', '豊洲市場', 'チームラボボーダレス', 'チームラボ'], en: ['Toyosu', 'Toyosu Market', 'teamLab Borderless'], zh: ['丰洲', '丰洲市场', 'teamLab无界'] }
+  },
+  imperial_palace: {
+    station: '東京', walk_min: 10,
+    note: { ja: '東京駅から徒歩約10分（皇居・二重橋・皇居外苑）', en: 'About 10 min walk from Tokyo Stn (Imperial Palace, Nijubashi)', zh: '从东京站步行约10分钟（皇居・二重桥・皇居外苑）' },
+    names: { ja: ['皇居', '二重橋', '皇居外苑', '千鳥ヶ淵'], en: ['Imperial Palace', 'Nijubashi', 'Imperial Palace East Gardens'], zh: ['皇居', '二重桥', '皇居外苑'] }
+  },
+  national_diet: {
+    station: '永田町', walk_min: 5,
+    note: { ja: '永田町駅から徒歩約5分（国会議事堂・日比谷公園も近接）', en: 'About 5 min walk from Nagatacho Stn (National Diet Building)', zh: '从永田町站步行约5分钟（国会议事堂）' },
+    names: { ja: ['国会議事堂', '永田町'], en: ['National Diet Building', 'Diet Building'], zh: ['国会议事堂', '国会议事堂'] }
   }
 };
 
