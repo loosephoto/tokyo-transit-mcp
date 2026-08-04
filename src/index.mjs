@@ -102,6 +102,10 @@ const cache = {
   bikeShare: { key: 'bike_share', ttl: 30000 },
   ferryGtfs: { key: 'ferry_gtfs', ttl: 3600000 },
   jmaWeather: { key: 'jma_weather', ttl: 600000 },
+  // 津波警報は即時性を優先。5分間だけキャッシュし、フェリー検索の安全判定に用いる。
+  jmaTsunami: { key: 'jma_tsunami', ttl: 300000 },
+  // 国土地理院の自治体別指定緊急避難場所データ。更新頻度を考慮して6時間キャッシュ。
+  gsiEmergencyShelters: { key: 'gsi_emergency_shelters', ttl: 21600000 },
   railwayFare: { key: 'railway_fare', ttl: 86400000 },
   stationRomanToJa: { key: 'station_roman_to_ja', ttl: 86400000 },
   trainTimetable: { key: 'train_timetable', ttl: 3600000 },
@@ -308,9 +312,11 @@ function detectFailureType(failureText, userLang = 'ja') {
       for (const kw of kwList) {
         const lowerKw = kw.toLowerCase();
         if (rawKey === lowerKw || rawKey.includes(lowerKw) || lowerKw.includes(rawKey)) {
-          // ja/zh 共通キーワードの場合、テキストの言語判定を優先
+          // 呼び出し側で解決済みの応答言語を最優先する。
+          // 例: 「降雪」は中国語キーワード表にも存在するが、language:'ja' の詳細文まで
+          // 中国語へ混在させてはならない。
           const effectiveMatchedLang = (textLang !== 'ja') ? textLang : lang;
-          const effectiveLang = (userLang && userLang !== 'ja') ? userLang : effectiveMatchedLang;
+          const effectiveLang = userLang || effectiveMatchedLang;
           const weatherText = typeof config.weatherText === 'object'
             ? (config.weatherText[effectiveLang] || config.weatherText.ja)
             : config.weatherText;
@@ -429,9 +435,77 @@ function isEarthquakeSimulation(testAdv) {
   return testAdv?.failureAdviceKey === 'earthquake';
 }
 
+// 国土地理院の自治体別「指定緊急避難場所」公開GeoJSON（_2）を利用する。
+// 駅・港の自治体コードは、まず東京圏で利用頻度が高い地点を明示的に対応づける。
+const GSI_MUNICIPALITY_CODES = {
+  '東京': '13101', '大手町': '13101', '秋葉原': '13101', '神田': '13101', '御茶ノ水': '13101',
+  '有楽町': '13101', '日比谷': '13101', '新宿': '13104', '渋谷': '13113', '池袋': '13116',
+  '上野': '13106', '浅草': '13106', '品川': '13109', '浜松町': '13103', '田町': '13103',
+  '六本木': '13103', '新橋': '13103', '銀座': '13102', '築地': '13102', 'お台場海浜公園': '13108',
+    '豊洲': '13108', '日の出桟橋': '13103', '浜離宮': '13102', '竹芝': '13103',
+  '羽田空港': '13111', '羽田空港第1ターミナル': '13111', '羽田空港第2ターミナル': '13111',
+  '羽田空港第3ターミナル': '13111', '横浜': '14100', '川崎': '14130'
+};
+const GSI_MUNICIPALITY_LABELS = {
+  '13101': '東京都千代田区', '13102': '東京都中央区', '13103': '東京都港区', '13104': '東京都新宿区',
+  '13105': '東京都文京区', '13106': '東京都台東区', '13108': '東京都江東区', '13109': '東京都品川区',
+  '13111': '東京都大田区', '13113': '東京都渋谷区', '13116': '東京都豊島区',
+  '14100': '神奈川県横浜市', '14130': '神奈川県川崎市'
+};
+const GSI_SHELTER_HAZARD_FIELDS = {
+  earthquake: '地震', tsunami: '津波', flood: '洪水', storm_surge: '高潮', fire: '大規模な火事', inland_flood: '内水氾濫'
+};
+function getGsiMunicipalityCode(location) {
+  return GSI_MUNICIPALITY_CODES[location] || null;
+}
+async function fetchGsiEmergencyShelters(municipalityCode) {
+  const key = `${cache.gsiEmergencyShelters.key}:${municipalityCode}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+  const url = `https://hinanmap.gsi.go.jp/hinanjocp/defaultFtpData/geoJSON/${municipalityCode}_2.geojson`;
+  try {
+    const res = await axios.get(url, { timeout: 5000 });
+    const features = Array.isArray(res.data?.features) ? res.data.features : [];
+    const data = { available: true, source_url: url, features };
+    cache.set(key, data, cache.gsiEmergencyShelters.ttl);
+    return data;
+  } catch (error) {
+    return { available: false, source_url: url, features: [], error: error.message };
+  }
+}
+async function getGroundEmergencyShelters(location, hazardType, userLang = 'ja') {
+  const municipalityCode = getGsiMunicipalityCode(location);
+  const hazardField = GSI_SHELTER_HAZARD_FIELDS[hazardType];
+  const loc = STATION_COORDS[location];
+  if (!municipalityCode || !hazardField || !loc) return null;
+  const data = await fetchGsiEmergencyShelters(municipalityCode);
+  const candidates = data.features
+    .filter(f => f?.properties?.[hazardField] === '1' && Array.isArray(f?.geometry?.coordinates))
+    .map(f => {
+      const [lon, lat] = f.geometry.coordinates;
+      return {
+        name: f.properties['施設・場所名'], address: f.properties['住所'], common_id: f.properties['共通ID'],
+        distance_m: haversineDistance(loc.lat, loc.lon, lat, lon), hazard_compatible: true,
+        latitude: lat, longitude: lon, remarks: f.properties['備考'] || undefined
+      };
+    })
+    .sort((a, b) => a.distance_m - b.distance_m)
+    .slice(0, 5);
+  const labels = {
+    ja: { source: '国土地理院', hazard: hazardField, disclaimer: '国土地理院の公開データに基づく候補です。最新の指定状況、開設状況、避難経路は自治体の公式情報と現場の指示を必ず確認してください。' },
+    en: { source: 'Geospatial Information Authority of Japan', hazard: hazardType, disclaimer: 'These are candidates from GSI public data. Always verify current designation, opening status, and evacuation routes through local-authority information and on-site instructions.' },
+    zh: { source: '日本国土地理院', hazard: hazardField, disclaimer: '这些是基于国土地理院公开数据的候选地点。请务必通过当地政府官方信息和现场指示确认最新指定、开放状态与避难路线。' }
+  }[userLang] || {};
+  return {
+    source: labels.source, source_url: data.source_url, municipality: GSI_MUNICIPALITY_LABELS[municipalityCode] || municipalityCode,
+    municipality_code: municipalityCode, hazard_type: labels.hazard, hazard_field: hazardField,
+    candidates, data_available: data.available, disclaimer: labels.disclaimer
+  };
+}
+
 // 地震時に通常経路を提示せず、安全確保を最優先にする共通レスポンス。
 // search_route / search_bus / search_ferry の各入口で利用する。
-function buildEarthquakeSafetyResponse(transport, userLang = 'ja', context = {}) {
+async function buildEarthquakeSafetyResponse(transport, userLang = 'ja', context = {}) {
   const safety = buildEarthquakeTransportSafety(transport, userLang);
   const mode = transport === 'water' ? 'water' : 'ground';
   const message = userLang === 'en'
@@ -439,19 +513,32 @@ function buildEarthquakeSafetyResponse(transport, userLang = 'ja', context = {})
     : userLang === 'zh'
       ? '地震安全响应期间，已停止提供常规路线指引。'
       : '地震時の安全確保を優先するため、通常の経路・航路案内を停止しています。';
+  // 地上交通では、出発地点の自治体別GeoJSONから「地震」に対応する候補だけを抽出する。
+  const groundShelters = mode === 'ground'
+    ? await getGroundEmergencyShelters(context.from || context.busstop_name, 'earthquake', userLang)
+    : null;
   return jsonResponse({
     status: 'EMERGENCY_MODE_ACTIVE',
     detected_language: userLang,
     emergency_type: 'earthquake',
     transport_mode: mode,
+    ground_emergency_shelters: groundShelters || undefined,
     route_guidance_suspended: true,
     message,
     transport_safety: safety,
+    // 現在地・自治体・災害種別に適合する避難場所データを本サーバーは保持しない。
+    // 「最寄りの指定避難場所」を断定せず、自治体の公式情報と照合する外部検索として返す。
     emergency_evacuation_search: {
+      type: 'external_search_only',
       link: EMERGENCY_EVACUATION_SEARCH_URL,
-      label: userLang === 'en' ? 'Find designated emergency shelters on Google Maps'
-        : userLang === 'zh' ? '在地图上查找指定紧急避难场所'
-        : '地図で指定緊急避難場所を確認'
+      label: userLang === 'en' ? 'Search designated emergency shelters (verify with local authority)'
+        : userLang === 'zh' ? '搜索指定紧急避难场所（请向当地政府核实）'
+        : '指定緊急避難場所を検索（自治体の公式情報で確認）',
+      disclaimer: userLang === 'en'
+        ? 'This is a map search, not a verified nearest or hazard-specific shelter assignment. Follow local-authority evacuation instructions.'
+        : userLang === 'zh'
+          ? '这是地图搜索，并非已核实的最近或适用于该灾害的避难场所分配。请遵从当地政府的避难指示。'
+          : '地図検索であり、最寄り・災害種別に適合した避難場所を確定するものではありません。自治体の避難情報に従ってください。'
     },
     ai_transit_advice: MULTILINGUAL_ADVICE.earthquake[userLang] || MULTILINGUAL_ADVICE.earthquake.ja,
     test_mode: true,
@@ -2629,7 +2716,7 @@ async function searchRoute(args) {
 
   // 地震時は鉄道・トラム・バス等の通常経路を提示せず、安全確保を優先する。
   if (simulatedFailure && detectFailureType(simulatedFailure, userLang)?.adviceKey === 'earthquake') {
-    return buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
+    return await buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
   }
 
   if (!fromInput || !toInput) {
@@ -2736,9 +2823,11 @@ async function searchRoute(args) {
   }
   const aiAdvice = MULTILINGUAL_ADVICE[adviceKey]?.[userLang] || MULTILINGUAL_ADVICE[adviceKey]?.ja || "情報なし";
 
-  // 🚲 運転見合わせ時のみ自転車（荒天は非表示）
+  // 🚲 運転見合わせ時のみ自転車。ただし降雪・凍結時は転倒リスクが高いため非表示。
+  // failureAdviceKey を見ることで、実際の降雪警報だけでなく -test 降雪も安全に抑止する。
+  const isSnowRisk = failureAdviceKey === 'snow' || /雪|積雪|凍結/i.test(weatherText || '');
   let bikeShareInfo = null;
-  if (isTrainSuspended && !isSevereWeather) {
+  if (isTrainSuspended && !isSevereWeather && !isSnowRisk) {
     bikeShareInfo = await findNearestBikeStations(fromName, userLocation);
   }
 
@@ -2947,7 +3036,9 @@ async function searchRoute(args) {
     };
   }
 
-  // 🚨 非常時アラート（人身事故・災害時のみ）
+  // 🚨 緊急避難場所の検索リンクは、災害時のみ表示する。
+  // 人身事故・降雪・通常の運行障害は避難場所の適合性を意味しないためリンクを付けない。
+  const isDisasterEvacuationCase = ['earthquake', 'emergency', 'typhoon', 'flood', 'fire'].includes(failureAdviceKey);
   if (isEmergencyActive) {
     resultPayload.emergency_alert = {
       status: "ALERT_ACTIVE",
@@ -2956,7 +3047,18 @@ async function searchRoute(args) {
               (isTrainSuspended ? "鉄道路線の運行不能を検知" : "特別警報級の重大災害を検知"),
       detail: delayMessage,
       note: (MULTILINGUAL_ADVICE[adviceKey] && (MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja)) || MULTILINGUAL_ADVICE.emergency[userLang] || MULTILINGUAL_ADVICE.emergency.ja,
-      link: EMERGENCY_EVACUATION_SEARCH_URL
+      evacuation_search: isDisasterEvacuationCase ? {
+        type: 'external_search_only',
+        link: EMERGENCY_EVACUATION_SEARCH_URL,
+        label: userLang === 'en' ? 'Search designated emergency shelters (verify with local authority)'
+          : userLang === 'zh' ? '搜索指定紧急避难场所（请向当地政府核实）'
+          : '指定緊急避難場所を検索（自治体の公式情報で確認）',
+        disclaimer: userLang === 'en'
+          ? 'This is a map search, not a verified nearest or hazard-specific shelter assignment. Follow local-authority evacuation instructions.'
+          : userLang === 'zh'
+            ? '这是地图搜索，并非已核实的最近或适用于该灾害的避难场所分配。请遵从当地政府的避难指示。'
+            : '地図検索であり、最寄り・災害種別に適合した避難場所を確定するものではありません。自治体の避難情報に従ってください。'
+      } : undefined
     };
   }
 
@@ -3119,6 +3221,119 @@ async function listFerryPorts(args) {
 }
 
 // ==========================================
+// 🌊 フェリー向け海上・津波安全情報
+// ==========================================
+const JMA_TSUNAMI_LIST_URL = 'https://www.jma.go.jp/bosai/tsunami/data/list.json';
+const JMA_TSUNAMI_DETAIL_BASE_URL = 'https://www.jma.go.jp/bosai/tsunami/data/';
+
+// 港ごとの津波予報区（JMAの予報区名との照合用）。
+// 範囲外の港は安全側に倒し、全国有効警報がある場合は航路を抑止する。
+const FERRY_PORT_TSUNAMI_AREAS = {
+  '浅草': ['東京湾内湾'], '日の出桟橋': ['東京湾内湾'], '浜離宮': ['東京湾内湾'],
+  'お台場海浜公園': ['東京湾内湾'], '豊洲': ['東京湾内湾'],
+  '東京': ['東京湾内湾'], '竹芝': ['東京湾内湾'],
+  '大島': ['伊豆諸島'], '利島': ['伊豆諸島'], '新島': ['伊豆諸島'], '式根島': ['伊豆諸島'],
+  '神津島': ['伊豆諸島'], '三宅島': ['伊豆諸島'], '御蔵島': ['伊豆諸島'], '八丈島': ['伊豆諸島'],
+  '青ヶ島': ['伊豆諸島'], '父島': ['小笠原諸島'], '母島': ['小笠原諸島'],
+  '熱海': ['静岡県'], '伊東': ['静岡県'], '下田': ['静岡県']
+};
+
+function isActiveTsunamiWarning(kind) {
+  const text = String(kind || '');
+  return /大津波警報|津波警報|津波注意報|Major Tsunami Warning|Tsunami Warning|Tsunami Advisory/i.test(text)
+    && !/解除|No Tsunami/i.test(text);
+}
+
+async function fetchJmaTsunamiSafety() {
+  const cached = cache.get(cache.jmaTsunami.key);
+  if (cached) return cached;
+  try {
+    const listRes = await axios.get(JMA_TSUNAMI_LIST_URL, { timeout: 3500 });
+    const list = Array.isArray(listRes.data) ? listRes.data : [];
+    // 最新の津波警報・注意報・予報電文を1件取得。最新電文が解除なら active=false となる。
+    const latest = list.find(item => /津波警報・注意報・予報|Tsunami (Advisory|Warning|Forecast)/.test(item.ttl || item.en_ttl || ''));
+    if (!latest?.json) {
+      const none = { available: true, active: false, areas: [], source: 'JMA Tsunami Information', updated_at: null };
+      cache.set(cache.jmaTsunami.key, none, cache.jmaTsunami.ttl);
+      return none;
+    }
+    const detailRes = await axios.get(`${JMA_TSUNAMI_DETAIL_BASE_URL}${latest.json}`, { timeout: 3500 });
+    const body = detailRes.data?.Body || {};
+    const forecastItems = body?.Tsunami?.Forecast?.Item || [];
+    const items = Array.isArray(forecastItems) ? forecastItems : [forecastItems];
+    const areas = items.map(item => {
+      const kind = item?.Category?.Kind || {};
+      return {
+        name: item?.Area?.Name || '',
+        en_name: item?.Area?.enName || '',
+        kind: kind.Name || '',
+        en_kind: kind.enName || '',
+        code: kind.Code || '',
+        max_height_m: item?.MaxHeight?.TsunamiHeight || null,
+        arrival_condition: item?.FirstHeight?.Condition || null
+      };
+    }).filter(a => a.name && isActiveTsunamiWarning(a.kind || a.en_kind));
+    const result = {
+      available: true,
+      active: areas.length > 0,
+      areas,
+      source: 'JMA Tsunami Information',
+      updated_at: detailRes.data?.Head?.ReportDateTime || latest.rdt || null,
+      headline: detailRes.data?.Head?.Headline?.Text || '',
+      detail_url: `${JMA_TSUNAMI_DETAIL_BASE_URL}${latest.json}`
+    };
+    cache.set(cache.jmaTsunami.key, result, cache.jmaTsunami.ttl);
+    return result;
+  } catch (error) {
+    // 安全判定APIの一時障害は航路そのものを「安全」と断定しない。
+    return { available: false, active: false, areas: [], source: 'JMA Tsunami Information', error: error.message };
+  }
+}
+
+function getTsunamiAreasForPorts(...ports) {
+  return [...new Set(ports.flatMap(p => FERRY_PORT_TSUNAMI_AREAS[p] || []))];
+}
+
+function isTsunamiRelevantToPorts(tsunami, ...ports) {
+  if (!tsunami.active) return false;
+  const portAreas = getTsunamiAreasForPorts(...ports);
+  // 港の予報区が未登録なら、安全側で有効な津波警報を航路停止対象とする。
+  if (!portAreas.length) return true;
+  return tsunami.areas.some(a => portAreas.some(pa => a.name.includes(pa) || pa.includes(a.name)));
+}
+
+async function buildTsunamiWaterSafetyResponse(userLang, tsunami, context = {}) {
+  const safety = buildEarthquakeTransportSafety('water', userLang);
+  const advisory = userLang === 'en'
+    ? 'An active tsunami warning/advisory affects this water-transport area. Do not board or continue water travel.'
+    : userLang === 'zh'
+      ? '该水路区域受到有效海啸警报/注意报影响。请停止登船和水路出行。'
+      : 'この水路地域に有効な津波警報・注意報が発表されています。乗船・水路移動を中止してください。';
+  // 出発港側の自治体データから、津波対応の指定緊急避難場所だけを抽出する。
+  const tsunamiShelters = await getGroundEmergencyShelters(context.from_port, 'tsunami', userLang);
+  return jsonResponse({
+    status: 'EMERGENCY_MODE_ACTIVE',
+    detected_language: userLang,
+    emergency_type: 'tsunami',
+    transport_mode: 'water',
+    route_guidance_suspended: true,
+    message: advisory,
+    maritime_safety_status: {
+      tsunami_warning_active: true,
+      source: tsunami.source,
+      updated_at: tsunami.updated_at,
+      headline: tsunami.headline || undefined,
+      affected_areas: tsunami.areas,
+      official_detail_url: tsunami.detail_url
+    },
+    transport_safety: safety,
+    tsunami_emergency_shelter: tsunamiShelters || undefined,
+    ai_transit_advice: MULTILINGUAL_ADVICE.emergency[userLang] || MULTILINGUAL_ADVICE.emergency.ja,
+    ...context
+  });
+}
+
+// ==========================================
 // 🚢 フェリー航路検索
 // ==========================================
 async function searchFerry(args) {
@@ -3133,13 +3348,31 @@ async function searchFerry(args) {
   const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
   // 地震時はフェリー・水上バスの航路を提示しない。水面・岸辺から離れる避難を優先する。
   if (isEarthquakeSimulation(testAdv)) {
-    return buildEarthquakeSafetyResponse('water', userLang, { from_port: rawFrom, to_port: rawTo });
+    return await buildEarthquakeSafetyResponse('water', userLang, { from_port: rawFrom, to_port: rawTo });
+  }
+  // 津波シミュレーションでも、実運航・時刻表を提示せず水上避難を優先する。
+  if (testAdv.failureAdviceKey === 'emergency' && testAdv.fc?.type === 'disaster') {
+    const simulatedTsunami = {
+      active: true,
+      source: 'JMA Tsunami Information (simulation)',
+      updated_at: null,
+      headline: userLang === 'en' ? 'Tsunami warning simulation' : userLang === 'zh' ? '海啸警报模拟' : '津波警報シミュレーション',
+      detail_url: 'https://www.jma.go.jp/bosai/tsunami/',
+      areas: []
+    };
+    return await buildTsunamiWaterSafetyResponse(userLang, simulatedTsunami, { from_port: rawFrom, to_port: rawTo, test_mode: true, simulated_failure_type: parsedTest.simulatedFailure });
   }
   if (!fromPort || !toPort) {
     const errMsg = userLang === 'en' ? 'Please specify both origin and destination ports.' :
                    userLang === 'zh' ? '请同时指定出发港口和到达港口。' :
                    '両方の港を指定してください。';
     return jsonResponse(buildErrorResponse('INVALID_INPUT', errMsg, { userLang }));
+  }
+  // JMAの有効な津波警報・注意報を確認してから時刻表を取得する。
+  // 警報区域に該当する航路は、運航情報より避難行動を優先して抑止する。
+  const tsunamiSafety = await fetchJmaTsunamiSafety();
+  if (isTsunamiRelevantToPorts(tsunamiSafety, fromPort, toPort)) {
+    return await buildTsunamiWaterSafetyResponse(userLang, tsunamiSafety, { from_port: rawFrom, to_port: rawTo });
   }
   try {
     const data = await fetchFerryData();
@@ -3214,6 +3447,13 @@ async function searchFerry(args) {
         operator: operatorName,
         official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/',
         all_ports: data.stops.map(s => s.stop_name),
+        maritime_safety_status: {
+          tsunami_warning_active: false,
+          source: tsunamiSafety.source,
+          updated_at: tsunamiSafety.updated_at || undefined,
+          unavailable: !tsunamiSafety.available || undefined,
+          official_tsunami_info_url: 'https://www.jma.go.jp/bosai/tsunami/'
+        },
         ai_transit_advice: testAdv.aiAdvice,
         test_mode: testAdv.testMode,
         simulated_failure_type: testAdv.failureType || undefined
@@ -3229,6 +3469,13 @@ async function searchFerry(args) {
       total_routes: relevantRoutes.length,
       operator: operatorName,
       official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/',
+      maritime_safety_status: {
+        tsunami_warning_active: false,
+        source: tsunamiSafety.source,
+        updated_at: tsunamiSafety.updated_at || undefined,
+        unavailable: !tsunamiSafety.available || undefined,
+        official_tsunami_info_url: 'https://www.jma.go.jp/bosai/tsunami/'
+      },
       ai_transit_advice: testAdv.aiAdvice,
       test_mode: testAdv.testMode,
       simulated_failure_type: testAdv.failureType || undefined
@@ -4647,7 +4894,7 @@ async function searchBus(args) {
     const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
     // 地震時はバス・トラム・鉄道を含む通常の乗り継ぎ結果を提示せず、安全確保を優先する。
     if (isEarthquakeSimulation(testAdv)) {
-      return buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
+      return await buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
     }
     // searchBusTransfer 内で個別APIの障害を縮退処理する。
     // ここで早期 return すると、hard-coded / community-bus フォールバックまで遮断される。
@@ -4807,7 +5054,7 @@ async function searchBus(args) {
   const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
   // バス停単体検索でも、地震時は通常の乗車候補を提示しない。
   if (isEarthquakeSimulation(testAdv)) {
-    return buildEarthquakeSafetyResponse('ground', userLang, { busstop_name: busstopName });
+    return await buildEarthquakeSafetyResponse('ground', userLang, { busstop_name: busstopName });
   }
   // ブレーカーOPENでもハードコード（JRバス関東・コミュニティバス）は fetchAllBuses 内で提供されるため、
   // ここでは弾かない（ODPT断でも ちぃばす 等のコミュニティバス検索は可能）。

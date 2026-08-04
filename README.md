@@ -55,6 +55,8 @@
 > **地震時の交通モード別安全処理**
 >
 > 地震時は通常の経路・航路を「利用可能」として提示せず、安全確保を優先します。鉄道・トラム・バス・AGT・モノレールでは運転見合わせを前提に、落下物・架線・ホーム端から離れ、係員・自治体の指示を待つよう案内します。フェリー・水上バスでは乗船・水路移動を中止し、乗船前は岸辺・桟橋・水面から離れて指定避難場所または高台へ避難するよう案内します。乗船中は自己判断で下船・入水せず、船長・乗組員の指示に従うよう案内します。
+>
+> 地上交通で地震が発生した場合は、`ground_emergency_shelters` に国土地理院の自治体別GeoJSONから抽出した**地震対応の指定緊急避難場所候補**を、出発駅からの直線距離順で最大5件表示します。施設名・住所・共通ID・座標・距離を返します。避難場所候補や地図リンクは、最寄りの避難先・開設状況・安全な避難経路を確定するものではないため、必ず自治体・気象庁等の公式避難情報と現場の指示を確認してください。降雪・通常の運行障害では避難場所検索を表示せず、凍結時の転倒リスクを考慮してシェアサイクル代替も表示しません。
 
 ### 💬 自然言語で簡単検索
 
@@ -325,10 +327,20 @@ list_ferry_ports(language: "ja")
 
 ### 11. `search_ferry` — フェリー/水上バス航路検索
 
-港間の航路と時刻表を検索します。
+港間の航路と時刻表を検索します。検索前に**気象庁の津波警報・注意報**を確認し、出発・到着港の津波予報区に有効な警報がある場合は、航路・時刻表を返さず水路移動を中止する安全案内へ切り替えます。
 
-```
+> [!WARNING]
+> **津波警報・注意報時の水上交通安全処理**
+>
+> フェリー・水上バスへの乗船と水路移動を中止してください。乗船前は岸辺・桟橋・水面から離れ、自治体の指示に従って高台または津波対応の指定緊急避難場所へ避難します。乗船中は自己判断で下船・入水せず、船長・乗組員の指示に従ってください。
+>
+> 返却する `tsunami_emergency_shelter` には、国土地理院の自治体別GeoJSONから抽出した**津波対応・指定緊急避難場所候補**を距離順で含めます。施設名・住所・共通ID・座標・距離を返します。適合する避難場所・避難経路、開設状況は必ず自治体の公式避難情報で確認してください。
+
+通常時のレスポンスには `maritime_safety_status` を含め、気象庁の津波情報を確認した時刻・公式情報リンクを返します。
+
+```text
 search_ferry(from_port: "東京", to_port: "大島")
+search_ferry(from_port: "浅草", to_port: "浜離宮")
 ```
 
 ### 12. `list_community_buses` — 東京都コミュニティバス一覧
@@ -542,6 +554,8 @@ Generates concrete, useful advice for your trip based on weather and operational
 > **Earthquake safety by transport mode**
 >
 > During an earthquake, normal routes and water routes are not presented as available; safety takes priority. For rail, tram, bus, AGT, and monorail, the guidance assumes a safety suspension and tells users to stay clear of falling objects, overhead wires, and platform edges while awaiting staff and local-authority instructions. For ferries and water buses, it tells users not to board or continue water travel; before boarding, move away from shorelines, piers, and the water toward designated shelters or higher ground. On board, do not disembark or enter the water on your own; follow the captain and crew instructions.
+>
+> For an earthquake affecting ground transport, `ground_emergency_shelters` returns up to five **earthquake-designated emergency-shelter candidates** extracted from GSI municipality GeoJSON, ordered by straight-line distance from the origin station. It includes names, addresses, common IDs, coordinates, and distance. Candidates and map links do not establish the nearest safe destination, opening status, or a safe evacuation route; always follow local-authority, JMA, and on-site instructions. Snowfall and ordinary service disruptions do not show shelter search; bike-share alternatives are also hidden during snow/ice conditions because of fall risk.
 
 ### 💬 Easy Search in Natural Language
 
@@ -811,10 +825,20 @@ list_ferry_ports(language: "en")
 
 ### 11. `search_ferry` — Ferry / Water Bus Route Search
 
-Searches routes and timetables between ports.
+Searches routes and timetables between ports. Before returning them, it checks **JMA tsunami warnings/advisories**. When an active warning applies to the tsunami forecast area of either port, it stops route/timetable guidance and switches to water-travel safety guidance.
 
-```
+> [!WARNING]
+> **Water-transport safety during a tsunami warning/advisory**
+>
+> Do not board a ferry or water bus, and stop water travel. Before boarding, move away from shorelines, piers, and the water; follow local-authority instructions to higher ground or a tsunami-designated emergency shelter. On board, do not disembark or enter the water on your own; follow the captain and crew instructions.
+>
+> The returned `tsunami_emergency_shelter` contains **tsunami-designated emergency-shelter candidates** extracted from GSI municipality GeoJSON, ordered by distance. It includes names, addresses, common IDs, coordinates, and distance. Always verify the appropriate shelter, opening status, and evacuation route through official local-authority information.
+
+During normal conditions, the response includes `maritime_safety_status` with the JMA tsunami-information check time and official source link.
+
+```text
 search_ferry(from_port: "Tokyo", to_port: "Oshima")
+search_ferry(from_port: "Asakusa", to_port: "Hama-rikyu")
 ```
 
 ### 12. `list_community_buses` — Tokyo Community Buses
@@ -1028,6 +1052,8 @@ MIT License
 > **按交通方式区分的地震安全处理**
 >
 > 地震时不会将常规路线或水路航线显示为可用，安全优先。对铁路、有轨电车、公交、AGT 和单轨电车，系统假定正在进行安全检查而暂停运行，并提示远离高空坠物、架空电线和站台边缘，等待工作人员和当地政府指示。对轮渡和水上巴士，系统提示停止登船和水路出行；登船前应远离岸边、码头和水面，前往指定避难场所或高处。乘船中请勿自行下船或进入水中，应遵从船长和船员指示。
+>
+> 当地面交通受地震影响时，`ground_emergency_shelters` 会从国土地理院的自治体 GeoJSON 中提取最多5个**适用于地震的指定紧急避难场所候选**，按距出发站的直线距离排序，并返回名称、地址、共通ID、坐标和距离。候选地点与地图链接并不代表已确认的最近安全目的地、开放状态或安全避难路线；请始终遵从当地政府、气象厅和现场工作人员的指示。降雪和一般运行故障不显示避难场所搜索；考虑到冰雪路面跌倒风险，降雪/结冰时也不显示共享单车替代方案。
 
 ### 💬 自然语言轻松搜索
 
@@ -1296,10 +1322,20 @@ list_ferry_ports(language: "zh")
 
 ### 11. `search_ferry` — 轮渡/水上巴士航线搜索
 
-查询港口之间的航线与时刻表。
+查询港口之间的航线与时刻表。返回结果前会检查**气象厅的海啸警报/注意报**；当出发港或到达港所属的海啸预报区有有效警报时，系统不返回航线或时刻表，而切换为水路安全指引。
 
-```
-search_ferry(from_port: "東京", to_port: "大島")
+> [!WARNING]
+> **海啸警报/注意报期间的水上交通安全**
+>
+> 请停止乘坐轮渡、水上巴士和水路出行。登船前请远离岸边、码头和水面，并遵从当地政府指示前往高处或海啸对应的指定紧急避难场所。乘船中请勿自行下船或进入水中，应遵从船长和船员的指示。
+>
+> 返回的 `tsunami_emergency_shelter` 包含从国土地理院自治体 GeoJSON 中提取的**海啸对应指定紧急避难场所候选**，按距离排序，并返回名称、地址、共通ID、坐标和距离。请始终通过当地政府的官方信息确认适合的避难场所、开放状态和避难路线。
+
+正常情况下，响应会包含 `maritime_safety_status`，其中提供气象厅海啸信息的检查时间和官方来源链接。
+
+```text
+search_ferry(from_port: "东京", to_port: "大岛")
+search_ferry(from_port: "浅草", to_port: "滨离宫")
 ```
 
 ### 12. `list_community_buses` — 东京都社区公交一览
