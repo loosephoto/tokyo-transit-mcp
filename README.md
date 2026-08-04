@@ -29,6 +29,10 @@
 | ✈️ フライト | 羽田(HND)・成田(NRT) の到着/出発フライト（AviationStack）。キー未設定時は空港アクセス経路のみ表示（graceful degradation） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API・1,878ポート） |
 
+### 🛤️ 路線網とAPI突合
+
+`odpt:Railway`、公開路線一覧、国土数値情報の鉄道データを突合し、v2.20.0で東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。駅順・支線・接続駅を確認し、駅表示名（日本語/英語/中国語）と路線表示名も同期しています。APIは事業者・路線の存在確認に使用し、経路探索はキー不要の内蔵グラフで実行します。
+
 ### 🤖 AI インテリジェントアドバイス
 
 天候や運行情報から、移動に役立つ具体的なアドバイスを自動生成します。
@@ -466,7 +470,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.19.0）
+├── SKILL.md             # プロジェクトスキル定義（v2.20.0）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -515,7 +519,9 @@ Beyond simple route search, this server integrates weather data and public trans
 | ✈️ Flights | Haneda (HND) / Narita (NRT) arrivals & departures (AviationStack). Without a key, airport access routes are shown only (graceful degradation) |
 | 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
 
-### 🤖 AI Intelligent Advice
+### 🛤️ Route Network and API Cross-Check
+
+Using `odpt:Railway`, public railway lists, and Japan’s National Land Numerical Information railway data, v2.20.0 adds the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line. Station order, branches, interchange points, and Japanese/English/Chinese display names were synchronized. APIs are used to verify operators and railway existence; route search runs on the built-in graph without requiring an API key.
 
 Generates concrete, useful advice for your trip based on weather and operational status.
 
@@ -913,7 +919,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.19.0)
+├── SKILL.md             # Project skill definition (v2.20.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -962,7 +968,9 @@ MIT License
 | ✈️ 航班 | 羽田 (HND) / 成田 (NRT) 的到达/出发航班（AviationStack）。未配置密钥时仅显示机场接驳路线（优雅降级） |
 | 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878 个站点） |
 
-### 🤖 AI 智能建议
+### 🛤️ 路线网络与 API 交叉核对
+
+基于 `odpt:Railway`、公开铁路路线列表和日本国土数值信息铁路数据，v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线以及富士急行线。已同步核对车站顺序、支线、换乘站和日英中显示名称。API用于确认运营商与路线存在性，实际路线搜索由无需API密钥的内置图执行。
 
 根据天气与运行状况，自动生成具体实用的出行建议。
 
@@ -1361,7 +1369,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.19.0）
+├── SKILL.md             # 项目技能定义（v2.20.0）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
