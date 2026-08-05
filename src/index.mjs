@@ -19,12 +19,16 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
 import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
 
-config();
+// APIキーはMCPクライアントのenvではなく、プロジェクトルートの.envだけから読み込む。
+// MCPクライアントの起動時カレントディレクトリに依存しないよう、src/index.mjs基準で解決する。
+const envPath = fileURLToPath(new URL('../.env', import.meta.url));
+const { parsed: envConfig, error: envConfigError } = config({ path: envPath });
 
 const API_BASE_URL = 'https://api.odpt.org/api/v4';
-const API_KEY = process.env.ODPT_API_KEY;
-const FLIGHT_API_KEY = process.env.FLIGHT_API_KEY; // AviationStack (optional)
+const API_KEY = envConfig?.ODPT_API_KEY;
+const FLIGHT_API_KEY = envConfig?.FLIGHT_API_KEY; // AviationStack (optional)
 const FLIGHT_API_BASE = 'https://api.aviationstack.com/v1';
 
 if (!API_KEY) {

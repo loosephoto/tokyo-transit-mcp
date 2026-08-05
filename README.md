@@ -147,20 +147,27 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 
 ### MCP クライアント設定例（Claude Desktop / Hermes 等）
 
+APIキーはMCPクライアントの設定ファイルには記載せず、リポジトリルートの `.env` **のみ**に保存します。サーバーは `src/index.mjs` の位置を基準に `.env` を読み込むため、MCPクライアントの起動時カレントディレクトリには依存しません。
+
 ```json
 {
   "mcpServers": {
     "tokyo-transit": {
       "command": "node",
-      "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"],
-      "env": {
-        "ODPT_API_KEY": "your_api_key_here",
-        "FLIGHT_API_KEY": "your_flight_api_key_here"
-      }
+      "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"]
     }
   }
 }
 ```
+
+`/path/to/tokyo-transit-mcp/.env` に以下を設定してください。
+
+```dotenv
+ODPT_API_KEY=your_api_key_here
+FLIGHT_API_KEY=your_flight_api_key_here
+```
+
+`.env` は秘密情報を含むため、共有・コミットしないでください。
 
 ---
 
@@ -646,20 +653,27 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 
 ### MCP Client Configuration Example (Claude Desktop / Hermes, etc.)
 
+Keep API keys **only** in the repository-root `.env`; do not put them in the MCP client's configuration file. The server resolves `.env` relative to `src/index.mjs`, so it does not depend on the MCP client's working directory.
+
 ```json
 {
   "mcpServers": {
     "tokyo-transit": {
       "command": "node",
-      "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"],
-      "env": {
-        "ODPT_API_KEY": "your_api_key_here",
-        "FLIGHT_API_KEY": "your_flight_api_key_here"
-      }
+      "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"]
     }
   }
 }
 ```
+
+Set the keys in `/path/to/tokyo-transit-mcp/.env`:
+
+```dotenv
+ODPT_API_KEY=your_api_key_here
+FLIGHT_API_KEY=your_flight_api_key_here
+```
+
+Do not share or commit `.env`; it contains secrets.
 
 ---
 
@@ -1144,20 +1158,27 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 
 ### MCP 客户端配置示例（Claude Desktop / Hermes 等）
 
+API 密钥**仅**保存于仓库根目录的 `.env` 中，不要写入 MCP 客户端配置文件。服务器会以 `src/index.mjs` 的位置为基准读取 `.env`，不依赖 MCP 客户端的工作目录。
+
 ```json
 {
   "mcpServers": {
     "tokyo-transit": {
       "command": "node",
-      "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"],
-      "env": {
-        "ODPT_API_KEY": "your_api_key_here",
-        "FLIGHT_API_KEY": "your_flight_api_key_here"
-      }
+      "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"]
     }
   }
 }
 ```
+
+请在 `/path/to/tokyo-transit-mcp/.env` 中设置：
+
+```dotenv
+ODPT_API_KEY=your_api_key_here
+FLIGHT_API_KEY=your_flight_api_key_here
+```
+
+`.env` 包含密钥，请勿分享或提交到版本库。
 
 ---
 
