@@ -26,6 +26,10 @@ import { fileURLToPath } from 'node:url';
 const envPath = fileURLToPath(new URL('../.env', import.meta.url));
 const { parsed: envConfig, error: envConfigError } = config({ path: envPath });
 
+// MCP stdio プロトコル保護: stdout は JSON-RPC 専用（console.log は stderr へ）
+console.log = (...args) => console.error('[log]', ...args);
+console.debug = console.info = console.log;
+
 const API_BASE_URL = 'https://api.odpt.org/api/v4';
 const API_KEY = envConfig?.ODPT_API_KEY;
 const FLIGHT_API_KEY = envConfig?.FLIGHT_API_KEY; // AviationStack (optional)
@@ -138,7 +142,7 @@ async function getStationRomanToJa() {
   try {
     const ops = ['TokyoMetro', 'Toei'];
     const responses = await Promise.allSettled(ops.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 4000 })
+      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 15000 })
     ));
     for (const r of responses) {
       if (r.status !== 'fulfilled') continue;
@@ -480,7 +484,7 @@ async function fetchGsiEmergencyShelters(municipalityCode) {
   if (cached) return cached;
   const url = `https://hinanmap.gsi.go.jp/hinanjocp/defaultFtpData/geoJSON/${municipalityCode}_2.geojson`;
   try {
-    const res = await axios.get(url, { timeout: 5000 });
+    const res = await axios.get(url, { timeout: 15000 });
     const features = Array.isArray(res.data?.features) ? res.data.features : [];
     const data = { available: true, source_url: url, features };
     cache.set(key, data, cache.gsiEmergencyShelters.ttl);
@@ -680,6 +684,7 @@ const STATION_NAME_MAP = {
   'Osaka': '大阪', 'Kyoto': '京都', 'Narita Airport': '成田空港', 'Haneda Airport': '羽田空港',
   'Narita': '成田空港', 'Haneda': '羽田空港', 'HND': '羽田空港', 'NRT': '成田空港',
   'Odaiba Seaside Park': 'お台場海浜公園', 'Hinode Pier': '日の出桟橋', 'Toyosu': '豊洲',
+  '合羽橋': 'かっぱ橋', 'Kappabashi': 'かっぱ橋', 'Kappabashi Dori': 'かっぱ橋',
   // コミュニティバス駅接続の主要駅（ローマ字）
   'Kichijoji': '吉祥寺', 'Mitaka': '三鷹', 'Musashisakai': '武蔵境', 'Musashi-Sakai': '武蔵境',
   'Tanashi': '田無', 'Hibarigaoka': 'ひばりヶ丘', 'Houya': '保谷', 'Hoya': '保谷', 'Higashifushimi': '東伏見', 'Hanakoganei': '花小金井',
@@ -1285,22 +1290,31 @@ const WEATHER_TERM_MAP = {
   en: [
     ['昼過ぎ', 'in the afternoon'], ['時々', 'occasionally'], ['一時', 'temporarily'], ['のち', 'then'], ['後', 'then'],
     ['所により雨', 'scattered rain'], ['所により雪', 'scattered snow'], ['所により', 'in places'],
-    ['夕方', 'evening'], ['夜', 'night'], ['から', 'from'],
+    ['夜遅く', 'late at night'], ['夜のはじめ頃', 'in the early night'], ['明け方', 'dawn'], ['未明', 'before dawn'],
+    ['雷を伴い', 'with thunder'], ['激しく', 'heavily'], ['で', 'then'],
+    ['夕方', 'evening'], ['夜', 'night'], ['朝', 'morning'], ['日中', 'during the day'], ['から', 'from'],
     ['晴れ', 'sunny'], ['くもり', 'cloudy'], ['曇り', 'cloudy'], ['雨', 'rain'],
-    ['雪', 'snow'], ['雷', 'thunder'], ['風', 'wind'], ['強い', 'strong'], ['弱い', 'light']
+    ['雪', 'snow'], ['雷', 'thunder'], ['風', 'wind'], ['強い', 'strong'], ['弱い', 'light'], ['降る', 'falling']
   ],
   zh: [
     ['昼過ぎ', '午后'], ['時々', '有时'], ['一時', '短暂'], ['のち', '转'], ['後', '转'],
     ['所により雨', '局部有雨'], ['所により雪', '局部有雪'], ['所により', '局部'],
-    ['夕方', '傍晚'], ['夜', '夜间'], ['から', '从'],
+    ['夜遅く', '深夜'], ['夜のはじめ頃', '入夜时分'], ['明け方', '清晨'], ['未明', '凌晨'],
+    ['雷を伴い', '伴有雷电'], ['激しく', '猛烈地'], ['で', '并'],
+    ['夕方', '傍晚'], ['夜', '夜间'], ['朝', '早晨'], ['日中', '白天'], ['から', '从'],
     ['晴れ', '晴'], ['くもり', '多云'], ['曇り', '多云'], ['雨', '雨'],
-    ['雪', '雪'], ['雷', '雷'], ['風', '风'], ['強い', '强'], ['弱い', '弱']
+    ['雪', '雪'], ['雷', '雷'], ['風', '风'], ['強い', '强'], ['弱い', '弱'], ['降る', '下']
   ]
 };
 function translateWeather(text, userLang) {
   if (!text || userLang === 'ja') return text;
-  let t = text;
-  for (const [from, to] of (WEATHER_TERM_MAP[userLang] || [])) t = t.split(from).join(to);
+  const entries = (WEATHER_TERM_MAP[userLang] || []).slice().sort((a, b) => b[0].length - a[0].length);
+  const pattern = entries.map(e => e[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  // 最長一致を優先した一括置換（置換結果が再度翻訳される二重翻訳を防ぐ）
+  let t = pattern ? text.replace(new RegExp(pattern, 'g'), matched => {
+    const entry = entries.find(e => e[0] === matched);
+    return entry ? entry[1] : matched;
+  }) : text;
   // 全角スペースは英中では通常のスペースに（JMAテキスト由来の整形用スペース）
   t = t.split('\u3000').join(' ');
   return t.trim();
@@ -1384,7 +1398,7 @@ const OPERATOR_MAP = {
   odakyuhakone: 'OdakyuHakone', hokuso: 'Hokuso',
   saitamarailway: 'SaitamaRailway', toyorapid: 'ToyoRapid',
   shibayama: 'Shibayama', jrcentral: 'JR-Central',
-  tsukuba: 'TsukubaExpress'
+  tsukuba: 'MIR' // つくばエクスプレスの ODPT 事業者ID（首都圏新都市鉄道）
 };
 
 const NON_RAIL_OPERATORS = {
@@ -1446,7 +1460,7 @@ function detectLanguage(text) {
     '几点','多少','航班','列车','天气','码头','碼頭','渡轮','轮渡','要多久','多少钱',
     // 交通・地名拡充（中国語ユーザーがよく使う表記。ただし東京/大阪等の大都市名は
     // 日中で表記が共通するため判定シグナルには使わない）
-    '合羽桥','合羽橋','道具街','坐巴士','坐车','坐地铁',' bus','坐','去','到','从','巴士站',
+    '合羽桥','坐巴士','坐车','坐地铁',' bus','坐','去','到','从','巴士站',
     '公交车','公车','捷运','高铁','火车','怎么去','怎么走','多长时间','多久','几点发车','首班车','末班车',
     '浅草寺','雷门','雷門','晴空塔','天空树'];
   if (zhWords.some(w => str.includes(w))) return 'zh';
@@ -1557,8 +1571,8 @@ async function fetchBikeShareData() {
   const cached = cache.get(cache.bikeShare.key);
   if (cached) return cached;
   const [infoRes, statusRes] = await Promise.all([
-    axios.get(`${GBFS_BASE}/station_information.json`, { timeout: 5000 }),
-    axios.get(`${GBFS_BASE}/station_status.json`, { timeout: 5000 })
+    axios.get(`${GBFS_BASE}/station_information.json`, { timeout: 15000 }),
+    axios.get(`${GBFS_BASE}/station_status.json`, { timeout: 15000 })
   ]);
   const stations = infoRes.data.data?.stations || [];
   const statuses = statusRes.data.data?.stations || [];
@@ -2715,11 +2729,13 @@ function resolveLandmark(rawName) {
   return null;
 }
 
+const STATION_NAME_MAP_LOWER = new Map(
+  Object.entries(STATION_NAME_MAP).map(([k, v]) => [k.toLowerCase(), v])
+);
 function normalizeStationName(name) {
   const trimmed = name.trim();
   if (STATION_NAME_MAP[trimmed]) return STATION_NAME_MAP[trimmed];
-  const normalized = Object.keys(STATION_NAME_MAP).find(k => k.toLowerCase() === trimmed.toLowerCase());
-  return normalized ? STATION_NAME_MAP[normalized] : trimmed;
+  return STATION_NAME_MAP_LOWER.get(trimmed.toLowerCase()) || trimmed;
 }
 
 // ==========================================
@@ -2801,7 +2817,7 @@ async function searchRoute(args) {
         try {
           const cached = cache.get(cache.jmaWeather.key);
           if (cached) { isHot = cached.isHot; return cached; }
-          const res = await axios.get("https://www.jma.go.jp/bosai/forecast/data/forecast/130000.json", { timeout: 3500 });
+          const res = await axios.get("https://www.jma.go.jp/bosai/forecast/data/forecast/130000.json", { timeout: 15000 });
           const text = res.data[0].timeSeries[0].areas[0].weathers[0];
           const r = text.includes("雨") || text.includes("雪") || text.includes("雷");
           const s = text.includes("特別警報") || text.includes("大雨特別") || text.includes("大雪特別") || text.includes("津波");
@@ -2823,14 +2839,15 @@ async function searchRoute(args) {
         if (!odptBreaker.canExecute()) return { error: 'CIRCUIT_OPEN' };
         try {
           const operators = ['TokyoMetro', 'Toei', 'TamaMonorail', 'MIR', 'TWR'];
-          const results = await Promise.allSettled(operators.map(op => axios.get(`${API_BASE_URL}/odpt:TrainInformation`, { params: getParams(op), timeout: 3500 })));
+          const results = await Promise.allSettled(operators.map(op => axios.get(`${API_BASE_URL}/odpt:TrainInformation`, { params: getParams(op), timeout: 15000 })));
           const allDelays = []; let fb = false, fd = '';
           for (const res of results) {
             if (res.status === 'rejected') continue;
             for (const info of res.value.data) {
               if (!info['odpt:trainInformationStatus']) continue;
               const t = info['odpt:trainInformationText']?.ja || '';
-              if (t.includes("運転見合わせ") || t.includes("見合わせ") || t.includes("運休")) allDelays.push({ railway: info['odpt:railway'], text: t });
+              const resumed = t.includes('再開');
+              if (!resumed && (t.includes("運転見合わせ") || t.includes("見合わせ") || t.includes("運休"))) allDelays.push({ railway: info['odpt:railway'], text: t });
               if (t.includes('バス') || t.includes('振替') || t.includes('代行') || t.includes('輸送')) { fb = true; fd = t; }
             }
           }
@@ -3148,7 +3165,7 @@ async function getStationInfo(args) {
   }
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, station: stationName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
   try {
-    const response = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(operator, { 'dc:title': stationName }), timeout: 3500 });
+    const response = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(operator, { 'dc:title': stationName }), timeout: 15000 });
     const stations = response.data;
     odptBreaker.onSuccess();
     const displayStation = getDisplayStationName(stationName, userLang);
@@ -3180,7 +3197,7 @@ async function getWeatherAdvice(userLang, areaCode = '130000') {
     let weather, isRainy = false, isHot = false, maxTemp = 0;
     if (cached) { weather = cached.weather; isRainy = cached.isRainy; isHot = cached.isHot; }
     else {
-      const response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 3500 });
+      const response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
       weather = response.data[0].timeSeries[0].areas[0].weathers[0];
       isRainy = weather.includes("雨") || weather.includes("雪");
       for (const ts of response.data[0]?.timeSeries || []) {
@@ -3307,7 +3324,7 @@ async function fetchJmaTsunamiSafety() {
   const cached = cache.get(cache.jmaTsunami.key);
   if (cached) return cached;
   try {
-    const listRes = await axios.get(JMA_TSUNAMI_LIST_URL, { timeout: 3500 });
+    const listRes = await axios.get(JMA_TSUNAMI_LIST_URL, { timeout: 15000 });
     const list = Array.isArray(listRes.data) ? listRes.data : [];
     // 最新の津波警報・注意報・予報電文を1件取得。最新電文が解除なら active=false となる。
     const latest = list.find(item => /津波警報・注意報・予報|Tsunami (Advisory|Warning|Forecast)/.test(item.ttl || item.en_ttl || ''));
@@ -3316,7 +3333,7 @@ async function fetchJmaTsunamiSafety() {
       cache.set(cache.jmaTsunami.key, none, cache.jmaTsunami.ttl);
       return none;
     }
-    const detailRes = await axios.get(`${JMA_TSUNAMI_DETAIL_BASE_URL}${latest.json}`, { timeout: 3500 });
+    const detailRes = await axios.get(`${JMA_TSUNAMI_DETAIL_BASE_URL}${latest.json}`, { timeout: 15000 });
     const body = detailRes.data?.Body || {};
     const forecastItems = body?.Tsunami?.Forecast?.Item || [];
     const items = Array.isArray(forecastItems) ? forecastItems : [forecastItems];
@@ -3559,7 +3576,8 @@ async function listTransitOperators(args) {
   const userLang = resolveLang(args) || 'ja';
   const typeFilter = args?.type_filter || 'all';
   const tl = { ja: { rail: '鉄道', agt: 'AGT', monorail: 'モノレール', tram: '路面電車' }, en: { rail: 'Railway', agt: 'AGT', monorail: 'Monorail', tram: 'Tram' }, zh: { rail: '铁路', agt: 'AGT', monorail: '单轨电车', tram: '路面电车' } }[userLang] || {};
-  const railOps = Object.entries(OPERATOR_MAP).map(([k, id]) => ({ key: k, id, type: 'rail', typeLabel: tl.rail, label: id }));
+  const seenIds = new Set();
+  const railOps = Object.entries(OPERATOR_MAP).map(([k, id]) => ({ key: k, id, type: 'rail', typeLabel: tl.rail, label: id })).filter(o => !seenIds.has(o.id) && seenIds.add(o.id));
   const nonRail = Object.entries(NON_RAIL_OPERATORS).map(([k, op]) => ({ key: k, id: op.id, type: op.type, typeLabel: tl[op.type] || op.type, label: userLang === 'en' ? op.labelEn : userLang === 'zh' ? op.labelZh : op.label, description: userLang === 'en' ? (op.descEn || op.description) : userLang === 'zh' ? (op.descZh || op.description) : op.description, website: op.website }));
   let all = [...railOps, ...nonRail];
   if (typeFilter !== 'all') all = all.filter(op => op.type === typeFilter);
@@ -3578,10 +3596,19 @@ async function getOperatorRoutes(args) {
   else if (OPERATOR_MAP[opKey]) { opId = OPERATOR_MAP[opKey]; opMeta = { type: 'rail' }; }
   else if (OPERATOR_MAP[normKey]) { opId = OPERATOR_MAP[normKey]; opMeta = { type: 'rail' }; }
   else if (RAILWAY_NAME_MAP[opKey]) { const nk = RAILWAY_NAME_MAP[opKey]; if (OPERATOR_MAP[nk]) { opId = OPERATOR_MAP[nk]; opMeta = { type: 'rail' }; } }
+  // list_transit_operators が表示する id（例: MIR, TWR, TokyoMonorail, TsukubaExpress）でも解決可能に
+  else if (Object.values(NON_RAIL_OPERATORS).some(op => (op.id || '').toLowerCase() === opKey.toLowerCase())) {
+    opMeta = Object.values(NON_RAIL_OPERATORS).find(op => (op.id || '').toLowerCase() === opKey.toLowerCase());
+    opId = opMeta.id;
+  }
+  else if (Object.values(OPERATOR_MAP).some(id => (id || '').toLowerCase() === opKey.toLowerCase())) {
+    opId = Object.values(OPERATOR_MAP).find(id => (id || '').toLowerCase() === opKey.toLowerCase());
+    opMeta = { type: 'rail' };
+  }
   else return jsonResponse(buildErrorResponse('INVALID_INPUT', `不明: ${opKey}。list_transit_operators で確認。`, { userLang }));
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
-    let railways = (await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: { 'acl:consumerKey': API_KEY, 'odpt:operator': `odpt.Operator:${opId}` }, timeout: 3500 })).data;
+    let railways = (await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: { 'acl:consumerKey': API_KEY, 'odpt:operator': `odpt.Operator:${opId}` }, timeout: 15000 })).data;
     if (opMeta.railwayId) { const tid = `odpt.Railway:${opMeta.railwayId}`; railways = railways.filter(r => r['owl:sameAs'] === tid); }
     odptBreaker.onSuccess();
     const routes = railways.map(r => ({
@@ -3602,6 +3629,56 @@ async function getOperatorRoutes(args) {
 // ==========================================
 // 🚃 運賃検索
 // ==========================================
+// 運賃検索用: 駅名 → odpt:Station 候補（全事業者）を解決（キャッシュ付き）。
+// dc:title 完全一致で候補を取得し、1000件上限問題（odpt:RailwayFare 一括取得）を回避する。
+async function resolveFareStations(rawName) {
+  const name = (normalizeStationName(rawName) || rawName || '').trim();
+  if (!name) return [];
+  const cacheKey = `${cache.railwayFare.key}:station:${name}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+  if (!odptBreaker.canExecute()) return [];
+  const candidates = [];
+  const queries = [name, name.replace(/(駅|站)$/, ''), name.replace(/駅前$/, '')]
+    .filter((v, i, a) => v && a.indexOf(v) === i);
+  for (const q of queries) {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: { 'acl:consumerKey': API_KEY, 'dc:title': q }, timeout: 15000 });
+      odptBreaker.onSuccess();
+      if (Array.isArray(res.data)) {
+        for (const st of res.data) {
+          const id = st['owl:sameAs'];
+          if (id && !candidates.some(c => c.id === id)) {
+            candidates.push({ id, operator: (st['odpt:operator'] || '').replace('odpt.Operator:', ''), title: st['dc:title'] || q });
+          }
+        }
+      }
+      if (candidates.length) break;
+    } catch (e) { odptBreaker.onFailure(e); }
+  }
+  cache.set(cacheKey, candidates, cache.railwayFare.ttl);
+  return candidates;
+}
+
+// 出発駅IDごとに運賃を分割取得（ODPT の 1000 件上限による切り捨てを回避）。
+// 東京メトロ・都営に加え MIR（つくばエクスプレス）・TWR（りんかい線）・Yurikamome も自動対応。
+async function fetchFaresByFromStation(stationId) {
+  const cacheKey = `${cache.railwayFare.key}:byfrom:${stationId}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+  if (!odptBreaker.canExecute()) return [];
+  try {
+    const res = await axios.get(`${API_BASE_URL}/odpt:RailwayFare`, { params: { 'acl:consumerKey': API_KEY, 'odpt:fromStation': stationId }, timeout: 15000 });
+    const fares = Array.isArray(res.data) ? res.data : [];
+    odptBreaker.onSuccess();
+    cache.set(cacheKey, fares, cache.railwayFare.ttl);
+    return fares;
+  } catch (e) {
+    odptBreaker.onFailure(e);
+    return [];
+  }
+}
+
 async function searchFare(args) {
   const rawFrom = args.from || '';
   const rawTo = args.to || '';
@@ -3619,44 +3696,42 @@ async function searchFare(args) {
   }
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
-    const cached = cache.get(cache.railwayFare.key);
-    let fares;
-    if (cached) { fares = cached; odptBreaker.onSuccess(); }
-    else {
-      const responses = await Promise.allSettled([
-        axios.get(`${API_BASE_URL}/odpt:RailwayFare`, { params: getParams('TokyoMetro'), timeout: 3500 }),
-        axios.get(`${API_BASE_URL}/odpt:RailwayFare`, { params: getParams('Toei'), timeout: 3500 })
-      ]);
-      fares = [];
-      for (const r of responses) { if (r.status === 'fulfilled') fares = fares.concat(r.value.data); }
-      cache.set(cache.railwayFare.key, fares, cache.railwayFare.ttl);
+    // 両駅を odpt:Station 候補へ解決し、出発駅ごとに運賃を分割取得
+    const [fromStations, toStations] = await Promise.all([resolveFareStations(from), resolveFareStations(to)]);
+    const toIds = new Set(toStations.map(st => st.id));
+    const fareGroups = await Promise.all(fromStations.map(fs => fetchFaresByFromStation(fs.id)));
+    const results = [];
+    for (let i = 0; i < fromStations.length; i++) {
+      for (const f of fareGroups[i]) {
+        const tsId = f['odpt:toStation'] || '';
+        if (tsId && toIds.has(tsId)) results.push(f);
+      }
     }
-    odptBreaker.onSuccess();
 
-    const stationMap = await getStationRomanToJa();
     const displayFrom = getDisplayStationName(from, userLang);
     const displayTo = getDisplayStationName(to, userLang);
 
-    const results = fares.filter(f => {
-      const fsKey = (f['odpt:fromStation'] || '').toLowerCase().split('.').pop() || '';
-      const tsKey = (f['odpt:toStation'] || '').toLowerCase().split('.').pop() || '';
-      const fsJa = stationMap[fsKey] || fsKey;
-      const tsJa = stationMap[tsKey] || tsKey;
-      const matchFrom = fsJa.includes(from) || from.includes(fsJa) || fsKey.includes(from.toLowerCase());
-      const matchTo = tsJa.includes(to) || to.includes(tsJa) || tsKey.includes(to.toLowerCase());
-      return matchFrom && matchTo;
-    }).slice(0, 5);
-
     if (results.length === 0) {
-      const notFoundMsg = userLang === 'en' ? "Fare data not found. Please check Yahoo! Transit." :
-                          userLang === 'zh' ? "未找到票价数据，请查看雅虎路线情报。" :
-                          "運賃データが見つかりません。Yahoo!路線情報をご利用ください。";
+      // ODPT に運賃データがない事業者（JR・私鉄等）か、ペア未登録かの案内を分ける
+      const odptCovered = fromStations.some(st =>
+        ['TokyoMetro', 'Toei', 'MIR', 'TWR', 'Yurikamome'].includes(st.operator));
+      const notFoundMsg = userLang === 'en'
+        ? (odptCovered
+          ? 'Fare data not found for this pair in ODPT.'
+          : 'This operator has no fare data in ODPT (JR East / private railways are not covered). Please check Yahoo! Transit.')
+        : userLang === 'zh'
+        ? (odptCovered
+          ? 'ODPT 中未找到该区间的票价。'
+          : '该运营商在 ODPT 中没有票价数据（JR东日本/私营铁路不在覆盖范围）。请查看雅虎路线情报。')
+        : (odptCovered
+          ? 'この区間の運賃データがODPTに見つかりませんでした。'
+          : 'この事業者はODPTに運賃データがありません（JR・私鉄は対象外）。Yahoo!路線情報をご利用ください。');
       return jsonResponse({ status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo, fare: null, message: notFoundMsg, fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` });
     }
 
-    const noteText = userLang === 'en' ? "ODPT RailwayFare (24h Cache)" :
-                     userLang === 'zh' ? "ODPT RailwayFare (缓存: 24小时)" :
-                     "ODPT RailwayFare (キャッシュ: 24h)";
+    const noteText = userLang === 'en' ? "ODPT RailwayFare (per-station, 24h Cache)" :
+                     userLang === 'zh' ? "ODPT RailwayFare (按车站缓存: 24小时)" :
+                     "ODPT RailwayFare (駅単位取得・キャッシュ: 24h)";
 
     // 最安値を single fare フィールドにも設定（後方互換・親切表示）
     const cheapest = results.reduce((best, f) => {
@@ -3672,7 +3747,7 @@ async function searchFare(args) {
         child_ticket: cheapest.f['odpt:childTicketFare'] || null,
         child_ic: cheapest.f['odpt:childIcCardFare'] || null
       } : null,
-      fares: results.map(f => ({
+      fares: results.slice(0, 5).map(f => ({
         operator: f['odpt:operator']?.replace('odpt.Operator:', '') || 'Unknown',
         ticket: f['odpt:ticketFare'] || f['odpt:childTicketFare'] || null,
         ic: f['odpt:icCardFare'] || f['odpt:childIcCardFare'] || null,
@@ -3706,7 +3781,7 @@ async function getTimetable(args) {
     let allTimetables;
     if (cached) { allTimetables = cached; odptBreaker.onSuccess(); }
     else {
-      const res = await axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(), timeout: 5000 });
+      const res = await axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(), timeout: 15000 });
       allTimetables = res.data;
       cache.set(cache.trainTimetable.key, allTimetables, cache.trainTimetable.ttl);
     }
@@ -4151,7 +4226,7 @@ async function fetchAllBuses(userLang) {
   // 全バス事業者を並列取得してマージ（1社でも失敗しても他社は維持）
   const results = await Promise.allSettled(
     BUS_OPERATORS.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:Bus`, { params: getParams(op.id), timeout: 5000 })
+      axios.get(`${API_BASE_URL}/odpt:Bus`, { params: getParams(op.id), timeout: 15000 })
     )
   );
   const merged = [];
@@ -4224,6 +4299,24 @@ async function fetchAllBuses(userLang) {
       hcCount++;
     }
     // 将来的に { url, date } ソースが追加されたらここで axios.get + zip展開（フェリーと同様）
+  }
+  // コミュニティバス（めぐりん・江戸バス等・COMMUNITY_BUS_ROUTES）の停留所も検索プールに追加。
+  // 乗り継ぎグラフ（buildTransferGraph）には既に組み込まれているが、busstop_name 検索モードでは
+  // ヒットしなかったため、バス停検索でも引けるようにする。
+  for (const cb of COMMUNITY_BUS_ROUTES) {
+    const cbMeta = { label: cb.bus, labelEn: cb.bus, labelZh: cb.bus, website: cb.url };
+    const cbStops = new Set();
+    for (const route of cb.routes) for (const stopName of route.stops) cbStops.add(stopName);
+    for (const stopName of cbStops) {
+      merged.push({
+        'odpt:note': stopName, 'odpt:busroute': `${cb.municipality}:${cb.bus}:stop`,
+        'odpt:busNumber': '', 'odpt:frequency': '', 'odpt:operator': `odpt.Operator:${cb.municipality}`,
+        _operatorId: cb.municipality, _operatorLabel: cbMeta,
+        _searchKeys: [stopName, cb.bus, cb.municipality],
+        _displayNote: stopName, _communityBus: true, _communityBusUrl: cb.url,
+        _municipality: cb.municipality, _hardCoded: true
+      });
+    }
   }
   return { merged, okCount, failCount, hcCount };
 }
@@ -4342,12 +4435,14 @@ function buildTransferGraph(patterns) {
   for (const p of patterns) {
     // 停留所名を正規化。空文字（odpt:note 欠損等）はスキップし、前の有効停留所から
     // 次の有効停留所へエッジを張る（中間欠損による「飛び越し隣接」を防ぐ）。
+    // 正規化済みの停車順は系統ごとに1回だけ計算して全停留所で共有する。
+    const normStops = p.stops.map(x => normalizeBusStop(x.name)).filter(Boolean);
     let prevValid = null;
     for (const raw of p.stops) {
       const s = normalizeBusStop(raw.name);
       if (!s) continue; // 空名称はスキップ
       if (!stopToPatterns.has(s)) stopToPatterns.set(s, []);
-      stopToPatterns.get(s).push({ operator: p.operator, patternId: p.patternId, stops: p.stops.map(x => normalizeBusStop(x.name)).filter(Boolean) });
+      stopToPatterns.get(s).push({ operator: p.operator, patternId: p.patternId, stops: normStops });
       if (prevValid) addEdge(prevValid, s);
       prevValid = s;
     }
@@ -4616,23 +4711,59 @@ function edgeTypeToMode(type) {
 // 重み付きダイクストラ（最小コスト経路探索）
 // adj: Map<nodeName, [{to, type}]>, weights: mode->cost
 // 戻り値: { found, nodePath, segments, score }
+// バイナリミニヒープ（Dijkstra 用・遅延削除は dist 再チェックで対応）
+class MinHeap {
+  constructor() { this.heap = []; }
+  size() { return this.heap.length; }
+  push(item) {
+    const h = this.heap;
+    h.push(item);
+    let i = h.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (h[p].cost <= h[i].cost) break;
+      [h[p], h[i]] = [h[i], h[p]];
+      i = p;
+    }
+  }
+  pop() {
+    const h = this.heap;
+    if (!h.length) return undefined;
+    const top = h[0];
+    const last = h.pop();
+    if (h.length) {
+      h[0] = last;
+      let i = 0;
+      while (true) {
+        const l = i * 2 + 1, r = l + 1;
+        let m = i;
+        if (l < h.length && h[l].cost < h[m].cost) m = l;
+        if (r < h.length && h[r].cost < h[m].cost) m = r;
+        if (m === i) break;
+        [h[m], h[i]] = [h[i], h[m]];
+        i = m;
+      }
+    }
+    return top;
+  }
+}
+
 function findWeightedPath(adj, fromNode, toNode, weights, busGraph, nonStepByPattern, nonStepByStop, cbStopToBus) {
   const dist = new Map(); // node -> best cost
   const prev = new Map(); // node -> parentNode
-  const pq = [{ node: fromNode, cost: 0 }];
+  const pq = new MinHeap();
   dist.set(fromNode, 0);
   prev.set(fromNode, null);
-  while (pq.length) {
-    // 最小コスト要素を取り出し（簡易実装: 毎回 sort して先頭）
-    pq.sort((a, b) => a.cost - b.cost);
-    const { node: cur, cost: curCost } = pq.shift();
-    if (curCost > (dist.get(cur) || Infinity)) continue;
+  pq.push({ node: fromNode, cost: 0 });
+  while (pq.size()) {
+    const { node: cur, cost: curCost } = pq.pop();
+    if (curCost > (dist.get(cur) ?? Infinity)) continue;
     if (cur === toNode) break;
     for (const e of (adj.get(cur) || [])) {
       const mode = edgeTypeToMode(e.type);
       const w = weights[mode] !== undefined ? weights[mode] : 1;
       const nc = curCost + w;
-      if (nc < (dist.get(e.to) || Infinity)) {
+      if (nc < (dist.get(e.to) ?? Infinity)) {
         dist.set(e.to, nc);
         prev.set(e.to, { from: cur, edgeType: e.type });
         pq.push({ node: e.to, cost: nc });
@@ -4675,7 +4806,25 @@ function buildSegmentsFromPath(nodePath, edgePath, adj, busGraph, nonStepByPatte
         else break;
       }
       const stops = nodePath.slice(i, end + 1);
-      segments.push({ mode: 'train', fromStop: stops[0], toStop: stops[stops.length - 1], stops });
+      // 鉄道ルートエンジンで路線単位に分割（乗換回数を正確に表示するため）。
+      // バスグラフの train エッジは路線情報を持たないため、区間両端を再ルーティングする。
+      const rr = findShortestPath(stops[0], stops[stops.length - 1]);
+      if (rr && rr.path && rr.path.length >= 2 && rr.lines && rr.lines.length >= 1) {
+        let curLine = rr.lines[0];
+        let curStops = [rr.path[0], rr.path[1]];
+        for (let k = 1; k < rr.lines.length; k++) {
+          if (rr.lines[k] === curLine) {
+            curStops.push(rr.path[k + 1]);
+          } else {
+            segments.push({ mode: 'train', fromStop: curStops[0], toStop: curStops[curStops.length - 1], stops: curStops });
+            curLine = rr.lines[k];
+            curStops = [rr.path[k], rr.path[k + 1]];
+          }
+        }
+        segments.push({ mode: 'train', fromStop: curStops[0], toStop: curStops[curStops.length - 1], stops: curStops });
+      } else {
+        segments.push({ mode: 'train', fromStop: stops[0], toStop: stops[stops.length - 1], stops });
+      }
       i = end + 1;
     } else if (type === 'community_bus') {
       let end = i + 1;
@@ -4901,6 +5050,9 @@ async function searchBusTransfer(fromInput, toInput, vehiclePref) {
     found: true, fromNode: fNode, toNode: tNode, segments,
     isCrossModal: segments.some(s => s.mode === 'train'),
     vehicleRequested: validPref,
+    // 指定乗り物（ferry等）の経路が見つからず通常探索で代替した場合
+    // （優先探索は他モードでも経路を「見つけて」しまうため、採用経路に指定モードが含まれるかを判定）
+    vehicleFallback: validPref !== 'any' && !segments.some(s => s.mode === validPref),
     betterAlternative
   };
 }
@@ -4979,7 +5131,8 @@ async function searchBus(args) {
           for (const q of [fromInput, toInput]) {
             const qn = String(q || '').replace(/(停留所|バス停|駅)$/, '');
             for (const k of busPool) {
-              if (!k || seen.has(k)) continue;
+              // 生データの系統名・ID付きノイズ（「系統名:数字:停留所」等）は候補から除外
+              if (!k || seen.has(k) || /[：:〜→|]/.test(k)) continue;
               if ((qn && k.includes(qn)) || (k.length >= 2 && qn.length >= 1 && k.includes(qn.slice(0, Math.max(1, qn.length - 1))))) {
                 seen.add(k); similarStops.push(k);
               }
@@ -5001,7 +5154,7 @@ async function searchBus(args) {
             : userLang === 'zh' ? '换乘覆盖都营/西武/横滨市营公交（ODPT BusroutePattern 数据）及社区公交接驳。JR巴士关东不包含在内（缺少站点顺序数据）。'
             : '乗り継ぎは都営・西武・横浜市営バス＋コミュニティバス駅接続が対象（ODPT BusroutePattern データ）。JRバス関東は停留所順序データがないため対象外です。',
           data_source: 'ODPT BusroutePattern + BusTimetable',
-          ai_transit_advice: testAdv.aiAdvice,
+          ai_transit_advice: aiAdvice,
           community_bus_access: cbAccess.length ? cbAccess : undefined,
           similar_stops: similarStops.length ? (() => {
             const localized = similarStops.slice(0, 10)
@@ -5052,7 +5205,15 @@ async function searchBus(args) {
           : (allNonStep
             ? '全区間でノンステップバス（段差なし）が運行されています。足の悪い方の乗車が容易です。'
             : '一部区間でノンステップバスが運行されていない可能性があります。各事業者へご確認いただくか、ノンステップ指定便をご利用ください。');
-      const crossModal = result.isCrossModal ? (userLang === 'en' ? ' (bus→train→bus cross-modal)' : userLang === 'zh' ? '（公交→电车→公交 跨方式换乘）' : '（バス→電車→バスの横断乗り継ぎ）') : '';
+      const hasBusSeg = segments.some(s => s.mode === 'bus' || s.mode === 'community_bus');
+      // バス区間のない純粋な電車フォールバックでは「バス→電車→バス」と表示しない
+      const crossModal = (result.isCrossModal && hasBusSeg) ? (userLang === 'en' ? ' (bus→train→bus cross-modal)' : userLang === 'zh' ? '（公交→电车→公交 跨方式换乘）' : '（バス→電車→バスの横断乗り継ぎ）') : '';
+      // 指定乗り物の経路が無く代替した場合の案内
+      const vehicleFallbackNote = result.vehicleFallback ? (userLang === 'en'
+        ? `No ${result.vehicleRequested} route found — substituted with another mode.`
+        : userLang === 'zh'
+        ? `未找到${result.vehicleRequested}路线，已用其他交通方式替代。`
+        : `指定の乗り物（${result.vehicleRequested}）の経路が見つからず、他の交通手段で代替しました。`) : undefined;
       // 🚌 乗り物指定優先の進言ブロック（better_alternative）
       let betterAlternativeBlock = undefined;
       if (result.betterAlternative && result.betterAlternative.exists) {
@@ -5096,6 +5257,8 @@ async function searchBus(args) {
         route: segments,
         barrier_free_note: barrierFreeNote,
         note: crossModal || undefined,
+        vehicle_fallback: result.vehicleFallback || undefined,
+        vehicle_fallback_note: vehicleFallbackNote,
         vehicle_requested: result.vehicleRequested || 'any',
         better_alternative: betterAlternativeBlock,
         community_bus_access: cbAccess.length ? cbAccess : undefined,
@@ -5202,7 +5365,8 @@ async function searchBus(args) {
       const cands = [];
       for (const b of buses) {
         for (const k of (b._searchKeys || [])) {
-          if (!k || seen.has(k)) continue;
+          // 生データの系統名・ID付きノイズ（「系統名:数字:停留所」等）は候補から除外
+          if (!k || seen.has(k) || /[：:〜→|]/.test(k)) continue;
           // 入力の先頭N文字に一致、または入力が停名に含まれる
           if ((q && k.includes(q)) || (k.length >= 2 && q.length >= 1 && k.includes(q.slice(0, Math.max(1, q.length - 1))))) {
             seen.add(k);
@@ -5339,11 +5503,10 @@ function normalizeFlight(f, direction, userLang) {
   const dep = f.departure || {};
   const arr = f.arrival || {};
   const end = direction === 'departure' ? dep : arr; // 着目側（到着なら到着側、出発なら出発側）
-  const sched = end.scheduled ? new Date(end.scheduled) : null;
-  const actual = end.actual ? new Date(end.actual) : null;
-  const est = end.estimated ? new Date(end.estimated) : null;
   const delayMin = typeof end.delay === 'number' ? end.delay : null;
-  const fmt = (d) => d ? d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: end.timezone || 'Asia/Tokyo' }) : null;
+  // AviationStack は空港の現地時刻（例: 07:35 JST）を「+00:00」表記で返すため、
+  // Date→Asia/Tokyo 変換（+9h）すると時刻がずれる。ISO文字列の時刻部分（HH:MM）をそのまま表示する。
+  const fmt = (iso) => (iso && iso.length >= 16) ? iso.slice(11, 16) : (iso || null);
   const statusMap = { scheduled: '予定通り', active: '運航中', landed: '到着済', cancelled: '欠航', diverted: 'ダイバート', incident: 'トラブル' };
   const statusMapEn = { scheduled: 'On schedule', active: 'In flight', landed: 'Landed', cancelled: 'Cancelled', diverted: 'Diverted', incident: 'Incident' };
   const statusMapZh = { scheduled: '准点', active: '飞行中', landed: '已到达', cancelled: '取消', diverted: '备降', incident: '异常' };
@@ -5360,9 +5523,9 @@ function normalizeFlight(f, direction, userLang) {
     terminal: end.terminal || null,
     gate: end.gate || null,
     baggage: end.baggage || null,
-    scheduled_time: sched ? fmt(sched) : null,
-    actual_time: actual ? fmt(actual) : null,
-    estimated_time: est ? fmt(est) : null,
+    scheduled_time: fmt(end.scheduled),
+    actual_time: fmt(end.actual),
+    estimated_time: fmt(end.estimated),
     delay_minutes: delayMin,
     airport_name: end.airport || null,
     airport_iata: end.iata || null,
