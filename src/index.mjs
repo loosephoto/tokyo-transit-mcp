@@ -365,6 +365,18 @@ function buildTestAdvice(simulatedFailure, userLang = 'ja') {
   };
 }
 
+// 通常検索でも全交通モードが一貫してAIアドバイスを返す。
+// -test の障害アドバイスを優先し、通常時は気象庁の天候連動アドバイス、
+// 気象庁APIが一時利用不可でも安全な既定（晴天時）アドバイスを返す。
+async function getTransitAdvice(testAdv, userLang) {
+  if (testAdv?.aiAdvice) return testAdv.aiAdvice;
+  try {
+    const weatherAdvice = await getWeatherAdvice(userLang);
+    if (weatherAdvice?.advice) return weatherAdvice.advice;
+  } catch (_) { /* 下記の既定アドバイスへフォールバック */ }
+  return MULTILINGUAL_ADVICE.fair[userLang] || MULTILINGUAL_ADVICE.fair.ja;
+}
+
 // 地震時は通常の経路・航路を「利用可能な経路」として提示しない。
 // ground: 鉄道/トラム/バス等、water: フェリー/水上バス。
 function buildEarthquakeTransportSafety(transport, userLang = 'ja') {
@@ -1267,14 +1279,14 @@ function getDisplayLineName(lineName, userLang) {
 // 気象庁の日本語天気文を en/zh に機械翻訳（出現順に置換。長い語を先に置く）
 const WEATHER_TERM_MAP = {
   en: [
-    ['時々', 'occasionally'], ['一時', 'temporarily'], ['のち', 'then'], ['後', 'then'],
+    ['昼過ぎ', 'in the afternoon'], ['時々', 'occasionally'], ['一時', 'temporarily'], ['のち', 'then'], ['後', 'then'],
     ['所により雨', 'scattered rain'], ['所により雪', 'scattered snow'], ['所により', 'in places'],
     ['夕方', 'evening'], ['夜', 'night'], ['から', 'from'],
     ['晴れ', 'sunny'], ['くもり', 'cloudy'], ['曇り', 'cloudy'], ['雨', 'rain'],
     ['雪', 'snow'], ['雷', 'thunder'], ['風', 'wind'], ['強い', 'strong'], ['弱い', 'light']
   ],
   zh: [
-    ['時々', '有时'], ['一時', '短暂'], ['のち', '转'], ['後', '转'],
+    ['昼過ぎ', '午后'], ['時々', '有时'], ['一時', '短暂'], ['のち', '转'], ['後', '转'],
     ['所により雨', '局部有雨'], ['所により雪', '局部有雪'], ['所により', '局部'],
     ['夕方', '傍晚'], ['夜', '夜间'], ['から', '从'],
     ['晴れ', '晴'], ['くもり', '多云'], ['曇り', '多云'], ['雨', '雨'],
@@ -1384,8 +1396,29 @@ const JMA_AREA_MAP = {
   '港': '131060', '千代田': '131010', '中央': '131040', '台東': '131170', '横浜': '140010'
 };
 
-const GOV_FACILITY_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=%E5%BD%B9%E6%89%80+%E5%87%BA%E5%BC%B5%E6%89%80+%E5%85%AC%E6%B0%91%E9%A5%A8+%E5%B8%82%E6%B0%91%E3%82%BB%E3%83%B3%E3%82%BF%E3%83%BC";
+const GOV_FACILITY_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=%E5%BD%B9%E6%89%80+%E5%87%BA%E5%BC%B5%E6%89%80+%E5%85%AC%E6%B0%91%E9%A4%A8+%E5%B8%82%E6%B0%91%E3%82%BB%E3%83%B3%E3%82%BF%E3%83%BC";
 const EMERGENCY_EVACUATION_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=%E6%8C%87%E5%AE%9A%E7%B7%8A%E6%80%A5%E9%81%BF%E9%9B%A3%E5%A0%B4%E6%89%80+%E9%81%BF%E9%9B%A3%E6%89%80";
+
+// 現在地が明示されたときだけ地点を伴う公的機関検索を返す。
+// 駅名や任意の自治体名を「現在地」と推測しない。
+function buildGovFacilitySearchSupport(userLocation, userLang = 'ja') {
+  if (!userLocation || !Number.isFinite(userLocation.lat) || !Number.isFinite(userLocation.lon)) return undefined;
+  const query = `役所 出張所 公民館 市民センター @${userLocation.lat},${userLocation.lon}`;
+  return {
+    note: userLang === 'en' ? "🏛️ [Public Facilities Near Your Shared Location]" :
+          userLang === 'zh' ? "🏛️ 【您共享位置周边的公共设施】" :
+          "🏛️ 【共有いただいた現在地周辺の公的機関】",
+    based_on: 'user_location',
+    location: { lat: userLocation.lat, lon: userLocation.lon },
+    link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+    link_label: userLang === 'en' ? "📍 Show public facilities near your shared location on Google Maps" :
+                userLang === 'zh' ? "📍 在地图上查看您共享位置周边的公共设施" :
+                "📍 共有いただいた現在地周辺の公的機関を地図で確認",
+    disclaimer: userLang === 'en' ? "Location-based map search only; verify opening hours and services with each authority." :
+                userLang === 'zh' ? "仅为基于位置的地图搜索；请向各机构确认开放时间和服务内容。" :
+                "位置情報に基づく地図検索です。開庁時間・取扱業務は各機関にご確認ください。"
+  };
+}
 
 // ==========================================
 // 🌐 多言語判定
@@ -1439,9 +1472,9 @@ const MULTILINGUAL_ADVICE = {
     zh: "🤖 【AI智能出行建议】\n☀ 天气晴朗良好！祝您旅途愉快顺畅。"
   },
   rainy: {
-    ja: "🤖 【AIからのインテリジェントアドバイス (雨天時)】\n☔ 雨が降っているため駅構内や階段が非常に滑りやすくなっています。足元に十分ご注意ください。最寄りの地下鉄出口直結の路線バスの利用がおすすめです。",
-    en: "🤖 [AI Intelligent Transit Advice (Rainy)]\n☔ Rain is expected. Station floors, stairs, and transfer walkways may be slippery. Please watch your step.",
-    zh: "🤖 【AI智能出行建议 (雨天)】\n☔ 预计有大雨，车站大厅、阶梯和换乘通道地面较为湿滑，请小心行走。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (雨天時)】\n☔ 駅構内・階段・ホームが滑りやすくなります。足元に注意し、乗換時間には余裕を持ってください。バスへの乗換は、この経路に接続情報がある場合のみ駅係員・事業者の案内で確認してください。",
+    en: "🤖 [AI Intelligent Transit Advice (Rainy)]\n☔ Station floors, stairs, and platforms may be slippery. Watch your step and allow extra transfer time. Only use bus connections when they are shown for this journey and confirmed by staff or the operator.",
+    zh: "🤖 【AI智能出行建议 (雨天)】\n☔ 车站大厅、楼梯和站台可能湿滑，请注意脚下并预留换乘时间。仅在本行程显示巴士接驳信息时，才向车站工作人员或运营商确认乘车安排。"
   },
   hot: {
     ja: "🤖 【AIからのインテリジェントアドバイス (熱中症警戒)】\n☀ 本日は気温が著しく上昇しています。駅構内や車内でもこまめな水分補給を心がけ、熱中症に十分ご注意ください。",
@@ -1585,7 +1618,19 @@ const STATION_COORDS = {
   '南与野': { lat: 35.845775, lon: 139.660658 },
   '与野本町': { lat: 35.854889, lon: 139.659625 },
   '北与野': { lat: 35.862681, lon: 139.659086 },
-  '大宮': { lat: 35.908095, lon: 139.656606 }
+  '大宮': { lat: 35.908095, lon: 139.656606 },
+  // 到着地周辺のシェアサイクル検索用（主要観光・乗換駅）
+  '両国': { lat: 35.696332, lon: 139.793012 },
+  '押上': { lat: 35.710063, lon: 139.813268 },
+  'とうきょうスカイツリー': { lat: 35.710063, lon: 139.813268 },
+  'とうきょうスカイツリー駅': { lat: 35.710063, lon: 139.813268 },
+  '稲荷町': { lat: 35.711107, lon: 139.783765 },
+  '北千住': { lat: 35.749739, lon: 139.805012 },
+  '松戸': { lat: 35.784619, lon: 139.900881 },
+  '神田': { lat: 35.691806, lon: 139.770931 },
+  '青山一丁目': { lat: 35.672608, lon: 139.723366 },
+  '羽田空港第3ターミナル': { lat: 35.543317, lon: 139.768083 },
+  '成田空港': { lat: 35.765246, lon: 140.385353 }
 };
 
 // ==========================================
@@ -2090,7 +2135,7 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     { name: 'search_route',
-      description: '乗り換えルート検索 - 出発駅から到着駅までのルートを検索。日本語・英語・中国語自動識別、天候/高温/運休を検出しAIアドバイスを返答。language（ja/en/zh）を指定すると応答言語を強制（ユーザーのクエリ言語に合わせて指定推奨）。user_location（緯度経度）を指定すると運転見合わせ時のシェアサイクル案内を現在地基準で表示。',
+      description: '乗り換えルート検索 - 出発駅から到着駅までのルートを検索。日本語・英語・中国語自動識別、天候/高温/運休を検出しAIアドバイスを返答。language（ja/en/zh）を指定すると応答言語を強制（ユーザーのクエリ言語に合わせて指定推奨）。荒天・降雪・凍結時を除き、到着地点周辺のレンタサイクル案内を表示。user_location（緯度経度）指定時は運転見合わせ時の代替シェアサイクル案内を現在地基準で表示。',
       inputSchema: { type: 'object', properties: { from: { type: 'string', description: '出発駅名' }, to: { type: 'string', description: '到着駅名' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時は駅名から自動判定）。ユーザーが英語で質問した場合は en、中国語なら zh を指定すると確実にその言語で応答。' }, user_location: { type: 'object', description: 'ユーザーの現在位置（緯度経度）。運転見合わせ時のシェアサイクル案内を現在地基準で表示する場合に指定。例: {"lat": 35.681, "lon": 139.767}', properties: { lat: { type: 'number' }, lon: { type: 'number' } } } }, required: ['from', 'to'] }
     },
     { name: 'get_station_info',
@@ -2827,8 +2872,14 @@ async function searchRoute(args) {
   // failureAdviceKey を見ることで、実際の降雪警報だけでなく -test 降雪も安全に抑止する。
   const isSnowRisk = failureAdviceKey === 'snow' || /雪|積雪|凍結/i.test(weatherText || '');
   let bikeShareInfo = null;
+  let destinationBikeShareInfo = null;
   if (isTrainSuspended && !isSevereWeather && !isSnowRisk) {
     bikeShareInfo = await findNearestBikeStations(fromName, userLocation);
+  }
+  // 荒天・降雪・凍結時を除き、到着地点周辺のラストワンマイル用ポートを案内する。
+  // リアルタイムAPIが取得できない場合は推測せず、案内ブロック自体を省略する。
+  if (!isSevereWeather && !isSnowRisk) {
+    destinationBikeShareInfo = await findNearestBikeStations(toName, null);
   }
 
   const displayFrom = getDisplayStationName(fromName, userLang);
@@ -2951,18 +3002,29 @@ async function searchRoute(args) {
     fare_note: userLang === 'en' ? "Use search_fare tool to find station-to-station fares." :
                userLang === 'zh' ? "使用 search_fare 工具查询车站间票价。" :
                "search_fareツールで駅間運賃を検索できます。",
-    gov_facility_search_support: {
-      note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
-            userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
-            "🏛️ 【現在地周辺の公的機関の検索】",
-      link: GOV_FACILITY_SEARCH_URL,
-      link_label: userLang === 'en' ? "📍 Show public facilities near current location on Google Maps" :
-                  userLang === 'zh' ? "📍 在地图上查看当前位置周边的公共设施" :
-                  "📍 現在地周辺の公的機関を地図で確認"
-    },
+    // 現在地が共有された場合だけ、公的機関を現在地基準で検索する。
+    gov_facility_search_support: buildGovFacilitySearchSupport(userLocation, userLang),
     // 🚌 駅⇔コミュニティバス接続（足の悪いユーザーの駅までの足・駅からの足）
     community_bus_access: communityBusAccessOut
   };
+
+  if (!isSevereWeather && !isSnowRisk && destinationBikeShareInfo) {
+    resultPayload.destination_bike_share = {
+      note: userLang === 'en' ? "🚲 [Bike Share Near Destination]" :
+            userLang === 'zh' ? "🚲 【到达地点附近的共享单车】" :
+            "🚲 【到着地点周辺のレンタサイクル】",
+      recommendation: userLang === 'en' ? "Bike-share ports near the destination are available for last-mile travel." :
+        userLang === 'zh' ? "可使用到达地点附近的共享单车进行最后一段行程。" :
+        "到着地点周辺のポートを、ラストワンマイルの移動に利用できます。",
+      based_on: 'destination',
+      stations: destinationBikeShareInfo,
+      total_nearby: destinationBikeShareInfo.length,
+      data_source: "docomo-cycle-tokyo GBFS",
+      caution: userLang === 'en' ? "Availability and return eligibility may change; check the official app." :
+        userLang === 'zh' ? "可用车辆和还车状态可能变化，请通过官方应用确认。" :
+        "利用可能台数・返却可否は変動するため、利用前に公式アプリでご確認ください。"
+    };
+  }
 
   if (isTrainSuspended && !isSevereWeather && bikeShareInfo) {
     const ref = bikeShareInfo[0]?.reference;
@@ -3006,17 +3068,19 @@ async function searchRoute(args) {
                 "詳細は list_transit_operators ツールを"
   };
 
-  // 🚉 駅周辺バス停・出口案内（短いリンクで提供）
-  if (fromName) {
+  // 🚉 バス連携を検出した場合だけ、出発駅周辺のバス停を案内する。
+  // 鉄道のみの通常経路に「最寄りの出口直結バス」等を推測して混在させない。
+  if (fromName && (communityBusAccessOut?.length || busTransferDetected)) {
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fromName + '駅 バス停')}`;
     resultPayload.station_bus_stops = {
-      note: userLang === 'en' ? "🚉 [Bus Stops Near Station]" :
-            userLang === 'zh' ? "🚉 【车站周边巴士站指南】" :
-            "🚉 【駅周辺バス停のご案内】",
+      note: userLang === 'en' ? "🚉 [Bus Stops Relevant to This Journey]" :
+            userLang === 'zh' ? "🚉 【与本次行程相关的车站周边巴士站】" :
+            "🚉 【この経路に関連する駅周辺バス停】",
       link: mapUrl,
-      hint: userLang === 'en' ? `Check exits (East/West/South/North) near ${displayFrom} Station for bus stops.` :
-            userLang === 'zh' ? `在${displayFrom}站的东西南北出口附近寻找巴士站。` :
-            `${displayFrom}駅の東口・西口・南口・北口周辺にバス停があります。`,
+      basis: communityBusAccessOut?.length ? 'community_bus_access' : 'substitute_transport',
+      hint: userLang === 'en' ? `Verify the boarding stop and exit with station staff or the bus operator near ${displayFrom} Station.` :
+            userLang === 'zh' ? `请向车站工作人员或巴士运营商确认${displayFrom}站附近的乘车站点与出口。` :
+            `${displayFrom}駅での乗車バス停・最寄り出口は、駅係員またはバス事業者の案内でご確認ください。`,
       link_label: userLang === 'en' ? `📍 Show bus stops near ${displayFrom} Station on Google Maps` :
                   userLang === 'zh' ? `📍 在地图上查看${displayFrom}站周边巴士站` :
                   `📍 ${displayFrom}駅周辺のバス停を地図で確認`
@@ -3146,16 +3210,7 @@ async function getWeather(args) {
     area: displayArea,
     weather: translateWeather(weather, userLang),
     max_temp: maxTemp,
-    heat_alert: isHot || undefined,
-    gov_facility_search_support: {
-      note: userLang === 'en' ? "🏛️ [Search Public Facilities Near Current Location]" :
-          userLang === 'zh' ? "🏛️ 【查找当前位置周边的公共设施】" :
-          "🏛️ 【現在地周辺の公的機関の検索】",
-      link: GOV_FACILITY_SEARCH_URL,
-      link_label: userLang === 'en' ? "📍 Show public facilities near current location on Google Maps" :
-                  userLang === 'zh' ? "📍 在地图上查看当前位置周边的公共设施" :
-                  "📍 現在地周辺の公的機関を地図で確認"
-    }
+    heat_alert: isHot || undefined
   });
 }
 
@@ -3346,6 +3401,7 @@ async function searchFerry(args) {
   const userLang = resolveLang(args) || (fromLang !== 'ja' ? fromLang : (toLang !== 'ja' ? toLang : 'ja'));
   const parsedTest = parseTestMode({ from: rawFrom, to: rawTo, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
   const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
+  const aiAdvice = await getTransitAdvice(testAdv, userLang);
   // 地震時はフェリー・水上バスの航路を提示しない。水面・岸辺から離れる避難を優先する。
   if (isEarthquakeSimulation(testAdv)) {
     return await buildEarthquakeSafetyResponse('water', userLang, { from_port: rawFrom, to_port: rawTo });
@@ -3454,7 +3510,7 @@ async function searchFerry(args) {
           unavailable: !tsunamiSafety.available || undefined,
           official_tsunami_info_url: 'https://www.jma.go.jp/bosai/tsunami/'
         },
-        ai_transit_advice: testAdv.aiAdvice,
+        ai_transit_advice: aiAdvice,
         test_mode: testAdv.testMode,
         simulated_failure_type: testAdv.failureType || undefined
       });
@@ -3476,7 +3532,7 @@ async function searchFerry(args) {
         unavailable: !tsunamiSafety.available || undefined,
         official_tsunami_info_url: 'https://www.jma.go.jp/bosai/tsunami/'
       },
-      ai_transit_advice: testAdv.aiAdvice,
+      ai_transit_advice: aiAdvice,
       test_mode: testAdv.testMode,
       simulated_failure_type: testAdv.failureType || undefined
     });
@@ -4892,6 +4948,7 @@ async function searchBus(args) {
     const userLang = resolveLang(args) || (fL !== 'ja' ? fL : tL !== 'ja' ? tL : 'ja');
     const parsedTest = parseTestMode({ from: fromInput, to: toInput, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
     const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
+    const aiAdvice = await getTransitAdvice(testAdv, userLang);
     // 地震時はバス・トラム・鉄道を含む通常の乗り継ぎ結果を提示せず、安全確保を優先する。
     if (isEarthquakeSimulation(testAdv)) {
       return await buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
@@ -5040,7 +5097,7 @@ async function searchBus(args) {
         community_bus_access: cbAccess.length ? cbAccess : undefined,
         community_bus_note: communityBusNote,
         data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link) + コミュニティバス駅接続(自治体公式データ)',
-        ai_transit_advice: testAdv.aiAdvice,
+        ai_transit_advice: aiAdvice,
         test_mode: testAdv.testMode,
         simulated_failure_type: testAdv.failureType || undefined
       });
@@ -5052,6 +5109,7 @@ async function searchBus(args) {
   const userLang = resolveLang(args) || detectLanguage(busstopName) || 'ja';
   const parsedTest = parseTestMode({ from: busstopName, to: '', '-test': args['-test'], test: args.test, test_mode: args.test_mode });
   const testAdv = buildTestAdvice(parsedTest.simulatedFailure, userLang);
+  const aiAdvice = await getTransitAdvice(testAdv, userLang);
   // バス停単体検索でも、地震時は通常の乗車候補を提示しない。
   if (isEarthquakeSimulation(testAdv)) {
     return await buildEarthquakeSafetyResponse('ground', userLang, { busstop_name: busstopName });
@@ -5099,7 +5157,7 @@ async function searchBus(args) {
         barrier_free_note: barrierFreeNote,
         data_source: dataSourceNote,
         fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/",
-        ai_transit_advice: testAdv.aiAdvice,
+        ai_transit_advice: aiAdvice,
         test_mode: testAdv.testMode,
         simulated_failure_type: testAdv.failureType || undefined
       });
@@ -5176,7 +5234,7 @@ async function searchBus(args) {
       barrier_free_note: barrierFreeNote,
       data_source: dataSourceNote,
       fallback_url: "https://www.kotsu.metro.tokyo.jp/bus/",
-      ai_transit_advice: testAdv.aiAdvice,
+      ai_transit_advice: aiAdvice,
       test_mode: testAdv.testMode,
       simulated_failure_type: testAdv.failureType || undefined
     });
