@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.20.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.21.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -680,7 +680,7 @@ const STATION_NAME_MAP = {
   'Akihabara': '秋葉原', 'Ginza': '銀座', 'Roppongi': '六本木', 'Harajuku': '原宿', 'Yokohama': '横浜',
   'Asakusa': '浅草', 'Shinagawa': '品川', 'Odaiba': 'お台場', 'Osaki': '大崎', 'Ebisu': '恵比寿',
   'Meguro': '目黒', 'Kanda': '神田', 'Hamamatsucho': '浜松町', 'Shimbashi': '新橋', 'Shin-Okubo': '新大久保',
-  'Takadanobaba': '高田馬場', 'Sugamo': '巣鴨', 'Nippori': '日暮里', 'Ochanomizu': '御茶ノ水',
+  'Takadanobaba': '高田馬場', 'Nippori': '日暮里', 'Ochanomizu': '御茶ノ水',
   'Osaka': '大阪', 'Kyoto': '京都', 'Narita Airport': '成田空港', 'Haneda Airport': '羽田空港',
   'Narita': '成田空港', 'Haneda': '羽田空港', 'HND': '羽田空港', 'NRT': '成田空港',
   'Odaiba Seaside Park': 'お台場海浜公園', 'Hinode Pier': '日の出桟橋', 'Toyosu': '豊洲',
@@ -695,11 +695,11 @@ const STATION_NAME_MAP = {
   'Tawaramachi': '田原町', 'Minowa': '三ノ輪', 'Yoyogi-Uehara': '代々木上原', 'Yoyogiuehara': '代々木上原',
   'Sasazuka': '笹塚', 'Omotesando': '表参道', 'Daikanyama': '代官山', 'Sendagaya': '千駄ヶ谷',
   'Tamachi': '田町', 'Mita': '三田', 'Shibakoen': '芝公園', 'Onarimon': '御成門', 'Daimon': '大門',
-  'Kamiyacho': '神谷町', 'Azabu-juban': '麻布十番', 'Azabujuban': '麻布十番', 'Akabanebashi': '赤羽橋', 'Shirokanedai': '白金高輪', 'Shirokane-Takanawa': '白金高輪',
+  'Kamiyacho': '神谷町', 'Shirokanedai': '白金高輪', 'Shirokane-Takanawa': '白金高輪',
   'Tokyo Skytree': 'とうきょうスカイツリー', 'Skytree': 'とうきょうスカイツリー',
   'Tokyo Big Sight': '東京ビッグサイト', 'Big Sight': '東京ビッグサイト',
   'Otemachi': '大手町', 'Otodo': '大手町',
-  'Kasumigaseki': '霞ケ関', 'Hibiya': '日比谷', 'Tokyo Station': '東京',
+  'Kasumigaseki': '霞ケ関', 'Tokyo Station': '東京',
 
   // 中文 (簡体字 / 繁体字)
   '东京': '東京', '新宿': '新宿', '涩谷': '渋谷', '澀谷': '渋谷', '银座': '銀座', '銀座': '銀座',
@@ -717,7 +717,18 @@ const STATION_NAME_MAP = {
   '西銀座': '銀座',                           // 東京メトロ銀座線 旧・西銀座駅（現:銀座）
   '数寄屋橋': '銀座',                         // 東京メトロ銀座線 旧・数寄屋橋駅（現:銀座）
   '歌舞伎町': '新宿',                         // 地域・バス停名（最寄り:新宿）
-  '西新宿': '都庁前',                         // 大江戸線 都庁前駅の別称
+  // 丸ノ内線補完駅（英字入力エイリアス）。西新宿は実在駅（丸ノ内線）のため 都庁前 への旧マップは解除
+  'Nishi-Shinjuku': '西新宿', 'Shin-Nakano': '新中野', 'Higashi-Koenji': '東高円寺', 'Shin-Koenji': '新高円寺', 'Minami-Asagaya': '南阿佐ケ谷',
+  // 京王高尾線・横浜市営地下鉄・京成本線支線・京浜東北線延伸 補完駅（英字入力エイリアス）
+  'Shonandai': '湘南台', 'Shimoida': '下飯田', 'Tachiba': '立場', 'Nakada': '中田', 'Odori': '踊場', 'Maioka': '舞岡',
+  'Shimonagaya': '下永谷', 'Kaminagaya': '上永谷', 'Konan-Chuo': '港南中央', 'Maita': '蒔田', 'Yoshinocho': '吉野町',
+  'Bando-bashi': '阪東橋', 'Isezaki-chojamachi': '伊勢佐木長者町', 'Takashimacho': '高島町',
+  'Mitsuzawa-shimocho': '三ツ沢下町', 'Mitsuzawa-kamicho': '三ツ沢上町', 'Katakuramachi': '片倉町', 'Kishine-koen': '岸根公園',
+  'Kita-Shin-Yokohama': '北新横浜', 'Nippa': '新羽', 'Nakamachidai': '仲町台', 'Center-Minami': 'センター南', 'Center-Kita': 'センター北',
+  'Nakagawa': '中川', 'Sakuragicho': '桜木町', 'Kannai': '関内', 'Ishikawacho': '石川町', 'Yamate': '山手', 'Negishi': '根岸',
+  'Keio-Katakura': '京王片倉', 'Yamada': '山田', 'Mejirodai': '目白台', 'Hazama': '狭間', 'Takaosanguchi': '高尾山口',
+  'Kawawacho': '川和町', 'Tsuzuki-Fureainooka': '都筑ふれあいの丘', 'Kawawa-Chuo': '川和中央',
+  'Higashi-Yamata': '東山田', 'Kita-Yamata': '北山田', 'Higashi-Shinden': '東新田', 'Takata': '高田',
   '新宿西口': '新宿',                         // バス停・出口名
   '渋谷駅': '渋谷', '新宿駅': '新宿', '東京駅': '東京', '品川駅': '品川', '池袋駅': '池袋', // suffix も念のため（resolveStation で大半解決済み）
   // 表記ゆれ: 公式駅名は「四ツ谷」（ツ入り）。「四谷」入力でも解決できるようにする
@@ -759,6 +770,14 @@ const STATION_NAME_MAP = {
   'Yachiyodai': '八千代台', 'Mimomi': '実籾', 'Keisei-Nakayama': '京成中山', 'Onigoe': '鬼越',
   'Funabashi-Keibajo': '船橋競馬場', 'Yatsu': '谷津', 'Keisei-Okubo': '京成大久保',
   'Keisei-Owada': '京成大和田', 'Osakura': '大佐倉',
+  // 京成線 日本語略称（「京成」を省略した通称。同名のJR/他社駅と衝突するものは登録しない）
+  '関屋': '京成関屋', '高砂': '京成高砂', '立石': '京成立石', '臼井': '京成臼井',
+  // 全路線 表記ゆれ・通称エイリアス（ヶ/ケ・ノ/の・中黒省略・通称。同名他駅と衝突しないもののみ）
+  'お茶の水': '御茶ノ水', '市谷': '市ヶ谷', '千駄谷': '千駄ヶ谷', '阿佐谷': '阿佐ヶ谷', '幡谷': '幡ヶ谷',
+  '祖師谷大蔵': '祖師ヶ谷大蔵', '保土ヶ谷': '保土ケ谷', 'つつじ丘': 'つつじヶ丘', 'ひばり丘': 'ひばりヶ丘',
+  '向丘遊園': '向ヶ丘遊園', '竹の塚': '竹ノ塚', '溝ノ口': '溝の口', '聖蹟桜丘': '聖蹟桜ヶ丘',
+  '自由ヶ丘': '自由が丘', 'テレポート': '東京テレポート', '中華街': '元町・中華街', '元町中華街': '元町・中華街',
+  '永山': '京王永山',
   // 西武
   'Sayamashi': '狭山市', 'Shin-Sayama': '新狭山', 'ShinSayama': '新狭山', 'Iriso': '入曽',
   'Numabukuro': '沼袋', 'Agano': '吾野', 'Higashi-Hanno': '東飯能', 'Koma': '高麗',
@@ -879,6 +898,63 @@ const STATION_DISPLAY_NAMES = {
   '都庁前': { en: 'Tochomae', zh: '都厅前' },
   '西新宿五丁目': { en: 'Nishi-Shinjuku-gochome', zh: '西新宿五丁目' },
   '中野坂上': { en: 'Nakano-Sakaue', zh: '中野坂上' },
+  // 丸ノ内線 補完駅（2026-08: 新宿〜荻窪間と方南町支線が欠落していたのを追加）
+  '新中野': { en: 'Shin-Nakano', zh: '新中野' },
+  '東高円寺': { en: 'Higashi-Koenji', zh: '东高圆寺' },
+  '新高円寺': { en: 'Shin-Koenji', zh: '新高圆寺' },
+  '南阿佐ケ谷': { en: 'Minami-Asagaya', zh: '南阿佐谷' },
+  '方南町': { en: 'Honancho', zh: '方南町' },
+  '西新宿': { en: 'Nishi-Shinjuku', zh: '西新宿' },
+  '荻窪': { en: 'Ogikubo', zh: '荻窪' },
+  // 京王高尾線・横浜市営地下鉄（ブルー/グリーン）・京成本線支線・京浜東北線延伸 補完駅（2026-08）
+  '京王片倉': { en: 'Keio-Katakura', zh: '京王片仓' },
+  '山田': { en: 'Yamada', zh: '山田' },
+  '目白台': { en: 'Mejirodai', zh: '目白台' },
+  '狭間': { en: 'Hazama', zh: '狭间' },
+  '高尾山口': { en: 'Takaosanguchi', zh: '高尾山口' },
+  '湘南台': { en: 'Shonandai', zh: '湘南台' },
+  '下飯田': { en: 'Shimoida', zh: '下饭田' },
+  '立場': { en: 'Tachiba', zh: '立场' },
+  '中田': { en: 'Nakada', zh: '中田' },
+  '踊場': { en: 'Odori', zh: '踊场' },
+  '舞岡': { en: 'Maioka', zh: '舞冈' },
+  '下永谷': { en: 'Shimonagaya', zh: '下永谷' },
+  '上永谷': { en: 'Kaminagaya', zh: '上永谷' },
+  '港南中央': { en: 'Konan-Chuo', zh: '港南中央' },
+  '蒔田': { en: 'Maita', zh: '蒔田' },
+  '吉野町': { en: 'Yoshinocho', zh: '吉野町' },
+  '阪東橋': { en: 'Bando-bashi', zh: '阪东桥' },
+  '伊勢佐木長者町': { en: 'Isezaki-chojamachi', zh: '伊势佐木长者町' },
+  '高島町': { en: 'Takashimacho', zh: '高岛町' },
+  '三ツ沢下町': { en: 'Mitsuzawa-shimocho', zh: '三ツ沢下町' },
+  '三ツ沢上町': { en: 'Mitsuzawa-kamicho', zh: '三ツ沢上町' },
+  '片倉町': { en: 'Katakuramachi', zh: '片仓町' },
+  '岸根公園': { en: 'Kishine-koen', zh: '岸根公园' },
+  '北新横浜': { en: 'Kita-Shin-Yokohama', zh: '北新横滨' },
+  '新羽': { en: 'Nippa', zh: '新羽' },
+  '仲町台': { en: 'Nakamachidai', zh: '仲町台' },
+  'センター南': { en: 'Center-Minami', zh: '中心南' },
+  'センター北': { en: 'Center-Kita', zh: '中心北' },
+  '中川': { en: 'Nakagawa', zh: '中川' },
+  '桜木町': { en: 'Sakuragicho', zh: '樱木町' },
+  '関内': { en: 'Kannai', zh: '关内' },
+  '石川町': { en: 'Ishikawacho', zh: '石川町' },
+  '山手': { en: 'Yamate', zh: '山手' },
+  '根岸': { en: 'Negishi', zh: '根岸' },
+  '川和町': { en: 'Kawawacho', zh: '川和町' },
+  '都筑ふれあいの丘': { en: 'Tsuzuki-Fureainooka', zh: '都筑交流之丘' },
+  '川和中央': { en: 'Kawawa-Chuo', zh: '川和中央' },
+  '東山田': { en: 'Higashi-Yamata', zh: '东山田' },
+  '北山田': { en: 'Kita-Yamata', zh: '北山田' },
+  '東新田': { en: 'Higashi-Shinden', zh: '东新田' },
+  '高田': { en: 'Takata', zh: '高田' },
+  '東成田': { en: 'Higashi-Narita', zh: '东成田' },
+  // 新規路線の乗換駅（既存駅の表示名欠落分）
+  '高尾': { en: 'Takao', zh: '高尾' },
+  '戸塚': { en: 'Totsuka', zh: '户冢' },
+  '日吉': { en: 'Hiyoshi', zh: '日吉' },
+  '京成成田': { en: 'Keisei-Narita', zh: '京成成田' },
+  '空港第2ビル': { en: 'Airport Terminal 2', zh: '机场第2航站楼' },
   '東中野': { en: 'Higashi-Nakano', zh: '东中野' },
   '中井': { en: 'Nakai', zh: '中井' },
   '落合南長崎': { en: 'Ochiai-Minami-Nagasaki', zh: '落合南长崎' },
@@ -1243,6 +1319,10 @@ const LINE_DISPLAY_NAMES = {
   '京急本線': { en: 'Keikyu Main Line', zh: '京急本线' },
   '京成押上線': { en: 'Keisei Oshiage Line', zh: '京成押上线' },
   '京成本線': { en: 'Keisei Main Line', zh: '京成本线' },
+  '京成本線支線': { en: 'Keisei Main Line (Branch)', zh: '京成本线支线' },
+  '京王高尾線': { en: 'Keio Takao Line', zh: '京王高尾线' },
+  '横浜市営地下鉄ブルーライン': { en: 'Yokohama Municipal Subway Blue Line', zh: '横滨市营地铁蓝线' },
+  '横浜市営地下鉄グリーンライン': { en: 'Yokohama Municipal Subway Green Line', zh: '横滨市营地铁绿线' },
   '相鉄本線': { en: 'Sotetsu Main Line', zh: '相铁本线' },
   'つくばエクスプレス': { en: 'Tsukuba Express', zh: '筑波快线' },
   'りんかい線': { en: 'Rinkai Line', zh: '临海线' },
@@ -1318,6 +1398,77 @@ function translateWeather(text, userLang) {
   // 全角スペースは英中では通常のスペースに（JMAテキスト由来の整形用スペース）
   t = t.split('\u3000').join(' ');
   return t.trim();
+}
+
+// ODPT運行情報テキスト（振替輸送・運転見合わせ・人身事故等）の英中ローカライズ。
+// LINE_DISPLAY_NAMES / STATION_DISPLAY_NAMES（路線・駅名）＋定型文辞書を最長一致で一括置換し、
+// 日本語が残った場合は汎用メッセージにフォールバックする（en/zh 応答に生の日本語を漏らさない）。
+const TRAIN_INFO_TERM_MAP = {
+  en: [
+    ['振替輸送を実施しています', 'Substitute bus transport is in operation.'],
+    ['ダイヤが乱れています', 'services are disrupted.'],
+    ['運転を見合わせています', 'train services are suspended.'],
+    ['運転を見合わせ', 'suspension of train services'],
+    ['振替輸送', 'substitute bus transport'],
+    ['人身事故', 'a personal-injury accident'],
+    ['踏切障害', 'a level-crossing obstruction'],
+    ['信号故障', 'a signal failure'],
+    ['車両故障', 'a rolling-stock fault'],
+    ['設備点検', 'equipment inspection'],
+    ['内にて発生した', ' occurred in '],
+    ['にて発生した', ' occurred in '],
+    ['で発生した', ' occurred at '],
+    ['の影響で', 'due to'],
+    ['のため、', ', so '],
+    ['のため', 'due to'],
+    ['強風', 'strong wind'], ['大雨', 'heavy rain'], ['大雪', 'heavy snow'],
+    ['運休', 'service suspension'], ['再開', 'services resumed'],
+    ['遅延が発生', 'delays occurred'], ['遅延', 'delays'],
+    ['ダイヤ', 'services'], ['輸送', 'transport'], ['発生', 'occurred'],
+    ['時', ':'], ['分', ''], ['頃', ' around'],
+    ['駅', ' Station'], ['線', ' Line'], ['内', ' within'],
+    ['は、', ' '], ['。', ''], ['、', ', '],
+  ],
+  zh: [
+    ['振替輸送を実施しています', '正在实施接驳换乘巴士。'],
+    ['ダイヤが乱れています', '运行时刻表出现混乱。'],
+    ['運転を見合わせています', '列车暂停运行。'],
+    ['運転を見合わせ', '暂停运行'],
+    ['振替輸送', '接驳换乘巴士'],
+    ['人身事故', '人身事故'],
+    ['踏切障害', '道口障碍'], ['信号故障', '信号故障'], ['車両故障', '车辆故障'], ['設備点検', '设备检查'],
+    ['内にて発生した', '发生在'], ['にて発生した', '发生在'], ['で発生した', '发生于'],
+    ['の影響で', '受其影响'], ['のため、', '，因此'], ['のため', '因'],
+    ['強風', '强风'], ['大雨', '大雨'], ['大雪', '大雪'],
+    ['運休', '停运'], ['再開', '恢复运行'], ['遅延', '晚点'],
+    ['ダイヤ', '运行时刻'], ['輸送', '运输'], ['発生', '发生'],
+    ['時', ':'], ['分', ''], ['頃', '左右'],
+    ['駅', '站'], ['線', '线'], ['内', '以内'],
+    ['は、', ' '], ['。', ''], ['、', '，'],
+  ],
+};
+function translateTrainInfoDetail(text, userLang) {
+  if (!text || userLang === 'ja') return text;
+  const dict = new Map();
+  for (const [ja, disp] of Object.entries(LINE_DISPLAY_NAMES)) {
+    if (disp && disp[userLang] && !dict.has(ja)) dict.set(ja, disp[userLang]);
+  }
+  for (const [ja, disp] of Object.entries(STATION_DISPLAY_NAMES)) {
+    if (disp && disp[userLang] && !dict.has(ja)) dict.set(ja, disp[userLang]);
+  }
+  for (const [ja, localized] of (TRAIN_INFO_TERM_MAP[userLang] || [])) {
+    if (!dict.has(ja)) dict.set(ja, localized);
+  }
+  const entries = [...dict.entries()].sort((a, b) => b[0].length - a[0].length);
+  const pattern = entries.map(e => e[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  let t = pattern ? text.replace(new RegExp(pattern, 'g'), m => dict.get(m)) : text;
+  // 日本語が残れば汎用メッセージにフォールバック（en はかな・漢字とも NG、zh はかなのみ NG）
+  if (userLang === 'en' ? /[\u3040-\u30ff\u4e00-\u9fff]/.test(t) : /[\u3040-\u30ff]/.test(t)) {
+    t = userLang === 'en'
+      ? 'Train services are disrupted; substitute bus transport may be in operation. Please follow station staff guidance.'
+      : '列车运行受到影响，可能正在实施接驳换乘巴士。请遵从车站工作人员的指引。';
+  }
+  return t.replace(/[ \t]+/g, ' ').replace(/\s*([,.])\s*/g, '$1 ').trim();
 }
 
 const FERRY_PORT_MAP = {
@@ -1663,8 +1814,11 @@ const RAILWAY_LINES = {
   'ゆりかもめ': ['新橋','汐留','竹芝','日の出','芝浦ふ頭','お台場海浜公園','台場','東京国際クルーズターミナル','テレコムセンター','青海','東京ビッグサイト','有明','有明テニスの森','市場前','新豊洲','豊洲'],
   'JR山手線': ['東京','神田','秋葉原','御徒町','上野','鶯谷','日暮里','西日暮里','田端','駒込','巣鴨','大塚','池袋','目白','高田馬場','新大久保','新宿','代々木','原宿','渋谷','恵比寿','目黒','五反田','大崎','品川','高輪ゲートウェイ','田町','浜松町','新橋'],
   '都営大江戸線': ['新宿西口','東新宿','若松河田','牛込柳町','牛込神楽坂','飯田橋','春日','本郷三丁目','上野御徒町','新御徒町','蔵前','両国','森下','清澄白河','門前仲町','月島','勝どき','築地市場','汐留','大門','赤羽橋','麻布十番','六本木','青山一丁目','国立競技場','代々木','新宿','都庁前','西新宿五丁目','中野坂上','東中野','中井','落合南長崎','新江古田','練馬','豊島園','練馬春日町','光が丘'],
-  '東京メトロ丸ノ内線': ['池袋','新大塚','茗荷谷','後楽園','本郷三丁目','御茶ノ水','淡路町','大手町','東京','銀座','京橋','霞ケ関','国会議事堂前','赤坂見附','四ツ谷','四谷三丁目','新宿御苑前','新宿三丁目','新宿'],
-  '京浜東北線': ['大宮','赤羽','王子','上中里','田端','西日暮里','日暮里','鶯谷','上野','御徒町','秋葉原','神田','東京','有楽町','浜松町','田町','品川','大井町','大森','蒲田','川崎','横浜'],
+  '東京メトロ丸ノ内線': ['池袋','新大塚','茗荷谷','後楽園','本郷三丁目','御茶ノ水','淡路町','大手町','東京','銀座','京橋','霞ケ関','国会議事堂前','赤坂見附','四ツ谷','四谷三丁目','新宿御苑前','新宿三丁目','新宿','西新宿','中野坂上','新中野','東高円寺','新高円寺','南阿佐ケ谷','荻窪'],
+  '丸ノ内線支線': ['中野坂上','方南町'],
+  '京浜東北線': ['大宮','赤羽','王子','上中里','田端','西日暮里','日暮里','鶯谷','上野','御徒町','秋葉原','神田','東京','有楽町','浜松町','田町','品川','大井町','大森','蒲田','川崎','横浜','桜木町','関内','石川町','山手','根岸'],
+  '横浜市営地下鉄ブルーライン': ['湘南台','下飯田','立場','中田','踊場','戸塚','舞岡','下永谷','上永谷','港南中央','上大岡','弘明寺','井土ヶ谷','蒔田','吉野町','阪東橋','伊勢佐木長者町','関内','桜木町','高島町','横浜','三ツ沢下町','三ツ沢上町','片倉町','岸根公園','新横浜','北新横浜','新羽','仲町台','センター南','センター北','中川','あざみ野'],
+  '横浜市営地下鉄グリーンライン': ['中山','川和町','都筑ふれあいの丘','川和中央','東山田','北山田','センター南','センター北','仲町台','北新横浜','新羽','東新田','高田','日吉'],
   // 西武鉄道（池袋線・新宿線）— 久米川への接続のため追加
   '西武池袋線': ['池袋','椎名町','東長崎','江古田','桜台','練馬','中村橋','富士見台','練馬高野台','石神井公園','大泉学園','保谷','ひばりヶ丘','東久留米','清瀬','秋津','所沢','西所沢','小手指','狭山ヶ丘','武蔵藤沢','稲荷山公園','入間市','仏子','元加治','飯能','東飯能','高麗','武蔵横手','東吾野','吾野'],
   '西武新宿線': ['西武新宿','高田馬場','下落合','中井','新井薬師前','沼袋','野方','都立家政','鷺ノ宮','下井草','井荻','上井草','上石神井','武蔵関','東伏見','西武柳沢','田無','花小金井','小平','久米川','東村山','所沢','航空公園','新所沢','入曽','狭山市','新狭山','南大塚','本川越'],
@@ -1687,6 +1841,7 @@ const RAILWAY_LINES = {
   // ===== 私鉄（主要路線）=====
   '小田急小田原線': ['新宿','南新宿','参宮橋','代々木八幡','代々木上原','東北沢','下北沢','世田谷代田','梅ヶ丘','豪徳寺','経堂','千歳船橋','祖師ヶ谷大蔵','成城学園前','喜多見','狛江','和泉多摩川','登戸','向ヶ丘遊園','生田','読売ランド前','百合ヶ丘','新百合ヶ丘','柿生','鶴川','玉川学園前','町田','相模大野','小田急相模原','相武台前','座間','海老名','厚木','本厚木','愛甲石田','伊勢原','鶴巻温泉','東海大学前','秦野','渋沢','新松田','開成','栢山','富水','螢田','足柄','小田原'],
   '京王線': ['新宿','初台','幡ヶ谷','笹塚','代田橋','明大前','下高井戸','桜上水','上北沢','八幡山','芦花公園','千歳烏山','仙川','つつじヶ丘','柴崎','国領','布田','調布','西調布','飛田給','武蔵野台','多磨霊園','東府中','府中','分倍河原','中河原','聖蹟桜ヶ丘','百草園','高幡不動','南平','平山城址公園','長沼','北野','京王八王子'],
+  '京王高尾線': ['北野','京王片倉','山田','目白台','狭間','高尾','高尾山口'],
   '京王相模原線': ['調布','京王多摩川','京王稲田堤','京王よみうりランド','稲城','若葉台','京王永山','京王多摩センター','京王堀之内','南大沢','多摩境','橋本'],
   '京王動物園線': ['高幡不動','多摩動物公園'],
   '東急東横線': ['渋谷','代官山','中目黒','祐天寺','学芸大学','都立大学','自由が丘','田園調布','多摩川','新丸子','武蔵小杉','元住吉','日吉','綱島','大倉山','菊名','妙蓮寺','白楽','東白楽','反町','横浜'],
@@ -1696,6 +1851,7 @@ const RAILWAY_LINES = {
   '京急本線': ['品川','北品川','新馬場','青物横丁','鮫洲','立会川','大森海岸','平和島','大森町','梅屋敷','京急蒲田','雑色','六郷土手','京急川崎','八丁畷','鶴見市場','京急鶴見','花月総持寺','生麦','京急新子安','子安','神奈川新町','京急東神奈川','神奈川','横浜','戸部','日ノ出町','黄金町','南太田','井土ヶ谷','弘明寺','上大岡','屏風浦','杉田','京急富岡','能見台','金沢文庫','金沢八景','追浜','京急田浦','安針塚','逸見','汐入','横須賀中央','県立大学','堀ノ内','京急大津','馬堀海岸','浦賀'],
   '京成押上線': ['押上','京成曳舟','八広','四ツ木','青砥'],
   '京成本線': ['京成上野','日暮里','新三河島','町屋','千住大橋','京成関屋','堀切菖蒲園','お花茶屋','青砥','京成高砂','京成立石','京成小岩','江戸川','国府台','市川真間','菅野','京成八幡','鬼越','京成中山','東中山','京成西船','海神','京成船橋','大神宮下','船橋競馬場','谷津','京成津田沼','京成大久保','実籾','八千代台','京成大和田','勝田台','志津','ユーカリが丘','京成臼井','京成佐倉','大佐倉','京成酒々井','宗吾参道','公津の杜','京成成田','空港第2ビル','成田空港'],
+  '京成本線支線': ['京成成田','東成田'],
   '相鉄本線': ['横浜','平沼橋','西横浜','天王町','星川','和田町','上星川','西谷','鶴ヶ峰','二俣川','希望ヶ丘','さがみ野','かしわ台','海老名'],
   // ===== 私鉄（続き）・AGT・モノレール・路面電車・都営 =====
   'つくばエクスプレス': ['秋葉原','新御徒町','浅草','南千住','北千住','青井','六町','八潮','三郷中央','南流山','流山セントラルパーク','流山おおたかの森','柏の葉キャンパス','柏たなか','守谷','みらい平','みどりの','万博記念公園','研究学園','つくば'],
@@ -1720,7 +1876,7 @@ const RAILWAY_LINES = {
   '東急大井町線': ['大井町','下神明','戸越公園','中延','荏原町','旗の台','北千束','大岡山','緑が丘','自由が丘','九品仏','尾山台','等々力','上野毛','二子玉川'],
   '京急空港線': ['京急蒲田','糀谷','大鳥居','穴守稲荷','天空橋','羽田空港第3ターミナル','羽田空港第1ターミナル','羽田空港第2ターミナル'],
   'JR横須賀線': ['東京','新橋','品川','西大井','武蔵小杉','新川崎','横浜','保土ケ谷','東戸塚','戸塚','大船','北鎌倉','鎌倉','逗子'],
-  'JR湘南新宿ライン': ['大宮','浦和','赤羽','池袋','新宿','渋谷','恵比寿','大崎','横浜','戸塚','大船','藤沢','辻堂','茅ケ崎','平塚','大磯','二宮','国府津','小田原'],
+  'JR湘南新宿ライン': ['大宮','浦和','赤羽','池袋','新宿','渋谷','恵比寿','大崎','横浜','戸塚','大船','藤沢','辻堂','茅ヶ崎','平塚','大磯','二宮','国府津','小田原'],
   'JR横浜線': ['東神奈川','大口','菊名','新横浜','小机','鴨居','中山','十日市場','長津田','成瀬','町田','古淵','淵野辺','矢部','相模原','橋本'],
   '富士急行線': ['大月','田野倉','禾生','赤坂','都留市','谷村町','都留文科大学前','十日市場','東桂','三つ峠','寿','葭池温泉前','下吉田','月江寺','富士山','富士急ハイランド','河口湖']
 };
@@ -2143,7 +2299,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.20.0' },
+  { name: 'tokyo-transit-mcp', version: '2.21.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -2866,8 +3022,8 @@ async function searchRoute(args) {
     } else { apiDegraded = true; } // 天気API取得失敗
     if (trainResult.status === 'fulfilled' && trainResult.value && !trainResult.value.error) {
       const t = trainResult.value;
-      if (t.delays.length > 0) { isTrainSuspended = true; delayMessage = `🚨 ${t.delays[0].railway.replace('odpt:Railway:', '')}: ${t.delays[0].text}`; }
-      if (t.busTransfer && !delayMessage) delayMessage = `🚨 ${t.busTransferDetail}`;
+      if (t.delays.length > 0) { isTrainSuspended = true; delayMessage = `🚨 ${t.delays[0].railway.replace('odpt:Railway:', '')}: ${translateTrainInfoDetail(t.delays[0].text, userLang)}`; }
+      if (t.busTransfer && !delayMessage) delayMessage = `🚨 ${translateTrainInfoDetail(t.busTransferDetail, userLang)}`;
     } else if (trainResult.status === 'fulfilled' && trainResult.value?.error === 'CIRCUIT_OPEN') {
       return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, from: fromName, to: toName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
     } else { apiDegraded = true; } // 運行情報API取得失敗
@@ -3114,7 +3270,7 @@ async function searchRoute(args) {
       note: userLang === 'en' ? "🚌 [Substitutive Bus Transport]" :
             userLang === 'zh' ? "🚌 【接驳换乘巴士指南】" :
             "🚌 【振替輸送のご案内】",
-      detail: busTransferDetail,
+      detail: translateTrainInfoDetail(busTransferDetail, userLang),
       suggestion: userLang === 'en' ? "Please inquire with station staff." :
                   userLang === 'zh' ? "请咨询车站工作人员。" :
                   "駅係員にお問い合わせください。"
@@ -5701,7 +5857,7 @@ async function searchFlight(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail };
 
 async function main() {
   const transport = new StdioServerTransport();

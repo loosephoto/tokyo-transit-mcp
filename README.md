@@ -31,7 +31,16 @@
 
 ### 🛤️ 路線網の網羅性とデータ確認
 
-公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
+公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
+
+**v2.21.0 では路線データの欠落を一括補完し、駅名解決と多言語表示を強化しました（計954駅・64路線）**:
+
+- **駅データ欠落の補完** — 東京メトロ丸ノ内線（新宿〜荻窪間の7駅＋方南町支線）、京王高尾線（7駅）、横浜市営地下鉄ブルーライン（33駅）・グリーンライン（14駅）、京浜東北線（桜木町〜根岸の延伸）を追加
+- **芝山鉄道の孤立解消** — 京成本線支線（京成成田⇄東成田）を追加し、芝山千代田から都心への経路を接続
+- **駅名解決の強化** — 京成線の略称（関屋・高砂・立石・臼井）と、全路線の表記ゆれ（お茶の水→御茶ノ水、市谷→市ヶ谷、茅ケ崎/茅ヶ崎の表記統合など18件）をエイリアス登録
+- **多言語対応の強化** — ライブ運行情報（振替輸送・運転見合わせ）を英語・中国語にローカライズ（en/zh 応答に日本語が漏れない）
+
+駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -525,7 +534,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.20.0）
+├── SKILL.md             # プロジェクトスキル定義（v2.21.0）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -576,7 +585,16 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Route Coverage and Data Validation
 
-The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added. Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
+The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
+
+**v2.21.0 completes missing route data and strengthens station-name resolution and multilingual output (954 stations / 64 lines total)**:
+
+- **Missing station data completed** — Tokyo Metro Marunouchi Line (7 stations between Shinjuku and Ogikubo + the Honancho branch), Keio Takao Line (7 stations), Yokohama Municipal Subway Blue Line (33 stations) and Green Line (14 stations), and the Keihin-Tohoku Line extension (Sakuragicho–Negishi)
+- **Shibayama Railway un-isolated** — the Keisei Main Line branch (Keisei-Narita ⇄ Higashi-Narita) was added, connecting Shibayama-Chiyoda to central Tokyo
+- **Station-name resolution strengthened** — Keisei abbreviations (Sekiya, Takasago, Tateishi, Usui) and notation variants across all lines (e.g. Ochanomizu→御茶ノ水, Ichigaya→市ヶ谷, unified 茅ケ崎/茅ヶ崎 — 18 entries) registered as aliases
+- **Multilingual output strengthened** — live train information (substitute bus transport, service suspension) is now localized to English/Chinese (no Japanese leaks into en/zh responses)
+
+Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
 ### 🤖 AI Intelligent Advice
 
@@ -1033,7 +1051,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.20.0)
+├── SKILL.md             # Project skill definition (v2.21.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1084,7 +1102,16 @@ MIT License
 
 ### 🛤️ 路线覆盖与数据确认
 
-项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
+项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
+
+**v2.21.0 一次性补齐路线数据缺失，并强化车站名解析与多语言输出（共954站/64条线路）**：
+
+- **车站数据缺失补齐** — 东京地铁丸之内线（新宿〜荻窪间7站＋方南町支线）、京王高尾线（7站）、横滨市营地铁蓝线（33站）/绿线（14站）、京滨东北线（樱木町〜根岸延伸）
+- **芝山铁道孤立解除** — 新增京成本线支线（京成成田⇄东成田），连通芝山千代田至都心
+- **车站名解析强化** — 京成线简称（关屋・高砂・立石・臼井）及全路线表记差异（お茶の水→御茶ノ水、市谷→市ヶ谷、茅ケ崎/茅ヶ崎统一等18项）已注册为别名
+- **多语言输出强化** — 实时运行信息（接驳换乘・暂停运行）已本地化为英/中（en/zh 响应不再泄漏日文）
+
+车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 
 ### 🤖 AI 智能建议
 
@@ -1540,7 +1567,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.20.0）
+├── SKILL.md             # 项目技能定义（v2.21.0）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
