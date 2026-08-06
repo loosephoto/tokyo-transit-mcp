@@ -3698,7 +3698,7 @@ async function searchFare(args) {
                 '両駅を指定してください。';
     return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
   }
-  if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
+  if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang, from, to }));
   try {
     // 両駅を odpt:Station 候補へ解決し、出発駅ごとに運賃を分割取得
     const [fromStations, toStations] = await Promise.all([resolveFareStations(from), resolveFareStations(to)]);
@@ -3759,12 +3759,11 @@ async function searchFare(args) {
         child_ticket: f['odpt:childTicketFare'] || null,
         child_ic: f['odpt:childIcCardFare'] || null
       })),
-      data_source: noteText,
-      fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+      data_source: noteText
     });
   } catch (error) {
     odptBreaker.onFailure(error);
-    return handleApiError(error, { userLang });
+    return handleApiError(error, { userLang, from, to });
   }
 }
 

@@ -40,5 +40,15 @@ assert(tama.fares?.some(f => f.operator === 'TamaMonorail'), 'operator が TamaM
 const metro = await parse(await searchFare({ from: '渋谷', to: '新宿', language: 'ja' }));
 assert(metro.fares?.some(f => f.operator === 'TokyoMetro'), '渋谷→新宿 で TokyoMetro 運賃が引き続き見つかる');
 
+// 4. fallback_url の表示タイミング: 料金取得成功時はリンクなし
+assert(!('fallback_url' in metro), '料金取得できた場合は fallback_url を表示しない（渋谷→新宿）');
+assert(!('fallback_url' in yokohama), '料金取得できた場合は fallback_url を表示しない（横浜→新横浜）');
+
+// 5. fallback_url の表示タイミング: 料金計算不可（ODPT に対象データなし）ならリンクあり
+const notFound = await parse(await searchFare({ from: '浅草', to: '八丈島', language: 'ja' }));
+console.log('浅草→八丈島 message:', notFound.message);
+assert(notFound.fares === undefined || notFound.fares?.length === 0, '浅草→八丈島 は運賃なし');
+assert(typeof notFound.fallback_url === 'string' && notFound.fallback_url.includes('transit.yahoo.co.jp'), '料金計算不可の場合は fallback_url（Yahoo!路線情報）を表示する');
+
 console.log(`\n=== 結果: PASS=${pass} FAIL=${fail} ===`);
 process.exit(fail ? 1 : 0);
