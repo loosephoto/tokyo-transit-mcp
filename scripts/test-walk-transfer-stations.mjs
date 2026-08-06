@@ -83,6 +83,21 @@ for (const [f, t] of [['田町','三田'],['浜松町','大門'],['秋葉原','�
   assert(walkOk, `${f}⇔${t}: ${r.error || (r.transfers + '乗換 ' + r.estimated_minutes + '分')}`);
 }
 
+// 2-2b. 徒歩連絡が同一路線の乗車エッジを上書きしないこと（バグ回帰: v2.22.1）
+// 新橋⇔汐留はゆりかもめ1駅（0乗換）、東京⇔大手町は丸ノ内線1駅（0乗換）が最適
+const shiodome = computeRoutes('新橋', '汐留');
+assert(shiodome.routes && shiodome.routes[0].summary.transfers === 0
+  && shiodome.routes[0].segments.some(s => s.line === 'ゆりかもめ' && s.stops === 1),
+  `新橋→汐留: ゆりかもめ1駅 0乗換（徒歩連絡が乗車エッジを上書きしない）→ ${JSON.stringify(shiodome.routes && shiodome.routes[0].summary)}`);
+const otemachi = computeRoutes('東京', '大手町');
+assert(otemachi.routes && otemachi.routes[0].summary.transfers === 0
+  && otemachi.routes[0].segments.some(s => s.line === '東京メトロ丸ノ内線' && s.stops === 1),
+  `東京→大手町: 丸ノ内線1駅 0乗換（徒歩連絡が乗車エッジを上書きしない）→ ${JSON.stringify(otemachi.routes && otemachi.routes[0].summary)}`);
+// 跨路線ペアの徒歩エッジは残る（新橋@山手線→汐留@大江戸線）
+const shiodomeWalk = computeRoutes('浜松町', '汐留');
+assert(shiodomeWalk.routes && shiodomeWalk.routes[0].segments.some(s => s.walk),
+  `浜松町→汐留: 跨路線の徒歩連絡は維持される → ${JSON.stringify(shiodomeWalk.routes && shiodomeWalk.routes[0].segments)}`);
+
 // 2-3. 同名別駅の曖昧化
 for (const [name, cands] of [['小川町', 2], ['両国', 2], ['霞ヶ関', 2]]) {
   const res = resolveStation(name);

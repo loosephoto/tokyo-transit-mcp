@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.22.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.22.1 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -2025,6 +2025,13 @@ for (const w of WALK_TRANSFERS) {
   const toNodes = (STATION_TO_LINES[w.to] || []).map(e => `${w.to}@${e.line}`);
   for (const a of fromNodes) {
     for (const b of toNodes) {
+      // 🔴 既存エッジ（同一路線の乗車エッジ等）を上書きしない。
+      // 例: 汐留⇔新橋は両方ゆりかもめに在線し、新橋@ゆりかもめ⇔汐留@ゆりかもめ は
+      // 乗車エッジ(重み1)が先に張られている。徒歩エッジで上書きすると
+      // 「ゆりかもめ1駅」が消えて徒歩連絡(乗換1回)だけになる（本セッションで実証）。
+      // 東京⇔大手町（丸ノ内線）も同類。同路線の徒歩エッジは不要（乗車が最適）なので
+      // スキップし、跨路線ペア（例: 新橋@山手線⇔汐留@大江戸線）のみ徒歩エッジを張る。
+      if (GRAPH[a] && GRAPH[a][b] !== undefined) continue;
       addEdge(a, b, WALK_TRANSFER_COST);
     }
   }
@@ -2169,41 +2176,50 @@ function findShortestPath(start, goal) {
   if (!nodePath.length || nodePath[0].split('@')[0] !== start) return null;
   const path = [];
   const lines = [];
+  const walkEdges = [];
   for (let i = 0; i < nodePath.length; i++) {
     const [st, ln] = nodePath[i].split('@');
     path.push(st);
     if (i > 0) lines.push(nodePath[i - 1].split('@')[1]);
   }
-  return { path, lines };
+  // 徒歩連絡（近接異名駅）エッジの判定: 「駅名が異なる」かつ「重みが乗換ペナルティ以上」のエッジ。
+  // 乗車エッジは重み1、同一駅の乗換エッジは駅名が同一のため、この条件で一意に判別できる。
+  // ※ 駅名ペアだけで判定すると、新橋⇔汐留のような「同一路線の隣接駅が近接異名駅でもある」ケースで
+  //    乗車エッジ（ゆりかもめ1駅）を徒歩連絡と誤表示する（v2.22.0 の実バグ・v2.22.1で修正）。
+  for (let i = 0; i < nodePath.length - 1; i++) {
+    const a = nodePath[i], b = nodePath[i + 1];
+    const w = (GRAPH[a] && GRAPH[a][b] !== undefined) ? GRAPH[a][b] : (GRAPH[b] && GRAPH[b][a] !== undefined ? GRAPH[b][a] : 0);
+    walkEdges.push(a.split('@')[0] !== b.split('@')[0] && w >= TRANSFER_PENALTY);
+  }
+  return { path, lines, walkEdges };
 }
 
 // 経路を路線セグメントに分割（乗り換え検出）
 // findShortestPath が返す「駅名パス path」と「各区間の実通過路線 lines」をもとに、
 // 連続する同路線区間を1セグメントにまとめる。これにより乗換回数が正確になる。
-function buildRouteSegments(path, lines) {
+function buildRouteSegments(path, lines, walkEdges = []) {
   if (!path || path.length < 2) return [];
   const segments = [];
+  // walkEdges[i] = エッジ i（path[i]→path[i+1]）が徒歩連絡（近接異名駅）かどうか。
+  // findShortestPath が「駅名が異なる & 重み>=乗換ペナルティ」で一意に判定した値を使う
+  // （駅名ペアだけで判定すると同一路線の乗車エッジを徒歩と誤表示する）。
+  const isWalkEdge = (i) => !!(walkEdges && walkEdges[i]);
+  const walkInfo = (i) => {
+    const w = WALK_TRANSFER_LOOKUP.get(`${path[i]}|${path[i + 1]}`);
+    return { line: '🚶 徒歩連絡', from: path[i], to: path[i + 1], count: 1, walk: true, minutes: w ? w.minutes : undefined };
+  };
   let curLine = lines[0];
-  let cur = { line: curLine, from: path[0], to: path[1], count: 1 };
-  let curIsWalk = WALK_TRANSFER_LOOKUP.has(`${path[0]}|${path[1]}`);
-  if (curIsWalk) {
-    const w = WALK_TRANSFER_LOOKUP.get(`${path[0]}|${path[1]}`);
-    cur = { line: '🚶 徒歩連絡', from: path[0], to: path[1], count: 1, walk: true, minutes: w.minutes };
-  }
+  let cur = isWalkEdge(0) ? walkInfo(0) : { line: curLine, from: path[0], to: path[1], count: 1 };
+  let curIsWalk = isWalkEdge(0);
   for (let i = 1; i < lines.length; i++) {
     const ln = lines[i];
-    const isWalk = WALK_TRANSFER_LOOKUP.has(`${path[i]}|${path[i + 1]}`);
+    const isWalk = isWalkEdge(i);
     if (ln === cur.line && !curIsWalk && !isWalk) {
       cur.to = path[i + 1];
       cur.count++;
     } else {
       segments.push({ ...cur });
-      if (isWalk) {
-        const w = WALK_TRANSFER_LOOKUP.get(`${path[i]}|${path[i + 1]}`);
-        cur = { line: '🚶 徒歩連絡', from: path[i], to: path[i + 1], count: 1, walk: true, minutes: w.minutes };
-      } else {
-        cur = { line: ln, from: path[i], to: path[i + 1], count: 1 };
-      }
+      cur = isWalk ? walkInfo(i) : { line: ln, from: path[i], to: path[i + 1], count: 1 };
       curIsWalk = isWalk;
     }
   }
@@ -2240,8 +2256,8 @@ function computeRoutes(fromRaw, toRaw) {
   if (!result || !result.path) {
     return { error: 'NO_ROUTE', from, to, fromLandmark: fromRes.landmark, toLandmark: toRes.landmark };
   }
-  const { path, lines } = result;
-  const segments = buildRouteSegments(path, lines);
+  const { path, lines, walkEdges } = result;
+  const segments = buildRouteSegments(path, lines, walkEdges);
   const totalStops = path.length - 1;
   // 徒歩連絡（近接異名駅）も乗換1回としてカウントする（WALK_TRANSFER_COST = TRANSFER_PENALTY）
   const walkSegs = segments.filter(s => s.walk);
@@ -2445,7 +2461,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.22.0' },
+  { name: 'tokyo-transit-mcp', version: '2.22.1' },
   { capabilities: { tools: {} } }
 );
 

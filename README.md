@@ -33,6 +33,11 @@
 
 公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
 
+**v2.22.1 では徒歩連絡（近接異名駅）の2バグを修正しました**:
+
+- **徒歩エッジによる乗車エッジの上書き** — 近接異名駅ペアの徒歩エッジが同一路線の乗車エッジを上書きし、新橋⇔汐留の「ゆりかもめ1駅」・東京⇔大手町の「丸ノ内線1駅」が徒歩連絡に置き換わっていた問題を修正（既存エッジは上書きしない）
+- **徒歩判定の誤表示** — 駅名ペアだけで徒歩連絡を判定していたため、同一路線の隣接駅（新橋⇔汐留）の乗車エッジまで「🚶 徒歩連絡」と表示される問題を修正（エッジの実重みで一意に判定）
+
 **v2.22.0 では近接異名駅（連絡駅）と同名別駅の取り扱いを強化しました**:
 
 - **近接異名駅（連絡駅）の徒歩連絡** — 名称は異なるが実質1つの乗換駅として機能する駅の組（牛田⇔京成関屋、田町⇔三田、浜松町⇔大門、東京⇔大手町、秋葉原⇔岩本町、馬喰横山⇔東日本橋、蒲田⇔京急蒲田、勝田台⇔東葉勝田台、上野⇔京成上野 ほか25組）を経路グラフに接続。ルート上は「🚶 徒歩連絡」セグメント（徒歩時間付き・日英中対応）として表示され、例: 牛田→矢切 が3乗換37分 → 2乗換30分に改善
@@ -542,7 +547,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.22.0）
+├── SKILL.md             # プロジェクトスキル定義（v2.22.1）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -594,6 +599,11 @@ Beyond simple route search, this server integrates weather data and public trans
 ### 🛤️ Route Coverage and Data Validation
 
 The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
+
+**v2.22.1 fixes two bugs in walk transfers (adjacent alias stations)**:
+
+- **Walk edge overwrote ride edge** — Walk edges between adjacent alias station pairs overwrote same-line ride edges, replacing "Yurikamome 1 stop" (Shimbashi⇔Shiodome) and "Marunouchi Line 1 stop" (Tokyo⇔Otemachi) with walk transfers. Fixed: existing edges are no longer overwritten.
+- **Mislabeled walk detection** — Walk transfer was detected by station-name pair alone, so same-line adjacent stations (Shimbashi⇔Shiodome) were shown as "🚶 Walk transfer" even when riding. Fixed: walk edges are now identified by actual edge weight.
 
 **v2.22.0 strengthens handling of adjacent alias stations (connected stations) and same-name-different-station cases**:
 
@@ -1066,7 +1076,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.22.0)
+├── SKILL.md             # Project skill definition (v2.22.1)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1118,6 +1128,11 @@ MIT License
 ### 🛤️ 路线覆盖与数据确认
 
 项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
+
+**v2.22.1 修复了步行换乘（近接异名站）的两个问题**：
+
+- **步行边覆盖乘车边** — 近接异名站的步行边覆盖了同一条线路的乘车边，导致新桥⇔汐留的「百合海鸥线1站」、东京⇔大手町的「丸之内线1站」被替换为步行换乘。已修复（不再覆盖已有边）。
+- **步行判定误显示** — 仅凭站名组合判断步行换乘，导致同线路相邻站（新桥⇔汐留）的乘车边也被显示为「🚶 步行换乘」。已修复（按边的实际权重唯一判定）。
 
 **v2.22.0 强化了近接异名站（连络站）与同名异站的处理**：
 
@@ -1589,7 +1604,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.22.0）
+├── SKILL.md             # 项目技能定义（v2.22.1）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
