@@ -3660,8 +3660,12 @@ async function resolveFareStations(rawName) {
   return candidates;
 }
 
+// ODPT に運賃データ（odpt:RailwayFare）を提供している事業者
+const FARE_OPERATORS = ['TokyoMetro', 'Toei', 'MIR', 'TWR', 'Yurikamome', 'YokohamaMunicipal', 'TamaMonorail'];
+
 // 出発駅IDごとに運賃を分割取得（ODPT の 1000 件上限による切り捨てを回避）。
-// 東京メトロ・都営に加え MIR（つくばエクスプレス）・TWR（りんかい線）・Yurikamome も自動対応。
+// 東京メトロ・都営に加え MIR（つくばエクスプレス）・TWR（りんかい線）・Yurikamome・
+// 横浜市営地下鉄（YokohamaMunicipal）・多摩モノレール（TamaMonorail）も自動対応。
 async function fetchFaresByFromStation(stationId) {
   const cacheKey = `${cache.railwayFare.key}:byfrom:${stationId}`;
   const cached = cache.get(cacheKey);
@@ -3713,8 +3717,9 @@ async function searchFare(args) {
 
     if (results.length === 0) {
       // ODPT に運賃データがない事業者（JR・私鉄等）か、ペア未登録かの案内を分ける
-      const odptCovered = fromStations.some(st =>
-        ['TokyoMetro', 'Toei', 'MIR', 'TWR', 'Yurikamome'].includes(st.operator));
+      // 両駅とも運賃データ提供事業者なら「ペア未登録」、片方でも対象外なら「対象外」と案内
+      const odptCovered = fromStations.some(st => FARE_OPERATORS.includes(st.operator)) &&
+                          toStations.some(st => FARE_OPERATORS.includes(st.operator));
       const notFoundMsg = userLang === 'en'
         ? (odptCovered
           ? 'Fare data not found for this pair in ODPT.'

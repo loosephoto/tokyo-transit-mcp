@@ -270,7 +270,7 @@ get_weather(area_name: "東京")
 
 ### 4. `search_fare` — 運賃検索
 
-2駅間の運賃をODPTデータから検索します（東京メトロ・都営対応）。
+2駅間の運賃をODPTデータから検索します（東京メトロ・都営・横浜市営地下鉄・つくばエクスプレス・りんかい線・ゆりかもめ・多摩モノレール対応）。
 
 ```
 search_fare(from: "渋谷", to: "新宿")
@@ -775,7 +775,7 @@ get_weather(area_name: "Tokyo")
 
 ### 4. `search_fare` — Fare Search
 
-Searches fares between two stations from ODPT data (Tokyo Metro / Toei).
+Searches fares between two stations from ODPT data (Tokyo Metro, Toei, Yokohama Municipal Subway, Tsukuba Express, Rinkai Line, Yurikamome, Tama Monorail).
 
 ```
 search_fare(from: "Shibuya", to: "Shinjuku")
@@ -1279,7 +1279,7 @@ get_weather(area_name: "東京")
 
 ### 4. `search_fare` — 票价查询
 
-从 ODPT 数据查询两站之间的票价（东京地下铁 / 都营）。
+从 ODPT 数据查询两站之间的票价（东京地下铁、都营、横滨市营地铁、筑波快线、临海线、百合海鸥号、多摩单轨电车）。
 
 ```
 search_fare(from: "渋谷", to: "新宿")
