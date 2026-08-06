@@ -50,5 +50,9 @@ console.log('浅草→八丈島 message:', notFound.message);
 assert(notFound.fares === undefined || notFound.fares?.length === 0, '浅草→八丈島 は運賃なし');
 assert(typeof notFound.fallback_url === 'string' && notFound.fallback_url.includes('transit.yahoo.co.jp'), '料金計算不可の場合は fallback_url（Yahoo!路線情報）を表示する');
 
+// 6. fare_coverage に対応・対象外事業者が明記される
+assert(Array.isArray(notFound.fare_coverage?.supported) && notFound.fare_coverage.supported.includes('YokohamaMunicipal') && notFound.fare_coverage.supported.includes('TamaMonorail'), 'fare_coverage.supported に対応事業者（横浜市営・多摩モノレール）が明記される');
+assert(Array.isArray(notFound.fare_coverage?.unsupported) && notFound.fare_coverage.unsupported.includes('JR-East') && notFound.fare_coverage.unsupported.includes('JR-Central') && notFound.fare_coverage.unsupported.includes('TokyoMonorail'), 'fare_coverage.unsupported に対象外（JR-East / JR-Central / 東京モノレール）が明記される');
+
 console.log(`\n=== 結果: PASS=${pass} FAIL=${fail} ===`);
 process.exit(fail ? 1 : 0);

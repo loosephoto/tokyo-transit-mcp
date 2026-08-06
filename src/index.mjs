@@ -3662,6 +3662,11 @@ async function resolveFareStations(rawName) {
 
 // ODPT に運賃データ（odpt:RailwayFare）を提供している事業者
 const FARE_OPERATORS = ['TokyoMetro', 'Toei', 'MIR', 'TWR', 'Yurikamome', 'YokohamaMunicipal', 'TamaMonorail'];
+// 路線図（OPERATOR_MAP / NON_RAIL_OPERATORS）にはあるが ODPT に運賃データがない事業者（JR・私鉄等）
+const NON_FARE_OPERATORS = Object.values(OPERATOR_MAP)
+  .concat(Object.values(NON_RAIL_OPERATORS).map(o => o.id))
+  .filter((id, i, a) => a.indexOf(id) === i)
+  .filter(id => !FARE_OPERATORS.includes(id));
 
 // 出発駅IDごとに運賃を分割取得（ODPT の 1000 件上限による切り捨てを回避）。
 // 東京メトロ・都営に加え MIR（つくばエクスプレス）・TWR（りんかい線）・Yurikamome・
@@ -3723,15 +3728,15 @@ async function searchFare(args) {
       const notFoundMsg = userLang === 'en'
         ? (odptCovered
           ? 'Fare data not found for this pair in ODPT.'
-          : 'This operator has no fare data in ODPT (JR East / private railways are not covered). Please check Yahoo! Transit.')
+          : 'This route is not covered by ODPT fare data (JR East / JR Central / private railways / Tokyo Monorail etc.). Fares are available only for Tokyo Metro, Toei, Yokohama Municipal Subway, Tsukuba Express, Rinkai Line, Yurikamome, and Tama Monorail. Please check Yahoo! Transit.')
         : userLang === 'zh'
         ? (odptCovered
           ? 'ODPT 中未找到该区间的票价。'
-          : '该运营商在 ODPT 中没有票价数据（JR东日本/私营铁路不在覆盖范围）。请查看雅虎路线情报。')
+          : '此路线不在 ODPT 票价数据覆盖范围内（JR东日本 / JR东海 / 私营铁路 / 东京单轨电车等）。仅东京地下铁、都营、横滨市营地铁、筑波快线、临海线、百合海鸥号、多摩单轨电车支持票价计算。请查看雅虎路线情报。')
         : (odptCovered
           ? 'この区間の運賃データがODPTに見つかりませんでした。'
-          : 'この事業者はODPTに運賃データがありません（JR・私鉄は対象外）。Yahoo!路線情報をご利用ください。');
-      return jsonResponse({ status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo, fare: null, message: notFoundMsg, fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` });
+          : 'この路線はODPTの運賃計算対象外です（JR東日本・JR東海・私鉄・東京モノレール等。対応は東京メトロ・都営・横浜市営地下鉄・つくばエクスプレス・りんかい線・ゆりかもめ・多摩モノレールのみ）。Yahoo!路線情報をご利用ください。');
+      return jsonResponse({ status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo, fare: null, message: notFoundMsg, fare_coverage: { supported: FARE_OPERATORS, unsupported: NON_FARE_OPERATORS }, fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` });
     }
 
     const noteText = userLang === 'en' ? "ODPT RailwayFare (per-station, 24h Cache)" :

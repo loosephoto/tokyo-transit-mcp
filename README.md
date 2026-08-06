@@ -272,6 +272,9 @@ get_weather(area_name: "東京")
 
 2駅間の運賃をODPTデータから検索します（東京メトロ・都営・横浜市営地下鉄・つくばエクスプレス・りんかい線・ゆりかもめ・多摩モノレール対応）。
 
+> [!NOTE]
+> ODPT が運賃データを提供するのは上記の事業者のみです。**運賃計算ができない路線**（JR東日本・JR東海・小田急・京王・西武・東武・京急・京成・相鉄・東急・みなとみらい線・箱根登山線・北総・埼玉高速・東葉高速・芝山鉄道・東京モノレールなど）や、事業者をまたぐ通し運賃は計算できません。その場合は `fallback_url`（Yahoo!路線情報）が返ります。
+
 ```
 search_fare(from: "渋谷", to: "新宿")
 ```
@@ -777,6 +780,9 @@ get_weather(area_name: "Tokyo")
 
 Searches fares between two stations from ODPT data (Tokyo Metro, Toei, Yokohama Municipal Subway, Tsukuba Express, Rinkai Line, Yurikamome, Tama Monorail).
 
+> [!NOTE]
+> Only the operators above provide fare data to ODPT. Fares **cannot be computed** for JR East, JR Central, Odakyu, Keio, Seibu, Tobu, Keikyu, Keisei, Sotetsu, Tokyu, Minatomirai Line, Hakone Tozan, Hokuso, Saitama Railway, Toyo Rapid, Shibayama Railway, Tokyo Monorail, etc., nor for through-fares across multiple operators. In such cases a `fallback_url` (Yahoo! Transit) is returned.
+
 ```
 search_fare(from: "Shibuya", to: "Shinjuku")
 ```
@@ -1280,6 +1286,9 @@ get_weather(area_name: "東京")
 ### 4. `search_fare` — 票价查询
 
 从 ODPT 数据查询两站之间的票价（东京地下铁、都营、横滨市营地铁、筑波快线、临海线、百合海鸥号、多摩单轨电车）。
+
+> [!NOTE]
+> 仅有上述运营商向 ODPT 提供票价数据。**无法计算票价**的线路包括 JR东日本、JR东海、小田急、京王、西武、东武、京急、京成、相铁、东急、港区未来线、箱根登山、北总、埼玉高速、东叶高速、芝山铁道、东京单轨电车等，以及跨运营商的全程票价。此时将返回 `fallback_url`（雅虎路线情报）。
 
 ```
 search_fare(from: "渋谷", to: "新宿")
