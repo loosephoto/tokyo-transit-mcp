@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.21.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.22.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -290,6 +290,12 @@ const FAILURE_TYPES = {
     weatherText: { ja: "機材故障の発生", en: "Vehicle/equipment failure occurred", zh: "发生机材故障" },
     delayMessage: { ja: "機材故障による運行見合わせ", en: "Service suspended due to equipment failure", zh: "因机材故障暂停运行" }
   },
+  'vehicle_delay': {
+    type: 'equipment', adviceKey: 'vehicle_delay', isTrainSuspended: false,
+    keywords: { ja: ['遅延', '列車遅延', '車両遅延', 'ダイヤ乱れ', 'ダイヤ遅延', '運転遅延', '到着遅れ'], en: ['delay', 'train_delay', 'vehicle_delay', 'service_delay', 'delayed', 'running_late'], zh: ['晚点', '晚點', '延误', '延誤', '列车晚点', '列车延误', '车辆延误'] },
+    weatherText: { ja: "車両遅延の発生", en: "Train/vehicle delay occurred", zh: "发生列车晚点" },
+    delayMessage: { ja: "車両遅延によりダイヤが乱れています", en: "Services are delayed due to a train/vehicle delay", zh: "因列车晚点导致运行时刻表混乱" }
+  },
   'gate_baggage_delay': {
     type: 'airport', adviceKey: 'gate_baggage_delay', isTrainSuspended: false,
     keywords: { ja: ['ゲート遅延', '手荷物遅延', '手荷物受取遅延', 'ゲート変更', '到着ゲート遅れ'], en: ['gate_delay', 'baggage_delay', 'gate_change', 'baggage_claim_delay', 'arrival_gate_delay'], zh: ['登机口延误', '行李延误', '行李领取延误', '登机口变更', '到达口延误'] },
@@ -315,43 +321,53 @@ function detectFailureType(failureText, userLang = 'ja') {
   const rawKey = failureText.trim().toLowerCase();
   const textLang = detectLanguage(rawKey); // テキスト自体の言語（ja/zh 共通キーワードの判別用）
 
+  // マッチ優先度: ①完全一致 ②入力がキーワードを含む（入力の方が長い） ③キーワードが入力を含む（入力の方が短い）。
+  // ③は「遅延」⊂「ゲート遅延」のような誤マッチの元なので最弱とする。
+  // 同一優先度内では最長キーワードを優先（「人身事故が発生」→「事故」より「人身事故」）。
+  let best = null, bestType = 3, bestLen = -1;
   for (const [id, config] of Object.entries(FAILURE_TYPES)) {
     for (const [lang, kwList] of Object.entries(config.keywords)) {
       for (const kw of kwList) {
         const lowerKw = kw.toLowerCase();
-        if (rawKey === lowerKw || rawKey.includes(lowerKw) || lowerKw.includes(rawKey)) {
-          // 呼び出し側で解決済みの応答言語を最優先する。
-          // 例: 「降雪」は中国語キーワード表にも存在するが、language:'ja' の詳細文まで
-          // 中国語へ混在させてはならない。
-          const effectiveMatchedLang = (textLang !== 'ja') ? textLang : lang;
-          const effectiveLang = userLang || effectiveMatchedLang;
-          const weatherText = typeof config.weatherText === 'object'
-            ? (config.weatherText[effectiveLang] || config.weatherText.ja)
-            : config.weatherText;
-          const delayMessage = typeof config.delayMessage === 'object'
-            ? (config.delayMessage[effectiveLang] || config.delayMessage.ja)
-            : config.delayMessage;
-          return {
-            ...config,
-            matchedLang: effectiveMatchedLang,
-            weatherText,
-            delayMessage
-          };
+        const matchType = rawKey === lowerKw ? 0 : rawKey.includes(lowerKw) ? 1 : lowerKw.includes(rawKey) ? 2 : -1;
+        if (matchType >= 0 && (matchType < bestType || (matchType === bestType && lowerKw.length > bestLen))) {
+          bestType = matchType;
+          bestLen = lowerKw.length;
+          best = { id, config, lang };
         }
       }
     }
   }
-
-  const fallbackMsg = {
-    ja: rawKey + " のため一部列車が運行停止中",
-    en: "Service partially suspended due to " + rawKey,
-    zh: "因 " + rawKey + " 导致部分列车暂停运行"
-  };
+  if (!best) {
+    const fallbackMsg = {
+      ja: rawKey + " のため一部列車が運行停止中",
+      en: "Service partially suspended due to " + rawKey,
+      zh: "因 " + rawKey + " 导致部分列车暂停运行"
+    };
+    return {
+      type: 'unknown',
+      isTrainSuspended: true,
+      weatherText: userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知",
+      delayMessage: fallbackMsg[userLang] || fallbackMsg.ja
+    };
+  }
+  const { config, lang } = best;
+  // 呼び出し側で解決済みの応答言語を最優先する。
+  // 例: 「降雪」は中国語キーワード表にも存在するが、language:'ja' の詳細文まで
+  // 中国語へ混在させてはならない。
+  const effectiveMatchedLang = (textLang !== 'ja') ? textLang : lang;
+  const effectiveLang = userLang || effectiveMatchedLang;
+  const weatherText = typeof config.weatherText === 'object'
+    ? (config.weatherText[effectiveLang] || config.weatherText.ja)
+    : config.weatherText;
+  const delayMessage = typeof config.delayMessage === 'object'
+    ? (config.delayMessage[effectiveLang] || config.delayMessage.ja)
+    : config.delayMessage;
   return {
-    type: 'unknown',
-    isTrainSuspended: true,
-    weatherText: userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知",
-    delayMessage: fallbackMsg[userLang] || fallbackMsg.ja
+    ...config,
+    matchedLang: effectiveMatchedLang,
+    weatherText,
+    delayMessage
   };
 }
 
@@ -700,6 +716,9 @@ const STATION_NAME_MAP = {
   'Tokyo Big Sight': '東京ビッグサイト', 'Big Sight': '東京ビッグサイト',
   'Otemachi': '大手町', 'Otodo': '大手町',
   'Kasumigaseki': '霞ケ関', 'Tokyo Station': '東京',
+  // 近接異名駅（連絡駅）の英字エイリアス
+  'Ushida': '牛田', 'Yagiri': '矢切', 'Keisei-Sekiya': '京成関屋', 'KeiseiSekiya': '京成関屋',
+  'Sekiya': '京成関屋', 'Awajicho': '淡路町', 'Iwamotocho': '岩本町', 'Takaracho': '宝町',
 
   // 中文 (簡体字 / 繁体字)
   '东京': '東京', '新宿': '新宿', '涩谷': '渋谷', '澀谷': '渋谷', '银座': '銀座', '銀座': '銀座',
@@ -764,7 +783,7 @@ const STATION_NAME_MAP = {
   // 京急
   'Keikyu-Higashikanagawa': '京急東神奈川', 'KeikyuHigashikanagawa': '京急東神奈川',
   'Kanazawa-Bunko': '金沢文庫', 'KanazawaBunko': '金沢文庫', 'Nojima': '能見台',
-  'Omorimachi': '大森町', 'Keikyu-Tsurumi': '京急鶴見', 'Tsurumi-Ichiba': '鶴見市場',
+  'Omorimachi': '大森町', 'Keikyu-Tsurumi': '京急鶴見', 'Tsurumi-Ichiba': '鶴見市場', 'Kamata': '蒲田',
   'Maborikaigan': '馬堀海岸', 'Keikyu-Otsu': '京急大津', 'KeikyuOtsu': '京急大津',
   // 京成
   'Yachiyodai': '八千代台', 'Mimomi': '実籾', 'Keisei-Nakayama': '京成中山', 'Onigoe': '鬼越',
@@ -773,7 +792,7 @@ const STATION_NAME_MAP = {
   // 京成線 日本語略称（「京成」を省略した通称。同名のJR/他社駅と衝突するものは登録しない）
   '関屋': '京成関屋', '高砂': '京成高砂', '立石': '京成立石', '臼井': '京成臼井',
   // 全路線 表記ゆれ・通称エイリアス（ヶ/ケ・ノ/の・中黒省略・通称。同名他駅と衝突しないもののみ）
-  'お茶の水': '御茶ノ水', '市谷': '市ヶ谷', '千駄谷': '千駄ヶ谷', '阿佐谷': '阿佐ヶ谷', '幡谷': '幡ヶ谷',
+  'お茶の水': '御茶ノ水', '市谷': '市ヶ谷', '市ケ谷': '市ヶ谷', '千駄谷': '千駄ヶ谷', '阿佐谷': '阿佐ヶ谷', '幡谷': '幡ヶ谷',
   '祖師谷大蔵': '祖師ヶ谷大蔵', '保土ヶ谷': '保土ケ谷', 'つつじ丘': 'つつじヶ丘', 'ひばり丘': 'ひばりヶ丘',
   '向丘遊園': '向ヶ丘遊園', '竹の塚': '竹ノ塚', '溝ノ口': '溝の口', '聖蹟桜丘': '聖蹟桜ヶ丘',
   '自由ヶ丘': '自由が丘', 'テレポート': '東京テレポート', '中華街': '元町・中華街', '元町中華街': '元町・中華街',
@@ -1093,6 +1112,30 @@ const STATION_DISPLAY_NAMES = {
   '北坂戸': { en: 'Kita-Sakado', zh: '北坂户' },
   '武蔵嵐山': { en: 'Musashi-Ranzan', zh: '武藏岚山' },
   '小川町': { en: 'Ogawamachi', zh: '小川町' },
+  // 同名別駅（グラフ分離のための識別子付き駅名）
+  '小川町（東武東上線）': { en: 'Ogawamachi (Tobu Tojo Line)', zh: '小川町（东武东上线）' },
+  '両国（大江戸線）': { en: 'Ryogoku (Toei Oedo Line)', zh: '两国（都营大江户线）' },
+  '浅草（つくばエクスプレス）': { en: 'Asakusa (Tsukuba Express)', zh: '浅草（筑波快线）' },
+  '霞ヶ関（東武東上線）': { en: 'Kasumigaseki (Tobu Tojo Line)', zh: '霞关（东武东上线）' },
+  // 近接異名駅（連絡駅）の主要駅
+  '牛田': { en: 'Ushida', zh: '牛田' },
+  '京成関屋': { en: 'Keisei Sekiya', zh: '京成关屋' },
+  '市ヶ谷': { en: 'Ichigaya', zh: '市谷' },
+  '宝町': { en: 'Takaracho', zh: '宝町' },
+  '馬喰横山': { en: 'Bakuroyokoyama', zh: '马喰横山' },
+  '東日本橋': { en: 'Higashi-Nihombashi', zh: '东日本桥' },
+  '岩本町': { en: 'Iwamotocho', zh: '岩本町' },
+  '淡路町': { en: 'Awajicho', zh: '淡路町' },
+  '三ノ輪橋': { en: 'Minowabashi', zh: '三轮桥' },
+  '王子駅前': { en: 'Oji-ekimae', zh: '王子站前' },
+  '大塚駅前': { en: 'Otsuka-ekimae', zh: '大塚站前' },
+  '町屋駅前': { en: 'Machiya-ekimae', zh: '町屋站前' },
+  '朝霞台': { en: 'Asakadai', zh: '朝霞台' },
+  '北朝霞': { en: 'Kita-Asaka', zh: '北朝霞' },
+  '京急蒲田': { en: 'Keikyu Kamata', zh: '京急蒲田' },
+  '蒲田': { en: 'Kamata', zh: '蒲田' },
+  '勝田台': { en: 'Katsutadai', zh: '胜田台' },
+  '京成船橋': { en: 'Keisei Funabashi', zh: '京成船桥' },
   '東武竹沢': { en: 'Tobu-Takezawa', zh: '东武竹泽' },
   'みなみ寄居': { en: 'Minami-Yorii', zh: '南寄居' },
   '鉢形': { en: 'Hachigata', zh: '钵形' },
@@ -1696,6 +1739,11 @@ const MULTILINGUAL_ADVICE = {
     en: "🤖 [AI Intelligent Transit Advice (Equipment Failure)]\n🚃 Some services are suspended due to an equipment/vehicle failure (rail, bus, or aircraft). Allow extra time; follow staff for substitute transport or consider alternative routes.",
     zh: "🤖 【AI智能出行建议 (机材故障)】\n🚃 因机材故障部分运行暂停（铁路、巴士、飞机均有可能）。恢复可能需要时间。请听从工作人员安排换乘，或考虑其他路线。"
   },
+  vehicle_delay: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (車両遅延)】\n🚃 車両遅延・ダイヤ乱れのため列車に遅れが生じています（運転は継続中）。乗り換え時間に余裕がない場合は係員へお問い合わせいただくか、並行する他路線の利用をご検討ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Train Delay)]\n🚃 Trains are running behind schedule due to a vehicle delay / disrupted timetable (service continues). If your connection is tight, ask station staff or consider parallel lines.",
+    zh: "🤖 【AI智能出行建议 (列车晚点)】\n🚃 因车辆延误/时刻表混乱，列车正在晚点运行（运营仍在继续）。若换乘时间紧张，请咨询车站工作人员或考虑平行线路。"
+  },
   gate_baggage_delay: {
     ja: "🤖 【AIからのインテリジェントアドバイス (ゲート・手荷物遅延)】\n✈ ゲート変更または手荷物受取の遅延が発生しています。搭乗ゲート・到着口の案内板をご確認ください。お急ぎの方は空港スタッフへお問い合わせください。",
     en: "🤖 [AI Intelligent Transit Advice (Gate/Baggage Delay)]\n✈ A gate change or baggage claim delay has occurred. Check the gate/arrival display boards and ask airport staff if you are in a hurry.",
@@ -1808,15 +1856,15 @@ const STATION_COORDS = {
 // 主要都内路線＋臨海部（ゆりかもめ）を網羅し、浅草↔お台場等の主要区間をカバー。
 // ==========================================
 const RAILWAY_LINES = {
-  '都営浅草線': ['西馬込','馬込','中延','戸越','五反田','高輪台','泉岳寺','三田','大門','新橋','東銀座','宝町','日本橋','人形町','水天宮前','清澄白河','森下','菊川','住吉','西大島','大島','新大島','東大島','船堀','篠崎','本八幡'],
+  '都営浅草線': ['西馬込','馬込','中延','戸越','五反田','高輪台','泉岳寺','三田','大門','新橋','東銀座','宝町','日本橋','人形町','東日本橋','浅草橋','蔵前','浅草','本所吾妻橋','押上'],
   '東京メトロ銀座線': ['浅草','田原町','稲荷町','上野','上野広小路','末広町','神田','三越前','日本橋','京橋','銀座','新橋','虎ノ門','溜池山王','赤坂見附','青山一丁目','外苑前','表参道','渋谷'],
   '東京メトロ日比谷線': ['中目黒','恵比寿','広尾','六本木','神谷町','霞ケ関','日比谷','銀座','東銀座','築地','八丁堀','茅場町','人形町','小伝馬町','秋葉原','仲御徒町','上野','入谷','三ノ輪','南千住','北千住'],
   'ゆりかもめ': ['新橋','汐留','竹芝','日の出','芝浦ふ頭','お台場海浜公園','台場','東京国際クルーズターミナル','テレコムセンター','青海','東京ビッグサイト','有明','有明テニスの森','市場前','新豊洲','豊洲'],
   'JR山手線': ['東京','神田','秋葉原','御徒町','上野','鶯谷','日暮里','西日暮里','田端','駒込','巣鴨','大塚','池袋','目白','高田馬場','新大久保','新宿','代々木','原宿','渋谷','恵比寿','目黒','五反田','大崎','品川','高輪ゲートウェイ','田町','浜松町','新橋'],
-  '都営大江戸線': ['新宿西口','東新宿','若松河田','牛込柳町','牛込神楽坂','飯田橋','春日','本郷三丁目','上野御徒町','新御徒町','蔵前','両国','森下','清澄白河','門前仲町','月島','勝どき','築地市場','汐留','大門','赤羽橋','麻布十番','六本木','青山一丁目','国立競技場','代々木','新宿','都庁前','西新宿五丁目','中野坂上','東中野','中井','落合南長崎','新江古田','練馬','豊島園','練馬春日町','光が丘'],
+  '都営大江戸線': ['東新宿','若松河田','牛込柳町','牛込神楽坂','飯田橋','春日','本郷三丁目','上野御徒町','新御徒町','蔵前','両国（大江戸線）','森下','清澄白河','門前仲町','月島','勝どき','築地市場','汐留','大門','赤羽橋','麻布十番','六本木','青山一丁目','国立競技場','代々木','新宿','都庁前','新宿西口','西新宿五丁目','中野坂上','東中野','中井','落合南長崎','新江古田','練馬','豊島園','練馬春日町','光が丘'],
   '東京メトロ丸ノ内線': ['池袋','新大塚','茗荷谷','後楽園','本郷三丁目','御茶ノ水','淡路町','大手町','東京','銀座','京橋','霞ケ関','国会議事堂前','赤坂見附','四ツ谷','四谷三丁目','新宿御苑前','新宿三丁目','新宿','西新宿','中野坂上','新中野','東高円寺','新高円寺','南阿佐ケ谷','荻窪'],
   '丸ノ内線支線': ['中野坂上','方南町'],
-  '京浜東北線': ['大宮','赤羽','王子','上中里','田端','西日暮里','日暮里','鶯谷','上野','御徒町','秋葉原','神田','東京','有楽町','浜松町','田町','品川','大井町','大森','蒲田','川崎','横浜','桜木町','関内','石川町','山手','根岸'],
+  '京浜東北線': ['大宮','赤羽','王子','上中里','田端','西日暮里','日暮里','鶯谷','上野','御徒町','秋葉原','神田','東京','有楽町','新橋','浜松町','田町','品川','大井町','大森','蒲田','川崎','横浜','桜木町','関内','石川町','山手','根岸'],
   '横浜市営地下鉄ブルーライン': ['湘南台','下飯田','立場','中田','踊場','戸塚','舞岡','下永谷','上永谷','港南中央','上大岡','弘明寺','井土ヶ谷','蒔田','吉野町','阪東橋','伊勢佐木長者町','関内','桜木町','高島町','横浜','三ツ沢下町','三ツ沢上町','片倉町','岸根公園','新横浜','北新横浜','新羽','仲町台','センター南','センター北','中川','あざみ野'],
   '横浜市営地下鉄グリーンライン': ['中山','川和町','都筑ふれあいの丘','川和中央','東山田','北山田','センター南','センター北','仲町台','北新横浜','新羽','東新田','高田','日吉'],
   // 西武鉄道（池袋線・新宿線）— 久米川への接続のため追加
@@ -1834,7 +1882,7 @@ const RAILWAY_LINES = {
   'JR東海道線': ['東京','新橋','品川','川崎','横浜','戸塚','大船','藤沢','茅ヶ崎','平塚','小田原','熱海'],
   // ===== 東京メトロ（残り5路線）=====
   '東京メトロ東西線': ['中野','落合南長崎','西落合','神楽坂','飯田橋','九段下','竹橋','大手町','日本橋','茅場町','門前仲町','木場','東陽町','南砂町','西葛西','葛西','浦安','南行徳','行徳','妙典','原木中山','西船橋'],
-  '東京メトロ千代田線': ['代々木上原','明治神宮前','表参道','乃木坂','赤坂','国会議事堂前','霞ケ関','日比谷','内幸町','二重橋前','大手町','新御茶ノ水','湯島','千駄木','根津','西日暮里','町屋','綾瀬','北綾瀬'],
+  '東京メトロ千代田線': ['代々木上原','明治神宮前','表参道','乃木坂','赤坂','国会議事堂前','霞ケ関','日比谷','二重橋前','大手町','新御茶ノ水','湯島','千駄木','根津','西日暮里','町屋','北千住','綾瀬','北綾瀬'],
   '東京メトロ半蔵門線': ['渋谷','表参道','青山一丁目','永田町','半蔵門','九段下','神保町','大手町','三越前','水天宮前','清澄白河','住吉','錦糸町','押上'],
   '東京メトロ有楽町線': ['和光市','平和台','氷川台','小竹向原','千川','要町','池袋','東池袋','護国寺','江戸川橋','飯田橋','市ヶ谷','麹町','永田町','桜田門','有楽町','銀座一丁目','新富町','月島','豊洲','辰巳','新木場'],
   '東京メトロ副都心線': ['和光市','平和台','氷川台','小竹向原','千川','要町','池袋','雑司が谷','西早稲田','東新宿','新宿三丁目','北参道','明治神宮前','渋谷'],
@@ -1846,7 +1894,7 @@ const RAILWAY_LINES = {
   '京王動物園線': ['高幡不動','多摩動物公園'],
   '東急東横線': ['渋谷','代官山','中目黒','祐天寺','学芸大学','都立大学','自由が丘','田園調布','多摩川','新丸子','武蔵小杉','元住吉','日吉','綱島','大倉山','菊名','妙蓮寺','白楽','東白楽','反町','横浜'],
   '東急田園都市線': ['渋谷','池尻大橋','三軒茶屋','駒沢大学','桜新町','用賀','二子玉川','二子新地','高津','溝の口','梶が谷','宮崎台','宮前平','鷺沼','たまプラーザ','あざみ野','江田','市が尾','藤が丘','青葉台','田奈','長津田','つくし野','すずかけ台','南町田グランベリーパーク','つきみ野','中央林間'],
-  '東武東上線': ['池袋','北池袋','下板橋','大山','中板橋','ときわ台','上板橋','東武練馬','下赤塚','成増','和光市','朝霞','朝霞台','志木','柳瀬川','みずほ台','鶴瀬','ふじみ野','上福岡','新河岸','川越','川越市','霞ヶ関','鶴ヶ島','若葉','坂戸','北坂戸','高坂','東松山','森林公園','つきのわ','武蔵嵐山','小川町','東武竹沢','みなみ寄居','男衾','鉢形','玉淀','寄居'],
+  '東武東上線': ['池袋','北池袋','下板橋','大山','中板橋','ときわ台','上板橋','東武練馬','下赤塚','成増','和光市','朝霞','朝霞台','志木','柳瀬川','みずほ台','鶴瀬','ふじみ野','上福岡','新河岸','川越','川越市','霞ヶ関（東武東上線）','鶴ヶ島','若葉','坂戸','北坂戸','高坂','東松山','森林公園','つきのわ','武蔵嵐山','小川町（東武東上線）','東武竹沢','みなみ寄居','男衾','鉢形','玉淀','寄居'],
   '東武伊勢崎線': ['浅草','とうきょうスカイツリー','押上','曳舟','東向島','鐘ヶ淵','堀切','牛田','北千住','小菅','五反野','梅島','西新井','竹ノ塚','谷塚','草加','獨協大学前','新田','蒲生','新越谷','越谷','北越谷','大袋','せんげん台','武里','一ノ割','春日部','北春日部','姫宮','東武動物公園','和戸','久喜','鷲宮','花崎','加須','南羽生','羽生','川俣','茂林寺前','館林','多々良','県','福居','東武和泉','足利市','野州山辺','韮川','太田','細谷','木崎','世良田','境町','剛志','新伊勢崎','伊勢崎'],
   '京急本線': ['品川','北品川','新馬場','青物横丁','鮫洲','立会川','大森海岸','平和島','大森町','梅屋敷','京急蒲田','雑色','六郷土手','京急川崎','八丁畷','鶴見市場','京急鶴見','花月総持寺','生麦','京急新子安','子安','神奈川新町','京急東神奈川','神奈川','横浜','戸部','日ノ出町','黄金町','南太田','井土ヶ谷','弘明寺','上大岡','屏風浦','杉田','京急富岡','能見台','金沢文庫','金沢八景','追浜','京急田浦','安針塚','逸見','汐入','横須賀中央','県立大学','堀ノ内','京急大津','馬堀海岸','浦賀'],
   '京成押上線': ['押上','京成曳舟','八広','四ツ木','青砥'],
@@ -1854,7 +1902,7 @@ const RAILWAY_LINES = {
   '京成本線支線': ['京成成田','東成田'],
   '相鉄本線': ['横浜','平沼橋','西横浜','天王町','星川','和田町','上星川','西谷','鶴ヶ峰','二俣川','希望ヶ丘','さがみ野','かしわ台','海老名'],
   // ===== 私鉄（続き）・AGT・モノレール・路面電車・都営 =====
-  'つくばエクスプレス': ['秋葉原','新御徒町','浅草','南千住','北千住','青井','六町','八潮','三郷中央','南流山','流山セントラルパーク','流山おおたかの森','柏の葉キャンパス','柏たなか','守谷','みらい平','みどりの','万博記念公園','研究学園','つくば'],
+  'つくばエクスプレス': ['秋葉原','新御徒町','浅草（つくばエクスプレス）','南千住','北千住','青井','六町','八潮','三郷中央','南流山','流山セントラルパーク','流山おおたかの森','柏の葉キャンパス','柏たなか','守谷','みらい平','みどりの','万博記念公園','研究学園','つくば'],
   'りんかい線': ['新木場','東雲','国際展示場','東京テレポート','天王洲アイル','品川シーサイド','大井町','大崎'],
   'みなとみらい線': ['横浜','新高島','みなとみらい','馬車道','日本大通り','元町・中華街'],
   '箱根登山線': ['小田原','箱根板橋','風祭','入生田','箱根湯本','塔ノ沢','大平台','宮ノ下','小涌谷','彫刻の森','強羅'],
@@ -1869,7 +1917,7 @@ const RAILWAY_LINES = {
   '都営三田線': ['目黒','白金台','白金高輪','三田','芝公園','御成門','内幸町','日比谷','大手町','神保町','水道橋','春日','白山','千石','巣鴨','西巣鴨','新板橋','板橋区役所前','板橋本町','本蓮沼','志村坂上','志村三丁目','蓮根','西台','高島平','新高島平','西高島平'],
   '都営新宿線': ['新宿','新宿三丁目','曙橋','市ヶ谷','九段下','神保町','小川町','淡路町','岩本町','馬喰横山','浜町','森下','菊川','住吉','西大島','大島','東大島','船堀','瑞江','一之江','春日町','篠崎','本八幡'],
   // ===== API突合で確認した主要未登録路線 =====
-  '東京メトロ南北線': ['目黒','白金台','白金高輪','麻布十番','六本木一丁目','溜池山王','永田町','四ツ谷','市ケ谷','飯田橋','後楽園','東大前','本駒込','駒込','西ケ原','王子','王子神谷','志茂','赤羽岩淵'],
+  '東京メトロ南北線': ['目黒','白金台','白金高輪','麻布十番','六本木一丁目','溜池山王','永田町','四ツ谷','市ヶ谷','飯田橋','後楽園','東大前','本駒込','駒込','西ケ原','王子','王子神谷','志茂','赤羽岩淵'],
   '京王井の頭線': ['渋谷','神泉','駒場東大前','池ノ上','下北沢','新代田','東松原','明大前','永福町','西永福','浜田山','高井戸','富士見ヶ丘','久我山','三鷹台','井の頭公園','吉祥寺'],
   '小田急多摩線': ['新百合ヶ丘','五月台','栗平','黒川','はるひ野','小田急永山','多摩センター','唐木田'],
   '東急目黒線': ['目黒','不動前','武蔵小山','西小山','洗足','大岡山','奥沢','田園調布','多摩川','新丸子','武蔵小杉','元住吉','日吉'],
@@ -1924,6 +1972,79 @@ for (const [st, entries] of Object.entries(STATION_TO_LINES)) {
   }
 }
 
+// ==========================================
+// 近接異名駅（連絡駅）: 名称は異なるが、連絡通路・地下通路・至近距離の徒歩で
+// 実質1つの乗換駅として機能する駅の組（例: 牛田(東武伊勢崎線)⇔京成関屋(京成本線)）。
+// ルート検索では「徒歩連絡」セグメントとして扱い、乗換1回としてカウントする。
+// ※ 公式の連絡駅案内（JR東日本乗換案内・各社連絡駅表）に基づく。
+// ==========================================
+const WALK_TRANSFERS = [
+  // 東京都心・下町
+  { from: '牛田', to: '京成関屋', minutes: 4 },        // 東武伊勢崎線 ⇔ 京成本線（荒川・綾瀬川を挟み徒歩連絡）
+  { from: '田町', to: '三田', minutes: 5 },            // JR ⇔ 都営浅草線・三田線（連絡通路）
+  { from: '浜松町', to: '大門', minutes: 5 },          // JR・モノレール ⇔ 都営浅草線・大江戸線（連絡通路）
+  { from: '馬喰横山', to: '東日本橋', minutes: 4 },    // 都営新宿線 ⇔ 都営浅草線（地下通路）
+  { from: '秋葉原', to: '岩本町', minutes: 5 },        // JR・メトロ・TX ⇔ 都営新宿線（昭和通り口連絡）
+  { from: '東京', to: '大手町', minutes: 6 },          // JR各線 ⇔ 東京メトロ（丸の内地下通路）
+  { from: '京橋', to: '宝町', minutes: 4 },            // 銀座線・丸ノ内線 ⇔ 都営浅草線（地下通路）
+  { from: '後楽園', to: '春日', minutes: 4 },          // 丸ノ内線・南北線 ⇔ 都営三田線・大江戸線（東京ドームシティ連絡）
+  { from: '淡路町', to: '小川町', minutes: 3 },        // 丸ノ内線 ⇔ 都営新宿線（同一街区）
+  { from: '明治神宮前', to: '原宿', minutes: 3 },      // 千代田線・副都心線 ⇔ JR山手線（表参道口連絡）
+  { from: '赤坂見附', to: '永田町', minutes: 3 },      // 銀座線・丸ノ内線 ⇔ 半蔵門線・有楽町線・南北線（連絡通路）
+  { from: '三ノ輪', to: '三ノ輪橋', minutes: 4 },      // 日比谷線 ⇔ 都電荒川線
+  { from: '王子', to: '王子駅前', minutes: 2 },        // JR・南北線 ⇔ 都電荒川線
+  { from: '大塚', to: '大塚駅前', minutes: 2 },        // JR山手線 ⇔ 都電荒川線
+  { from: '町屋', to: '町屋駅前', minutes: 3 },        // 千代田線・京成本線・舎人ライナー ⇔ 都電荒川線
+  { from: '赤羽', to: '赤羽岩淵', minutes: 5 },        // JR ⇔ 南北線・埼玉高速鉄道（連絡通路）
+  { from: '新宿西口', to: '新宿', minutes: 3 },        // 大江戸線 ⇔ 新宿駅（地下通路）
+  { from: '汐留', to: '新橋', minutes: 5 },            // 大江戸線・ゆりかもめ ⇔ JR・銀座線・浅草線
+  { from: '京成上野', to: '上野', minutes: 4 },        // 京成本線 ⇔ JR・銀座線・日比谷線（上野公園口）
+  // 郊外・千葉方面
+  { from: '北朝霞', to: '朝霞台', minutes: 3 },        // JR武蔵野線 ⇔ 東武東上線（連絡橋）
+  { from: '蒲田', to: '京急蒲田', minutes: 5 },        // JR京浜東北線 ⇔ 京急本線・空港線（連絡通路）
+  { from: '勝田台', to: '東葉勝田台', minutes: 2 },    // 京成本線 ⇔ 東葉高速鉄道（同一駅扱い）
+  { from: '京成船橋', to: '船橋', minutes: 4 },        // 京成本線 ⇔ JR総武線（徒歩連絡）
+  // 同名別駅の徒歩連絡（グラフ上は識別子付き駅名で分離）
+  { from: '両国', to: '両国（大江戸線）', minutes: 4 }, // JR総武線 ⇔ 都営大江戸線（徒歩連絡）
+  { from: '浅草', to: '浅草（つくばエクスプレス）', minutes: 5 }, // 東武・銀座線・浅草線 ⇔ TX
+];
+// 双方向ルックアップ（buildRouteSegments での徒歩連絡検出と徒歩時間取得に使用）
+const WALK_TRANSFER_LOOKUP = new Map();
+for (const w of WALK_TRANSFERS) {
+  WALK_TRANSFER_LOOKUP.set(`${w.from}|${w.to}`, w);
+  WALK_TRANSFER_LOOKUP.set(`${w.to}|${w.from}`, w);
+}
+
+// 近接異名駅ペアを乗換エッジで接続（全路線ノード間を WALK_TRANSFER_COST で結ぶ）
+// 徒歩連絡は「乗換1回」としてカウントする（同駅乗換と同じコスト）。
+// ※ これより軽いコストにすると、秋葉原⇔岩本町 等で「徒歩→徒歩の往復」により
+//   同駅乗換を回避するバウンス経路が発生するため、必ず TRANSFER_PENALTY 以上とする。
+const WALK_TRANSFER_COST = TRANSFER_PENALTY;
+for (const w of WALK_TRANSFERS) {
+  const fromNodes = (STATION_TO_LINES[w.from] || []).map(e => `${w.from}@${e.line}`);
+  const toNodes = (STATION_TO_LINES[w.to] || []).map(e => `${w.to}@${e.line}`);
+  for (const a of fromNodes) {
+    for (const b of toNodes) {
+      addEdge(a, b, WALK_TRANSFER_COST);
+    }
+  }
+}
+
+// ==========================================
+// 同名別駅: 同じ駅名だが別の場所にある駅（乗換不可・誤認リスク大）。
+// グラフ上はマイナー側に識別子を付与して分離済み（例: 小川町（東武東上線））。
+// 入力時はサイレント推測せず、検索を中断して候補を提示する（disambiguation）。
+// candidates は再入力可能な正式キー（グラフ上の駅名）で返す。
+// ==========================================
+const AMBIGUOUS_STATION_NAMES = {
+  // 都営新宿線（千代田区神田小川町・淡路町と連絡） vs 東武東上線（埼玉県小川町・約70km離隔）
+  '小川町': ['小川町', '小川町（東武東上線）'],
+  // JR総武線（横網・国技館側） vs 都営大江戸線（両国3丁目・約400m離隔）
+  '両国': ['両国', '両国（大江戸線）'],
+  // 東京メトロ（千代田区・表記は「霞ケ関」） vs 東武東上線（川越市）
+  '霞ヶ関': ['霞ケ関', '霞ヶ関（東武東上線）'],
+};
+
 // 駅ノード（出発・到着のために全路線分を仮想起点/終点として扱うためのマップ）
 // 出発駅・到着駅は「その駅の全路線ノードから開始/到着」とみなす
 
@@ -1939,6 +2060,11 @@ for (const [st, entries] of Object.entries(STATION_TO_LINES)) {
 function resolveStation(rawName) {
   if (!rawName) return { station: null, candidates: [], ambiguous: false, exact: false, landmark: null };
   const key = rawName.trim();
+  // 同名別駅（小川町・両国・霞ヶ関等）: 完全一致より先に判定し、サイレント推測せず候補を提示する。
+  // 例: 「霞ヶ関」は東京メトロ（霞ケ関）と東武東上線（川越市）の2駅がある。
+  if (AMBIGUOUS_STATION_NAMES[key]) {
+    return { station: null, candidates: AMBIGUOUS_STATION_NAMES[key], ambiguous: true, exact: false, landmark: null };
+  }
   if (STATION_TO_LINES[key]) return { station: key, candidates: [key], ambiguous: false, exact: true, landmark: null };
 
   // ランドマーク完全一致を駅名エイリアス正規化より先に評価する。
@@ -2059,14 +2185,26 @@ function buildRouteSegments(path, lines) {
   const segments = [];
   let curLine = lines[0];
   let cur = { line: curLine, from: path[0], to: path[1], count: 1 };
+  let curIsWalk = WALK_TRANSFER_LOOKUP.has(`${path[0]}|${path[1]}`);
+  if (curIsWalk) {
+    const w = WALK_TRANSFER_LOOKUP.get(`${path[0]}|${path[1]}`);
+    cur = { line: '🚶 徒歩連絡', from: path[0], to: path[1], count: 1, walk: true, minutes: w.minutes };
+  }
   for (let i = 1; i < lines.length; i++) {
     const ln = lines[i];
-    if (ln === cur.line) {
+    const isWalk = WALK_TRANSFER_LOOKUP.has(`${path[i]}|${path[i + 1]}`);
+    if (ln === cur.line && !curIsWalk && !isWalk) {
       cur.to = path[i + 1];
       cur.count++;
     } else {
       segments.push({ ...cur });
-      cur = { line: ln, from: path[i], to: path[i + 1], count: 1 };
+      if (isWalk) {
+        const w = WALK_TRANSFER_LOOKUP.get(`${path[i]}|${path[i + 1]}`);
+        cur = { line: '🚶 徒歩連絡', from: path[i], to: path[i + 1], count: 1, walk: true, minutes: w.minutes };
+      } else {
+        cur = { line: ln, from: path[i], to: path[i + 1], count: 1 };
+      }
+      curIsWalk = isWalk;
     }
   }
   segments.push({ ...cur });
@@ -2105,8 +2243,13 @@ function computeRoutes(fromRaw, toRaw) {
   const { path, lines } = result;
   const segments = buildRouteSegments(path, lines);
   const totalStops = path.length - 1;
+  // 徒歩連絡（近接異名駅）も乗換1回としてカウントする（WALK_TRANSFER_COST = TRANSFER_PENALTY）
+  const walkSegs = segments.filter(s => s.walk);
   const transfers = Math.max(0, segments.length - 1);
-  const estimatedMinutes = Math.round(totalStops * 2.5 + transfers * 4);
+  // 徒歩連絡は「乗車駅数」に含めず、実徒歩時間を推定所要に加算する
+  const walkMinutes = walkSegs.reduce((sum, s) => sum + (s.minutes || 0), 0);
+  const rideStops = segments.reduce((sum, s) => sum + (s.walk ? 0 : s.count), 0);
+  const estimatedMinutes = Math.round(rideStops * 2.5 + transfers * 4 + walkMinutes);
 
   const routes = [{
     summary: {
@@ -2115,14 +2258,17 @@ function computeRoutes(fromRaw, toRaw) {
       transfers,
       total_stops: totalStops,
       estimated_minutes: estimatedMinutes,
-      main_line: segments[0]?.line || null,
+      // 徒歩連絡が先頭でもメイン路線は最初の乗車路線とする
+      main_line: segments.find(s => !s.walk)?.line || segments[0]?.line || null,
       terminal_station: path[path.length - 1]
     },
     segments: segments.map(seg => ({
       line: seg.line,
       from: seg.from,
       to: seg.to,
-      stops: seg.count
+      stops: seg.count,
+      // 近接異名駅（徒歩連絡）セグメントは walk フラグと徒歩時間を保持する
+      ...(seg.walk ? { walk: true, minutes: seg.minutes } : {})
     })),
     path
   }];
@@ -2299,7 +2445,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.21.0' },
+  { name: 'tokyo-transit-mcp', version: '2.22.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -3120,12 +3266,19 @@ async function searchRoute(args) {
         estimated_minutes: r.summary.estimated_minutes,
         main_line: getDisplayLineName(r.summary.main_line, userLang)
       },
-      segments: r.segments.map(s => ({
+      segments: r.segments.map(s => s.walk ? {
+        // 近接異名駅（連絡駅）間の徒歩連絡セグメント
+        line: userLang === 'en' ? '🚶 Walk transfer' : userLang === 'zh' ? '🚶 步行换乘' : '🚶 徒歩連絡',
+        from: getDisplayStationName(s.from, userLang),
+        to: getDisplayStationName(s.to, userLang),
+        stops: s.stops,
+        walk_minutes: s.minutes
+      } : {
         line: getDisplayLineName(s.line, userLang),
         from: getDisplayStationName(s.from, userLang),
         to: getDisplayStationName(s.to, userLang),
         stops: s.stops
-      }))
+      })
     }));
     // ランドマーク（施設名）から変換された場合、ユーザーへの案内として付与
     // note は言語別オブジェクト {ja,en,zh} → 応答言語(userLang)で解決
@@ -5766,12 +5919,19 @@ async function searchFlight(args) {
             transfers: route.summary.transfers,
             estimated_minutes: route.summary.estimated_minutes,
             main_line: getDisplayLineName(route.summary.main_line, userLang),
-            segments: route.segments.map(s => ({
+            segments: route.segments.map(s => s.walk ? {
+              // 近接異名駅（連絡駅）間の徒歩連絡セグメント
+              line: userLang === 'en' ? '🚶 Walk transfer' : userLang === 'zh' ? '🚶 步行换乘' : '🚶 徒歩連絡',
+              from: getDisplayStationName(s.from, userLang),
+              to: getDisplayStationName(s.to, userLang),
+              stops: s.stops,
+              walk_minutes: s.minutes
+            } : {
               line: getDisplayLineName(s.line, userLang),
               from: getDisplayStationName(s.from, userLang),
               to: getDisplayStationName(s.to, userLang),
               stops: s.stops
-            }))
+            })
           });
         }
       }
@@ -5827,12 +5987,18 @@ async function searchFlight(args) {
             transfers: route.summary.transfers,
             estimated_minutes: route.summary.estimated_minutes,
             main_line: getDisplayLineName(route.summary.main_line, userLang),
-            segments: route.segments.map(s => ({
+            segments: route.segments.map(s => s.walk ? {
+              line: userLang === 'en' ? '🚶 Walk transfer' : userLang === 'zh' ? '🚶 步行换乘' : '🚶 徒歩連絡',
+              from: getDisplayStationName(s.from, userLang),
+              to: getDisplayStationName(s.to, userLang),
+              stops: s.stops,
+              walk_minutes: s.minutes
+            } : {
               line: getDisplayLineName(s.line, userLang),
               from: getDisplayStationName(s.from, userLang),
               to: getDisplayStationName(s.to, userLang),
               stops: s.stops
-            }))
+            })
           });
         }
       }
@@ -5857,7 +6023,7 @@ async function searchFlight(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES };
 
 async function main() {
   const transport = new StdioServerTransport();

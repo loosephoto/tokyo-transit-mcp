@@ -33,6 +33,12 @@
 
 公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
 
+**v2.22.0 では近接異名駅（連絡駅）と同名別駅の取り扱いを強化しました**:
+
+- **近接異名駅（連絡駅）の徒歩連絡** — 名称は異なるが実質1つの乗換駅として機能する駅の組（牛田⇔京成関屋、田町⇔三田、浜松町⇔大門、東京⇔大手町、秋葉原⇔岩本町、馬喰横山⇔東日本橋、蒲田⇔京急蒲田、勝田台⇔東葉勝田台、上野⇔京成上野 ほか25組）を経路グラフに接続。ルート上は「🚶 徒歩連絡」セグメント（徒歩時間付き・日英中対応）として表示され、例: 牛田→矢切 が3乗換37分 → 2乗換30分に改善
+- **同名別駅の曖昧化（disambiguation）** — 同じ駅名だが別の場所にある駅（小川町=都営新宿線/東武東上線、両国=JR/都営大江戸線、霞ヶ関=東京メトロ/東武東上線）は入力時に検索を中断し候補を提示（サイレント推測を廃止）
+- **路線データの正確性修正** — 都営浅草線の駅リスト破損（半蔵門線・新宿線の駅が混入）を公式駅順に修正、千代田線に北千住を追加・幻の内幸町を削除、京浜東北線に新橋を追加、南北線の市ケ谷を市ヶ谷に表記統合（乗換接続が機能）、大江戸線に新宿西口⇔都庁前の隣接を追加
+
 **v2.21.0 では路線データの欠落を一括補完し、駅名解決と多言語表示を強化しました（計954駅・64路線）**:
 
 - **駅データ欠落の補完** — 東京メトロ丸ノ内線（新宿〜荻窪間の7駅＋方南町支線）、京王高尾線（7駅）、横浜市営地下鉄ブルーライン（33駅）・グリーンライン（14駅）、京浜東北線（桜木町〜根岸の延伸）を追加
@@ -329,6 +335,7 @@ search_bus(from: "浅草", to: "上野", vehicle: "bus")
 ```bash
 npm run build       # node --check src/index.mjs
 npm test            # 全26ケースの日本語・英語・中国語回帰
+npm run test:walk   # 近接異名駅（徒歩連絡）・同名別駅・路線データ整合性の回帰
 npm run test:bus    # バス乗り継ぎ実APIプローブ（API状況により長時間化）
 npm run test:vehicle # vehicle優先の決定的モック回帰
 ```
@@ -428,6 +435,7 @@ Check route from Asakusa to Shibuya -test typhoon
 | `人身事故` | `accident` | `人身事故` / `人员伤亡` | 人身事故による運転見合わせ |
 | `火災` | `fire` | `火灾` / `火災` | 火災による運行停止 |
 | `車両故障` | `vehicle_failure` | `车辆故障` / `車輛故障` | 車両故障による運転見合わせ |
+| `遅延` / `車両遅延` | `delay` / `train_delay` | `晚点` / `延误` | 車両遅延によるダイヤ乱れ（運転は継続） |
 | `停電` | `blackout` / `power_outage` | `停电` / `停電` | 停電による列車停止 |
 | `信号故障` | `signal_failure` | `信号故障` / `信號故障` | 信号故障による運行停止 |
 | `猛暑` | `heatwave` / `extreme_heat` | `酷暑` / `高温` | 熱中症注意 |
@@ -534,7 +542,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.21.0）
+├── SKILL.md             # プロジェクトスキル定義（v2.22.0）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -586,6 +594,12 @@ Beyond simple route search, this server integrates weather data and public trans
 ### 🛤️ Route Coverage and Data Validation
 
 The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
+
+**v2.22.0 strengthens handling of adjacent alias stations (connected stations) and same-name-different-station cases**:
+
+- **Walk-transfer edges for adjacent alias stations** — 25 pairs of stations that function as a single interchange despite different names (Ushida⇔Keisei Sekiya, Tamachi⇔Mita, Hamamatsucho⇔Daimon, Tokyo⇔Otemachi, Akihabara⇔Iwamotocho, Bakuroyokoyama⇔Higashi-Nihombashi, Kamata⇔Keikyu Kamata, Katsutadai⇔Toyokatsutadai, Ueno⇔Keisei Ueno, etc.) are now connected in the route graph, shown as "🚶 Walk transfer" segments with walk time (ja/en/zh). E.g. Ushida→Yagiri improves from 3 transfers / 37 min to 2 transfers / 30 min
+- **Disambiguation for same-name different stations** — Stations that share a name but are at different locations (Ogawamachi=Toei Shinjuku Line / Tobu Tojo Line, Ryogoku=JR / Toei Oedo Line, Kasumigaseki=Tokyo Metro / Tobu Tojo Line) now stop the search and present candidates instead of silently guessing
+- **Route data accuracy fixes** — Toei Asakusa Line station list corruption (Hanzomon/Shinjuku Line stations mixed in) corrected to the official order; Kita-Senju added to Chiyoda Line (phantom Uchisaiwaicho removed); Shimbashi added to Keihin-Tohoku Line; Ichigaya spelling unified (Namboku Line transfer restored); Oedo Line Shinjuku-Nishiguchi⇔Tochomae adjacency added
 
 **v2.21.0 completes missing route data and strengthens station-name resolution and multilingual output (954 stations / 64 lines total)**:
 
@@ -945,6 +959,7 @@ Check route from Asakusa to Shibuya -test earthquake
 | `accident` | `人身事故` | `人身事故` / `人员伤亡` | Personal accident delay / service suspended |
 | `fire` | `火災` | `火灾` / `火災` | Fire incident service suspended |
 | `vehicle_failure` | `車両故障` | `车辆故障` / `車輛故障` | Train vehicle failure, service suspended |
+| `delay` / `train_delay` | `遅延` / `車両遅延` | `晚点` / `延误` | Train/vehicle delay, service continues with disrupted timetable |
 | `blackout` / `power_outage` | `停電` | `停电` / `停電` | Power outage train stoppage |
 | `signal_failure` | `信号故障` | `信号故障` / `信號故障` | Signal failure service suspended |
 | `heatwave` / `extreme_heat` | `猛暑` | `酷暑` / `高温` | Extreme heat / heatstroke warning |
@@ -1051,7 +1066,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.21.0)
+├── SKILL.md             # Project skill definition (v2.22.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1103,6 +1118,12 @@ MIT License
 ### 🛤️ 路线覆盖与数据确认
 
 项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
+
+**v2.22.0 强化了近接异名站（连络站）与同名异站的处理**：
+
+- **近接异名站（连络站）的步行换乘** — 名称不同但实质为同一换乘站的组合（牛田⇔京成关屋、田町⇔三田、滨松町⇔大门、东京⇔大手町、秋叶原⇔岩本町、马喰横山⇔东日本桥、蒲田⇔京急蒲田、胜田台⇔东叶胜田台、上野⇔京成上野 等25组）已接入路线图。路线上以「🚶 步行换乘」区段（含步行时间・支持日英中）显示。例：牛田→矢切 从3次换乘37分钟改善为2次换乘30分钟
+- **同名异站的消歧（disambiguation）** — 站名相同但位置不同的车站（小川町=都营新宿线/东武东上线、两国=JR/都营大江户线、霞关=东京地铁/东武东上线）在输入时中断搜索并提示候选（废除静默推测）
+- **路线数据准确性修正** — 都营浅草线站名列表损坏（混入半藏门线・新宿线的车站）已按官方顺序修正、千代田线补充北千住并删除幻之内幸町、京滨东北线补充新桥、南北线市ケ谷统一为市ヶ谷（换乘连接恢复）、大江户线补充新宿西口⇔都厅前邻接
 
 **v2.21.0 一次性补齐路线数据缺失，并强化车站名解析与多语言输出（共954站/64条线路）**：
 
@@ -1461,6 +1482,7 @@ Check route from Asakusa to Shibuya -test typhoon
 | `人身事故` / `人员伤亡` | `accident` | `人身事故` | 人身事故导致暂停运营 |
 | `火灾` / `火災` | `fire` | `火災` | 火灾导致暂停运营 |
 | `车辆故障` / `車輛故障` | `vehicle_failure` | `車両故障` | 车辆故障导致暂停运营 |
+| `晚点` / `延误` | `delay` / `train_delay` | `遅延` / `車両遅延` | 车辆延误导致时刻表混乱（运营仍在继续） |
 | `停电` / `停電` | `power_outage` / `blackout` | `停電` | 停电导致列车停运 |
 | `信号故障` / `信號故障` | `signal_failure` | `信号故障` | 信号故障导致暂停运营 |
 | `酷暑` / `高温` | `heatwave` | `猛暑` | 酷暑预警 |
@@ -1567,7 +1589,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.21.0）
+├── SKILL.md             # 项目技能定义（v2.22.0）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
