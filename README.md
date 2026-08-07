@@ -31,11 +31,7 @@
 | ✈️ フライト | 羽田(HND)・成田(NRT) の到着/出発フライト（AviationStack）。キー未設定時は空港アクセス経路のみ表示（graceful degradation） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API・1,878ポート） |
 
-### 🛤️ 路線網の網羅性とデータ確認
-
-公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
-
-**直近の更新内容（v2.29.0）**:
+### 🛤️ 直近の更新内容
 
 - **延伸地域（千葉・埼玉・神奈川）のイシュー一括解決**（GitHub Issue #45〜#49）
   - **#45 ローカルバス8事業者を追加**（ちばフラワーバス・さいたま市営バス・東武バス（埼玉）・西武観光バス（秩父）・江ノ電バス・千葉中央バス・丸建つばさ交通・川越観光自動車）— 佐倉・鉄道博物館（大成）・越生・江ノ島・千城台・内宿・正丸周辺のバス停が検索可能に
@@ -593,11 +589,7 @@ Beyond simple route search, this server integrates weather data and public trans
 | ✈️ Flights | Haneda (HND) / Narita (NRT) arrivals & departures (AviationStack). Without a key, airport access routes are shown only (graceful degradation) |
 | 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
 
-### 🛤️ Route Coverage and Data Validation
-
-The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
-
-**Latest updates (v2.29.0)**:
+### 🛤️ Latest Updates
 
 - **All extended-area (Chiba / Saitama / Kanagawa) issues resolved** (GitHub Issues #45–#49)
   - **#45 8 local bus operators added** (Chiba Flower Bus, Saitama City Bus, Tobu Bus (Saitama), Seibu Kanko Bus (Chichibu), Enoden Bus, Chiba Chuo Bus, Maruken Tsubasa Kotsu, Kawagoe Kanko Bus) — bus stops around Sakura, Tetsudo-Hakubutsukan (Taisho), Ogose, Enoshima, Chishirodai, Uchijuku and Shomaru are now searchable
@@ -1117,11 +1109,7 @@ MIT License
 | ✈️ 航班 | 羽田 (HND) / 成田 (NRT) 的到达/出发航班（AviationStack）。未配置密钥时仅显示机场接驳路线（优雅降级） |
 | 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878 个站点） |
 
-### 🛤️ 路线覆盖与数据确认
-
-项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
-
-**最近更新（v2.29.0）**：
+### 🛤️ 最近更新
 
 - **一揽子解决延伸地区（千叶・埼玉・神奈川）的问题**（对应 GitHub Issue #45〜#49）
   - **#45 新增8家地方公交运营商**（千叶花巴士・埼玉市营巴士・东武巴士（埼玉）・西武观光巴士（秩父）・江之电巴士・千叶中央巴士・丸建翼交通・川越观光汽车）— 佐仓・铁道博物馆（大成）・越生・江之岛・千城台・内宿・正丸周边的公交站现已可搜索
