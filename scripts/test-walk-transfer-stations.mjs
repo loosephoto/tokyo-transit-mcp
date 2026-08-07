@@ -84,7 +84,6 @@ for (const [f, t] of [['田町','三田'],['浜松町','大門'],['秋葉原','�
 }
 
 // 2-2b. 徒歩連絡が同一路線の乗車エッジを上書きしないこと（バグ回帰: v2.22.1）
-// 新橋⇔汐留はゆりかもめ1駅（0乗換）、東京⇔大手町は丸ノ内線1駅（0乗換）が最適
 const shiodome = computeRoutes('新橋', '汐留');
 assert(shiodome.routes && shiodome.routes[0].summary.transfers === 0
   && shiodome.routes[0].segments.some(s => s.line === 'ゆりかもめ' && s.stops === 1),
@@ -97,6 +96,40 @@ assert(otemachi.routes && otemachi.routes[0].summary.transfers === 0
 const shiodomeWalk = computeRoutes('浜松町', '汐留');
 assert(shiodomeWalk.routes && shiodomeWalk.routes[0].segments.some(s => s.walk),
   `浜松町→汐留: 跨路線の徒歩連絡は維持される → ${JSON.stringify(shiodomeWalk.routes && shiodomeWalk.routes[0].segments)}`);
+
+// 2-2c. v2.24 追加の近接異名駅（公式連絡駅）
+for (const [f, t, expectMin] of [
+  ['御徒町', '仲御徒町', 5], ['上野', '上野御徒町', 6], ['有楽町', '日比谷', 5],
+  ['津田沼', '京成津田沼', 6], ['川崎', '京急川崎', 5], ['溝の口', '武蔵溝ノ口', 5],
+  ['曳舟', '京成曳舟', 5], ['人形町', '水天宮前', 5],
+  ['小田急多摩センター', '京王多摩センター', 4], ['小田急多摩センター', '多摩センター', 4],
+]) {
+  const r = route(f, t);
+  const walkOk = r.error === undefined && r.transfers <= 1 && r.estimated_minutes <= expectMin;
+  assert(walkOk, `${f}⇔${t}: ${r.error || (r.transfers + '乗換 ' + r.estimated_minutes + '分')}`);
+}
+
+// 2-2d. v2.24 駅データ是正（幻駅削除・駅欠落追加・駅名修正）
+const nagatachoLines = STATION_TO_LINES['永田町'].map(e => e.line);
+assert(!nagatachoLines.includes('東京メトロ丸ノ内線'), '永田町は丸ノ内線に存在しない（幻駅削除: 公式は赤坂見附→四ツ谷）');
+const chikatetsuNarimasu = STATION_TO_LINES['地下鉄成増'].map(e => e.line);
+assert(chikatetsuNarimasu.includes('東京メトロ有楽町線'), '有楽町線に地下鉄成増を追加（公式24駅）');
+const heiwadaiLines = STATION_TO_LINES['平和台'].map(e => e.line);
+assert(heiwadaiLines.includes('東京メトロ副都心線'), '副都心線に平和台を追加（公式16駅）');
+const mitsukyo = STATION_TO_LINES['三ツ境'].map(e => e.line);
+assert(mitsukyo.includes('相鉄本線'), '相鉄本線に三ツ境を追加（公式18駅）');
+const odakyuTama = STATION_TO_LINES['小田急多摩センター'].map(e => e.line);
+assert(odakyuTama.includes('小田急多摩線'), '小田急多摩線の駅名を小田急多摩センターに是正');
+const yokohamaLine = STATION_TO_LINES['八王子'].map(e => e.line);
+assert(yokohamaLine.includes('JR横浜線'), '横浜線を八王子まで延長（公式20駅）');
+const keiyoLine = STATION_TO_LINES['蘇我'].map(e => e.line);
+assert(keiyoLine.includes('JR京葉線'), '京葉線を蘇我まで延長（公式19駅）');
+const kurihama = STATION_TO_LINES['久里浜'].map(e => e.line);
+assert(kurihama.includes('JR横須賀線'), '横須賀線を久里浜まで延長');
+const nambuBranch = STATION_TO_LINES['八丁畷'].map(e => e.line);
+assert(nambuBranch.includes('JR南武支線'), '南武支線（尻手〜浜川崎）を追加');
+const keihinTsurumi = STATION_TO_LINES['鶴見'].map(e => e.line);
+assert(keihinTsurumi.includes('京浜東北線'), '京浜東北線に鶴見を追加（公式41駅・川崎→横浜が1駅扱いだったバグ是正）');
 
 // 2-3. 同名別駅の曖昧化
 for (const [name, cands] of [['小川町', 2], ['両国', 2], ['霞ヶ関', 2]]) {
@@ -119,7 +152,7 @@ assert(ichigayaRoute.routes && ichigayaRoute.routes[0].summary.transfers === 0, 
 const kitaRoute = computeRoutes('北千住', '綾瀬');
 assert(kitaRoute.routes && kitaRoute.routes[0].segments.some(s => s.line === '東京メトロ千代田線' || s.line === 'JR常磐線快速'), '北千住→綾瀬: 千代田線または常磐線で直通（#14で常磐線各停・快速に綾瀬追加）');
 const shinbashiRoute = computeRoutes('有楽町', '品川');
-assert(shinbashiRoute.routes && shinbashiRoute.routes[0].segments.some(s => s.line === '京浜東北線' && s.stops === 4), '有楽町→品川: 京浜東北線で新橋経由（4駅）');
+assert(shinbashiRoute.routes && shinbashiRoute.routes[0].segments.some(s => s.line === '京浜東北線' && s.stops === 5), '有楽町→品川: 京浜東北線で新橋・浜松町・田町・高輪ゲートウェイ経由（5駅・公式駅順）');
 const asakusaBridge = computeRoutes('浅草橋', '森下');
 assert(asakusaBridge.routes && asakusaBridge.routes[0].segments.some(s => s.walk && s.from === '両国' && s.to === '両国（大江戸線）'),
   '浅草橋→森下: 両国⇔両国（大江戸線）徒歩連絡経由');

@@ -19,17 +19,19 @@ const route = (f, t) => {
 let s = route('国立', '立川');
 assert(s.error === undefined && s.transfers === 0 && s.main_line === 'JR中央線快速', `#13 国立→立川: 中央線快速直通 (${s.error || s.transfers + '乗換'})`);
 
-// #16 永田町: 丸ノ内線に追加（徒歩連絡の迂回解消）
+// #16 永田町→国会議事堂前: 永田町は丸ノ内線に存在しない（公式駅順: 赤坂見附→四ツ谷）。
+// 正しい乗換は永田町(半蔵門線)→赤坂見附(徒歩連絡)→丸ノ内線→国会議事堂前。
 s = route('永田町', '国会議事堂前');
-assert(s.error === undefined && s.transfers === 0 && s.main_line === '東京メトロ丸ノ内線', `#16 永田町→国会議事堂前: 丸ノ内線直通 (${s.error || s.transfers + '乗換'})`);
+assert(s.error === undefined && s.transfers === 1 && s.main_line === '東京メトロ丸ノ内線', `#16 永田町→国会議事堂前: 赤坂見附の徒歩連絡経由で丸ノ内線（公式駅順）(${s.error || s.transfers + '乗換'})`);
 
 // #17 6駅収録漏れ
 s = route('代々木公園', '渋谷');
 assert(s.error === undefined, `#17 代々木公園→渋谷: 検索可能 (${s.error || s.transfers + '乗換 ' + s.estimated_minutes + '分'})`);
 s = route('虎ノ門ヒルズ', '霞ケ関');
 assert(s.error === undefined && s.transfers === 0, `#17 虎ノ門ヒルズ→霞ケ関: 日比谷線直通 (${s.error || s.transfers + '乗換'})`);
+// 地下鉄成増は有楽町線・副都心線の両方に在線（公式: 和光市〜小竹向原は両線共用）
 s = route('地下鉄成増', '池袋');
-assert(s.error === undefined && s.main_line === '東京メトロ副都心線', `#17 地下鉄成増→池袋: 副都心線 (${s.error || s.main_line})`);
+assert(s.error === undefined && (s.main_line === '東京メトロ副都心線' || s.main_line === '東京メトロ有楽町線'), `#17 地下鉄成増→池袋: 有楽町線または副都心線直通 (${s.error || s.main_line})`);
 s = route('中野新橋', '方南町');
 assert(s.error === undefined && s.main_line === '丸ノ内線支線', `#17 中野新橋→方南町: 丸ノ内線支線 (${s.error || s.main_line})`);
 
@@ -40,8 +42,9 @@ assert(s.error === undefined && s.main_line === '東京メトロ東西線', `#18
 const { STATION_TO_LINES } = mod;
 const kyobashi = STATION_TO_LINES['京橋'].map(e => e.line);
 assert(kyobashi.length === 1 && kyobashi[0] === '東京メトロ銀座線', `#18 京橋: 銀座線のみ（丸ノ内線から除去）`);
+// 平和台は有楽町線・副都心線の両方に在線（公式: 和光市〜小竹向原は両線共用。v2.23の副都心線除去は誤りだった）
 const heiwadai = STATION_TO_LINES['平和台'].map(e => e.line);
-assert(heiwadai.length === 1 && heiwadai[0] === '東京メトロ有楽町線', `#18 平和台: 有楽町線のみ（副都心線から除去）`);
+assert(heiwadai.length === 2 && heiwadai.includes('東京メトロ有楽町線') && heiwadai.includes('東京メトロ副都心線'), `#18 平和台: 有楽町線＋副都心線（公式駅順）(${heiwadai.join('/')})`);
 const awajicho = STATION_TO_LINES['淡路町'].map(e => e.line);
 assert(awajicho.length === 1 && awajicho[0] === '東京メトロ丸ノ内線', `#18 淡路町: 丸ノ内線のみ（都営新宿線から除去）`);
 

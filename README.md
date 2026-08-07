@@ -33,22 +33,24 @@
 
 公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
 
-**現在の対応路線（計71路線・1,026駅）**:
+**現在の対応路線（計72路線・1,060駅超）**:
 
-- **JR東日本**: 山手線、京浜東北線、中央線快速、中央総武線各停、総武線各停、埼京線、京葉線、武蔵野線、常磐線快速、常磐線各停、南武線、東海道線、横須賀線、湘南新宿ライン、横浜線
+- **JR東日本**: 山手線、京浜東北線、中央線快速、中央総武線各停、総武線各停、埼京線、京葉線、武蔵野線、常磐線快速、常磐線各停、南武線、南武支線、東海道線、横須賀線、湘南新宿ライン、横浜線
 - **東京メトロ**: 銀座線、丸ノ内線（支線含む）、日比谷線、東西線、千代田線、半蔵門線、有楽町線、副都心線、南北線
 - **都営**: 浅草線、三田線、新宿線、大江戸線、都電荒川線
 - **私鉄・第三セクター**: 小田急（小田原線・多摩線）、京王（本線・高尾線・相模原線・動物園線・井の頭線）、西武（池袋線・新宿線・多摩湖線・山口線・西武園線）、東武（東上線・伊勢崎線・大師線）、京急（本線・空港線）、京成（本線・押上線・支線）、新京成線、東急（東横線・田園都市線・目黒線・大井町線）、相鉄本線、北総鉄道、埼玉高速鉄道、東葉高速鉄道、芝山鉄道、つくばエクスプレス、りんかい線、みなとみらい線、箱根登山線、富士急行線
 - **AGT・モノレール**: ゆりかもめ、日暮里・舎人ライナー、東京モノレール、多摩モノレール
 - **横浜市営地下鉄**: ブルーライン、グリーンライン
 
-**直近の更新内容（v2.23.0）**:
+**直近の更新内容（v2.24.0）**:
 
-- **路線データの一括是正（イシュー#10〜#19）** — 駅収録漏れ・他路線駅の混入を公式駅順とODPT公開データで突合して修正。武蔵野線を公式26駅順に是正（松戸・北小金・馬橋・本八幡など非武蔵野線駅を除去し、南越谷・東浦和・三郷・船橋法典などを追加）、中央線快速に国立、丸ノ内線に永田町、千代田線に代々木公園、日比谷線に虎ノ門ヒルズ、副都心線に地下鉄赤塚・地下鉄成増、丸ノ内線支線に中野新橋・中野富士見町を追加。東西線・丸ノ内線・副都心線・都営新宿線の他路線駅混入を除去
-- **新路線の追加** — JR南武線（川崎〜立川・26駅）、JR常磐線各停（上野〜取手・20駅）、新京成線（松戸〜津田沼・24駅）、東武大師線（西新井〜大師前）、西武多摩湖線・山口線・西武園線（西武園ゆうえんち・多摩湖・西武園など3駅が検索可能に）
-- **徒歩連絡の追加** — 新越谷⇔南越谷（東武⇔武蔵野線）、八柱⇔新八柱（新京成⇔武蔵野線）、西武園⇔西武園ゆうえんち（西武園線⇔山口線）
-- **時刻表の改善（イシュー#22・#23・#9）** — get_timetable の駅フィルタバグ（ODPT 1000件上限で全件マッチ誤り）を路線単位取得で修正し、発着時刻（departure_time/arrival_time・深夜0時越え正規化）を返却。search_ferry に stop_times（発着時刻・日英中表記）を統合し、時刻データがない航路は「時刻表なし」と公式サイト案内を明示
-- **空港シナリオの改善（イシュー#24）** — HND graceful 到着の既定ターミナルを国際線の第3ターミナルに変更。バス停を転々とする無意味な複雑バス連鎖を検出し「バス直行なし」と鉄道路線を推奨
+- **路線データの駅欠落・幻駅・駅名を公式駅順で一括是正** — rosen-zu.net / sidearrow.net / Wikipedia と実装を機械突合して検出した差分を修正。丸ノ内線の幻駅「永田町」を削除（公式は赤坂見附→四ツ谷。永田町は半蔵門線・有楽町線・南北線の駅）、有楽町線に地下鉄成増・地下鉄赤塚、副都心線に平和台・氷川台（公式: 和光市〜小竹向原は両線共用6駅）、相鉄本線に三ツ境・瀬谷・大和・相模大塚（公式18駅）を追加
+- **路線の途中打ち切りを公式区間まで延長** — 京浜東北線を公式41駅に是正（さいたま新都心〜川口・東十条・高輪ゲートウェイ・鶴見・新子安・東神奈川など13駅追加。川崎→横浜が「1駅」扱いだったバグを解消）、京葉線を蘇我まで（南船橋・海浜幕張・千葉みなと・蘇我など8駅追加）、横浜線を八王子まで（相原・八王子みなみ野・片倉・八王子追加）、横須賀線を久里浜まで延長。JR南武支線（尻手〜浜川崎）を新規追加
+- **駅名の公式表記に是正** — 小田急多摩線の「多摩センター」を「小田急多摩センター」に修正（京王相模原線の京王多摩センター・多摩モノレールの多摩センターと区別）。3駅はペデストリアンデッキ直結のため徒歩連絡で接続
+- **近接異名駅（徒歩連絡）を13組追加** — 御徒町⇔仲御徒町、上野⇔上野御徒町、有楽町⇔日比谷、津田沼⇔京成津田沼、川崎⇔京急川崎、溝の口⇔武蔵溝ノ口、曳舟⇔京成曳舟、新御茶ノ水⇔小川町、人形町⇔水天宮前、小田急多摩センター⇔京王多摩センター⇔多摩センター（合計38組）
+- **検証** — test-walk（近接異名駅・駅データ回帰: 2-2c/2-2d新規アサート追加）、test-issues-10-19（#16〜#18を公式駅順前提に更新）、probe-all-lang（既知の天気翻訳4件以外は全PASS）
+
+**v2.23.0 では大量イシュー（#10〜#25）に対応しました**:
 
 **v2.22.1 では徒歩連絡（近接異名駅）の2バグを修正しました**:
 
@@ -564,7 +566,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.23.0）
+├── SKILL.md             # プロジェクトスキル定義（v2.24.0）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -617,22 +619,24 @@ Beyond simple route search, this server integrates weather data and public trans
 
 The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
 
-**Currently supported network (71 lines / 1,026 stations)**:
+**Currently supported network (72 lines / 1,060+ stations)**:
 
-- **JR East**: Yamanote, Keihin-Tohoku, Chuo (Rapid), Chuo-Sobu (Local), Sobu (Local), Saikyo, Keiyo, Musashino, Joban (Rapid), Joban (Local), Nambu, Tokaido, Yokosuka, Shonan-Shinjuku, Yokohama Lines
+- **JR East**: Yamanote, Keihin-Tohoku, Chuo (Rapid), Chuo-Sobu (Local), Sobu (Local), Saikyo, Keiyo, Musashino, Joban (Rapid), Joban (Local), Nambu, Nambu Branch, Tokaido, Yokosuka, Shonan-Shinjuku, Yokohama Lines
 - **Tokyo Metro**: Ginza, Marunouchi (incl. branch), Hibiya, Tozai, Chiyoda, Hanzomon, Yurakucho, Fukutoshin, Namboku Lines
 - **Toei**: Asakusa, Mita, Shinjuku, Oedo Lines, Toden Arakawa Line
 - **Private / third-sector**: Odakyu (Odawara, Tama), Keio (Main, Takao, Sagamihara, Dobutsuen, Inokashira), Seibu (Ikebukuro, Shinjuku, Tamako, Yamaguchi, Seibuen), Tobu (Tojo, Isesaki, Daishi), Keikyu (Main, Airport), Keisei (Main, Oshiage, Branch), Shin-Keisei, Tokyu (Toyoko, Den-en-toshi, Meguro, Oimachi), Sotetsu Main, Hokuso, Saitama Rapid, Toyo Rapid, Shibayama, Tsukuba Express, Rinkai, Minatomirai, Hakone Tozan, Fujikyu Lines
 - **AGT / Monorail**: Yurikamome, Nippori-Toneri Liner, Tokyo Monorail, Tama Monorail
 - **Yokohama Municipal Subway**: Blue Line, Green Line
 
-**Latest updates (v2.23.0)**:
+**Latest updates (v2.24.0)**:
 
-- **Route data overhaul (issues #10-#19)** — Missing stations and cross-line contamination corrected against official station order and ODPT public data. Musashino Line restored to its official 26-station order (non-Musashino stations such as Matsudo, Kita-Kogane, Mabashi, Motoyawata removed; Minami-Koshigaya, Higashi-Urawa, Misato, Funabashi-Hoten etc. added); Kunitachi added to Chuo Line (Rapid), Nagatacho to Marunouchi Line, Yoyogi-Koen to Chiyoda Line, Toranomon Hills to Hibiya Line, Chikatetsu-Akatsuka/Chikatetsu-Narimasu to Fukutoshin Line, Nakano-Shimbashi/Nakano-Fujimicho to the Marunouchi branch. Cross-line contamination removed from Tozai, Marunouchi, Fukutoshin and Toei Shinjuku Lines
-- **New lines added** — JR Nambu Line (Kawasaki–Tachikawa, 26 stations), JR Joban Line (Local) (Ueno–Toride, 20 stations), Shin-Keisei Line (Matsudo–Tsudanuma, 24 stations), Tobu Daishi Line (Nishi-Arai–Daishimae), Seibu Tamako/Yamaguchi/Seibuen Lines (Seibuen-Yuenchi, Tamako, Seibuen and others now searchable)
-- **Walk transfers added** — Shin-Koshigaya⇔Minami-Koshigaya (Tobu⇔Musashino), Yahashira⇔Shin-Yahashira (Shin-Keisei⇔Musashino), Seibuen⇔Seibuen-Yuenchi (Seibuen Line⇔Yamaguchi Line)
-- **Timetable improvements (issues #22, #23, #9)** — get_timetable station-filter bug (all-records match due to ODPT 1,000-record cap) fixed by per-railway fetching; departure/arrival times (with overnight normalization) now returned. search_ferry now includes stop_times (departure/arrival times, ja/en/zh); routes without timetable data clearly state "no timetable" with an official-website link
-- **Airport scenario improvements (issue #24)** — HND graceful-arrival default terminal changed to Terminal 3 (international). Impractical multi-bus chains (e.g. harbor-berth hopping) are detected and flagged as "no direct bus" with a railway alternative recommended
+- **Station data corrected to official order (missing stations, phantom stations, station names)** — Diffs detected by mechanically cross-checking the implementation against rosen-zu.net / sidearrow.net / Wikipedia were fixed. Phantom "Nagatacho" removed from the Marunouchi Line (official order is Akasaka-Mitsuke→Yotsuya; Nagatacho belongs to Hanzomon/Yurakucho/Namboku Lines); Chikatetsu-Narimasu/Chikatetsu-Akatsuka added to the Yurakucho Line and Heiwadai/Hikawadai to the Fukutoshin Line (officially both lines share all 6 stations between Wakoshi and Kotake-Mukaihara); Mitsukyo, Seya, Yamato and Sagami-Otsuka added to the Sotetsu Main Line (official 18 stations)
+- **Routes extended to their official termini** — Keihin-Tohoku Line restored to its official 41 stations (13 added: Saitama-Shintoshin through Kawaguchi, Higashi-Jujo, Takanawa Gateway, Tsurumi, Shin-Koyasu, Higashi-Kanagawa — fixing the bug where Kawasaki→Yokohama was treated as "1 stop"); Keiyo Line extended to Soga (8 added: Minami-Funabashi, Kaihin-Makuhari, Chiba-Minato, Soga etc.); Yokohama Line extended to Hachioji (Aihara, Hachioji-Minamino, Katakura, Hachioji added); Yokosuka Line extended to Kurihama. JR Nambu Branch Line (Shitte–Hama-Kawasaki) newly added
+- **Station names corrected to official forms** — Odakyu Tama Line's "Tama-Center" renamed to "Odakyu-Tama-Center" (distinguished from Keio's Keio-Tama-Center and the Tama Monorail's Tama-Center). The three stations are connected by walk-transfer edges (pedestrian-deck adjacency)
+- **13 walk-transfer pairs (adjacent alias stations) added** — Okachimachi⇔Naka-Okachimachi, Ueno⇔Ueno-Okachimachi, Yurakucho⇔Hibiya, Tsudanuma⇔Keisei-Tsudanuma, Kawasaki⇔Keikyu-Kawasaki, Mizonokuchi⇔Musashi-Mizonokuchi, Hikifune⇔Keisei-Hikifune, Shin-Ochanomizu⇔Ogawamachi, Ningyocho⇔Suitengumae, Odakyu-Tama-Center⇔Keio-Tama-Center⇔Tama-Center (38 pairs total)
+- **Verification** — test-walk (adjacent-alias-station & station-data regression; new 2-2c/2-2d assertions), test-issues-10-19 (#16-#18 updated to the official station order), probe-all-lang (all PASS except the 4 known weather-translation failures)
+
+**v2.23.0 handled the large issue batch (#10-#25)**:
 
 **v2.22.1 fixes two bugs in walk transfers (adjacent alias stations)**:
 
@@ -1110,7 +1114,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.23.0)
+├── SKILL.md             # Project skill definition (v2.24.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1163,22 +1167,24 @@ MIT License
 
 项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
 
-**当前支持的线路（共71条线路/1,026站）**：
+**当前支持的线路（共72条线路/1,060+站）**：
 
-- **JR东日本**：山手线、京滨东北线、中央线快速、中央总武线各站停车、总武线各站停车、埼京线、京叶线、武藏野线、常磐线快速、常磐线各站停车、南武线、东海道线、横须贺线、湘南新宿线、横滨线
+- **JR东日本**：山手线、京滨东北线、中央线快速、中央总武线各站停车、总武线各站停车、埼京线、京叶线、武藏野线、常磐线快速、常磐线各站停车、南武线、南武支线、东海道线、横须贺线、湘南新宿线、横滨线
 - **东京地铁**：银座线、丸之内线（含支线）、日比谷线、东西线、千代田线、半藏门线、有乐町线、副都心线、南北线
 - **都营**：浅草线、三田线、新宿线、大江户线、都电荒川线
 - **私铁・第三部门**：小田急（小田原线・多摩线）、京王（本线・高尾线・相模原线・动物园线・井之头线）、西武（池袋线・新宿线・多摩湖线・山口线・西武园线）、东武（东上线・伊势崎线・大师线）、京急（本线・机场线）、京成（本线・押上线・支线）、新京成线、东急（东横线・田园都市线・目黑线・大井町线）、相铁本线、北总铁道、埼玉高速铁道、东叶高速铁道、芝山铁道、筑波快线、临海线、港未来线、箱根登山线、富士急行线
 - **AGT・单轨**：百合海鸥号、日暮里-舍人线、东京单轨电车、多摩单轨电车
 - **横滨市营地铁**：蓝线、绿线
 
-**最近更新（v2.23.0）**：
+**最近更新（v2.24.0）**：
 
-- **线路数据全面修正（议题#10〜#19）** — 按官方站序与ODPT公开数据校正车站缺失与跨线混入。武藏野线恢复为官方26站顺序（移除松户・北小金・马桥・本八幡等非武藏野线车站，新增南越谷・东浦和・三乡・船桥法典等）；中央线快速新增国立、丸之内线新增永田町、千代田线新增代代木公园、日比谷线新增虎之门Hills、副都心线新增地铁赤塚・地铁成增、丸之内支线新增中野新桥・中野富士见町。清除东西线・丸之内线・副都心线・都营新宿线的跨线车站混入
-- **新增线路** — JR南武线（川崎〜立川・26站）、JR常磐线各站停车（上野〜取手・20站）、新京成线（松户〜津田沼・24站）、东武大师线（西新井〜大师前）、西武多摩湖线・山口线・西武园线（西武园游乐园・多摩湖・西武园等3站现可搜索）
-- **新增步行换乘** — 新越谷⇔南越谷（东武⇔武藏野线）、八柱⇔新八柱（新京成⇔武藏野线）、西武园⇔西武园游乐园（西武园线⇔山口线）
-- **时刻表改善（议题#22・#23・#9）** — 修复 get_timetable 的站点过滤错误（因ODPT 1,000条上限导致全部匹配），改为按线路获取；现返回发到时刻（departure_time/arrival_time・支持深夜0点后归一化）。search_ferry 现整合 stop_times（发到时刻・日英中），无时刻数据的航线明确显示「无时刻表」并附官网链接
-- **机场场景改善（议题#24）** — HND 优雅降级到达的默认航站楼改为国际线的第3航站楼。检测到无意义的复杂公交换乘链（如港区泊位连续换乘）时明确提示「无直达公交」并推荐铁路路线
+- **按官方站序一揽子修正缺失站・幻影站・站名** — 用 rosen-zu.net / sidearrow.net / Wikipedia 与实现机械比对检测差异后修正。丸之内线删除幻影站「永田町」（官方站序为赤坂见附→四谷；永田町属于半藏门线・有乐町线・南北线）、有乐町线新增地铁成增・地铁赤塚、副都心线新增平和台・冰川台（官方：和光市〜小竹向原两线共用6站）、相铁本线新增三ツ境・濑谷・大和・相模大塚（官方18站）
+- **线路延伸至官方终点** — 京滨东北线恢复为官方41站（新增埼玉新都心〜川口・东十条・高轮Gateway・鹤见・新子安・东神奈川等13站，修复「川崎→横滨按1站」的错误）、京叶线延伸至苏我（新增南船桥・海滨幕张・千叶港・苏我等8站）、横滨线延伸至八王子（新增相原・八王子南野・片仓・八王子）、横须贺线延伸至久里浜。新增JR南武支线（尻手〜浜川崎）
+- **站名修正为官方写法** — 小田急多摩线的「多摩中心」修正为「小田急多摩中心」（与京王相模原线的京王多摩中心・多摩单轨的多摩中心区分）。3站通过人行天桥直连，故以步行换乘连接
+- **新增13组步行换乘（近接异名站）** — 御徒町⇔仲御徒町、上野⇔上野御徒町、有乐町⇔日比谷、津田沼⇔京成津田沼、川崎⇔京急川崎、沟之口⇔武藏沟之口、曳舟⇔京成曳舟、新御茶之水⇔小川町、人形町⇔水天宫前、小田急多摩中心⇔京王多摩中心⇔多摩中心（合计38组）
+- **验证** — test-walk（近接异名站・车站数据回归：新增2-2c/2-2d断言）、test-issues-10-19（#16〜#18按官方站序更新）、probe-all-lang（除已知天气翻译4项外全部PASS）
+
+**v2.23.0 处理了大规模议题（#10〜#25）**：
 
 **v2.22.1 修复了步行换乘（近接异名站）的两个问题**：
 
@@ -1655,7 +1661,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.23.0）
+├── SKILL.md             # 项目技能定义（v2.24.0）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
