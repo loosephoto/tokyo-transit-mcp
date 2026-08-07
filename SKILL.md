@@ -142,7 +142,7 @@ odpt:Railway:TokyoMetro.{路線名}
 - **LANDMARK_DEFS 旧名称エイリアス（#27）**: カップヌードルミュージアムに「インスタントラーメン発明記念館」（2006年開館時名称）を追加。カップヌードルミュージアムパーク（旧・新港パーク、2017年ネーミングライツ改称）を新規ランドマークとして追加（みなとみらい駅・徒歩約5分・ja/en/zh）
   - ZOZOマリンスタジアムの en「Chiba Marine Stadium」は v2.25.3 で対応済み（追加不要）
 - **検証**: test-walk に 2-2g（ランドマーク旧名3件＋新規2件）・2-2h2（旧駅名エイリアス35件）を追加。probe-all-lang（26/26）・test-bus-routes-expansion・test-tokyo-to-tdl・test-community-kappabashi 等 全PASS
-  - **既知の既存FAIL**: test-landmark-map / multilingual / spots / parks / cultural-attractions の「金町」アサートは #14 で金町駅がJR常磐線に追加されたため期待値が古い（v2.25.3 時点から FAIL、今回の変更とは無関係）。test-parks の「代々木公園」も同様
+  - **既存FAILの期待値更新（ebb7c65）**: 金町は #14 でJR常磐線に実在駅として追加済みのため、STATION_NOT_FOUND 期待を「実在駅として解決され黄金町に誤認されない」検証に変更（test-landmark-map/multilingual/spots/shrines/parks/cultural-attractions の6ファイル）。代々木公園も実在駅（千代田線）優先のため駅解決を期待（ランドマーク変換は英中表記で検証）。test-contextual-display-routines は GBFS（docomo-cycle-tokyo）がライブ外部APIのため縮退応答時（stations 数件のみ）は destination_bike_share 検証をスキップするよう堅牢化
 
 ### v2.25.3（2026-08-07）— 全路線の略称・表記揺れエイリアス充実＋横浜・千葉ランドマーク追加
 
