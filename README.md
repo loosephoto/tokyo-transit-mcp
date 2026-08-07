@@ -42,10 +42,11 @@
 - **AGT・モノレール**: ゆりかもめ、日暮里・舎人ライナー、東京モノレール、多摩モノレール
 - **横浜市営地下鉄**: ブルーライン、グリーンライン
 
-**直近の更新内容（v2.25.2）**:
+**直近の更新内容（v2.25.3）**:
 
-- **路線バスの主要系統を拡充（イシュー#21-A）** — ハードコード収録の7事業者に実在の主要系統を追加し、系統数を87→**152系統**に増強。京王バス（渋64: 中野〜渋谷・吉04: 吉祥寺〜武蔵小金井・宿31系など）、東急バス（黒07: 目黒〜五反田・井01: 大井町〜五反田・渋41など）、小田急バス（吉06: 三鷹〜武蔵境・成02: 成城学園前〜二子玉川など）、京成バス（船橋〜西船橋・松戸〜市川・舞浜〜新浦安など）、JRバス関東（新宿〜横浜・東京〜柏など）、コミュニティバス（めぐりん・Bーぐる・すみまるくんなど主要停留所・系統を追加）
-- **検証** — 新規20ケースのバス系統回帰テスト（scripts/test-bus-routes-expansion.mjs）を追加し全PASS。test:walk/test-issues/test-kanamachi/community/probe-all-lang（26/26）も全PASS
+- **全路線の略称・表記揺れエイリアスを充実** — RAILWAY_NAME_MAP に207件（MM線・ブルーライン・グリーンライン・TX・都営・メトロ・東上・野田線・アーバンパークライン・江ノ島線・いずみ野線・湘南モノレール・都電・舎人ライナー・北総・東葉・埼玉高速・箱根登山・富士急・青梅・鶴見・相模・八高・高崎・宇都宮 など）、STATION_NAME_MAP に227件（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba など英字表記）を追加
+- **横浜・千葉近郊のランドマークを17件追加**（特にテーマパーク・遊園地） — よこはまコスモワールド・横浜ランドマークタワー・カップヌードルミュージアム・横浜赤レンガ倉庫・横浜中華街・八景島シーパラダイス・ズーラシア・三溪園・山下公園・横浜ベイクォーター・成田ゆめ牧場・千葉市動物公園・千葉ポートタワー・ZOZOマリンスタジアム・浦安市総合公園 ほか（ja/en/zh対応）。マザー牧場・東京ドイツ村・市原ぞうの国はJR内房線が未収録のため保留
+- **検証** — test-walk に2-2g（ランドマーク解決）・2-2h（エイリアス）を追加して全PASS。test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）も全PASS
 
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
@@ -543,7 +544,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.25.2）
+├── SKILL.md             # プロジェクトスキル定義（v2.25.3）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -605,10 +606,11 @@ The supported network is expanded continuously using public transit data and off
 - **AGT / Monorail**: Yurikamome, Nippori-Toneri Liner, Tokyo Monorail, Tama Monorail
 - **Yokohama Municipal Subway**: Blue Line, Green Line
 
-**Latest updates (v2.25.2)**:
+**Latest updates (v2.25.3)**:
 
-- **Bus route expansion (issue #21-A)** — Real-world major bus routes added to all 7 hardcoded operators (87 → **152 routes**): Keio Bus (Shibuya–Nakano, Kichijoji–Musashi-Koganei), Tokyu Bus (Meguro–Gotanda, Oimachi–Gotanda), Odakyu Bus (Mitaka–Musakusakai, Seijo-Gakuen-mae–Futako-Tamagawa), Keisei Bus (Funabashi–Nishi-Funabashi, Matsudo–Ichikawa), JR Bus Kanto (Shinjuku–Yokohama, Tokyo–Kashiwa), community buses (Megurin, B-guru, Sumimaru-kun etc.)
-- **Verification** — New 20-case bus route regression test (scripts/test-bus-routes-expansion.mjs) added and all PASS; test-walk/test-issues/test-kanamachi/community/probe-all-lang (26/26) all PASS
+- **Line/station alias expansion (abbreviations & spelling variants)** — 207 aliases added to RAILWAY_NAME_MAP (MM Line, Blue Line, Green Line, TX, Toei, Metro, Tojo, Noda Line, Urban Park Line, Enoshima Line, Izumino Line, Shonan Monorail, Toden, Nippori-Toneri, Hokuso, Toyo Rapid, Saitama Rapid, Hakone Tozan, Fujikyu, Ome, Tsurumi, Sagami, Hachiko, Takasaki, Utsunomiya etc.) and 227 to STATION_NAME_MAP (Shin-Yokohama, Minatomirai, Maihama, Kaihin-Makuhari, Nishi-Funabashi, Matsudo, Kashiwa, Chiba etc.)
+- **17 Yokohama/Chiba landmarks added** (theme parks & amusement parks in particular) — Yokohama Cosmo World, Yokohama Landmark Tower, CupNoodles Museum, Red Brick Warehouse, Chinatown, Hakkeijima Sea Paradise, Zoorasia, Sankeien Garden, Yamashita Park, Bay Quarter, Narita Yume Farm, Chiba City Zoo, Chiba Port Tower, ZOZO Marine Stadium, Urayasu General Park etc. (ja/en/zh). Mother Farm / Tokyo German Village / Ichihara Elephant Kingdom held back (JR Uchibo Line not yet in the graph)
+- **Verification** — test-walk extended with 2-2g (landmark resolution) & 2-2h (aliases), all PASS. test-issues/test-kanamachi/test-bus/community/probe-all-lang (26/26) all PASS
 
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
@@ -1068,7 +1070,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.25.2)
+├── SKILL.md             # Project skill definition (v2.25.3)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1130,10 +1132,11 @@ MIT License
 - **AGT・单轨**：百合海鸥号、日暮里-舍人线、东京单轨电车、多摩单轨电车
 - **横滨市营地铁**：蓝线、绿线
 
-**最近更新（v2.25.2）**：
+**最近更新（v2.25.3）**：
 
-- **扩充路线巴士主要线路（议题#21-A）** — 为7家内置数据运营商追加实有主要线路，线路数由87条增至**152条**：京王巴士（涩谷-中野、吉祥寺-武藏小金井）、东急巴士（目黑-五反田、大井町-五反田）、小田急巴士（三鹰-武藏境、成城学园前-二子玉川）、京成巴士（船桥-西船桥、松户-市川）、JR巴士关东（新宿-横滨、东京-柏）、社区公交（惠巡、B-guru、隅丸君等）
-- **验证** — 新增20例巴士线路回归测试（scripts/test-bus-routes-expansion.mjs）全部PASS；test-walk/test-issues/test-kanamachi/community/probe-all-lang（26/26）全部PASS
+- **扩充全线略称・表记变体别名** — RAILWAY_NAME_MAP 新增207条（MM线・蓝线・绿线・TX・都营・Metro・东上・野田线・Urban Park Line・江之岛线・泉野线・湘南单轨・都电・舍人线・北总・东叶・埼玉高速・箱根登山・富士急・青梅・鹤见・相模・八高・高崎・宇都宫等），STATION_NAME_MAP 新增227条（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba 等英文拼写）
+- **新增横滨・千叶近郊地标17处**（特别是主题公园・游乐园） — 横滨宇宙世界游乐园・横滨地标大厦・杯面博物馆・横滨红砖仓库・横滨中华街・八景岛海岛乐园・Zoorasia动物园・三溪园・山下公园・Bay Quarter・成田梦牧场・千叶市动物公园・千叶港塔・ZOZO海洋球场・浦安市综合公园等（日英中对应）。母亲牧场・东京德国村・市原象之国因JR内房线未收录而暂缓
+- **验证** — test-walk 新增2-2g（地标解析）・2-2h（别名）全部PASS；test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）全部PASS
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 
@@ -1592,7 +1595,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.25.2）
+├── SKILL.md             # 项目技能定义（v2.25.3）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥

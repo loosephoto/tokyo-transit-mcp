@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.25.2
+version: 2.25.3
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,17 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.25.3（2026-08-07）— 全路線の略称・表記揺れエイリアス充実＋横浜・千葉ランドマーク追加
+
+- **RAILWAY_NAME_MAP に207件の略称・表記揺れエイリアスを追加**: MM線/ブルーライン/グリーンライン（横浜市営地下鉄）、TX、都営、メトロ（東京メトロ各線）、東上、野田線、アーバンパークライン、江ノ島線、いずみ野線、新横浜線、湘南モノレール、都電、舎人ライナー、北総、東葉、埼玉高速、芝山、箱根登山、富士急、青梅、五日市、鶴見、相模、八高、川越、高崎、宇都宮、京葉、武蔵野、常磐（快速/各停）等。
+  - **🔴 落とし穴**: RAILWAY_NAME_MAP の値は ODPT ID ではなく「正式路線名（RAILWAY_LINES のキー）」にマップする（例: '京葉' → 'JR京葉線'）。TX のみ既存値が 'tsukuba'（ODPT ID）のまま混在している。
+  - スクリプト: scripts/add-railway-aliases.mjs（再利用可）
+- **STATION_NAME_MAP に227件の英字表記エイリアスを追加**: Shin-Yokohama, Minatomirai, Maihama, Kaihin-Makuhari, Nishi-Funabashi, Matsudo, Kashiwa, Chiba, Tsudanuma, Keisei-Tsudanuma, Kamagaya, Nodashi, Kurihama, Musashi-Kosugi 等（横浜・千葉方面を重点的に）。
+  - スクリプト: scripts/add-station-aliases-yokohama-chiba.mjs（再利用可）
+- **横浜・千葉近郊のランドマーク17件追加**（テーマパーク・遊園地中心）: よこはまコスモワールド（みなとみらい）・横浜ランドマークタワー（みなとみらい）・カップヌードルミュージアム（みなとみらい）・横浜赤レンガ倉庫（馬車道）・横浜中華街/山下公園（元町・中華街）・八景島シーパラダイス（金沢八景）・ズーラシア（鶴ヶ峰）・三溪園（根岸）・横浜ベイクォーター（新高島）・成田ゆめ牧場（京成成田）・千葉市動物公園（千葉）・千葉ポートタワー（千葉みなと）・ZOZOマリンスタジアム（海浜幕張）・浦安市総合公園（新浦安）等。ja/en/zh 別名付き。
+  - **🔴 保留ルール**: 最寄り駅がグラフ未収録（マザー牧場=君津・東京ドイツ村=姉ケ崎・市原ぞうの国=五井、JR内房線）は推測せず保留。グラフ拡張時に追加。
+- **検証**: test-walk に 2-2g（ランドマーク解決17件＋保留確認）・2-2h（駅名エイリアス44件＋路線エイリアス30件）を追加。路線エイリアスは resolveStation ではなく RAILWAY_NAME_MAP を直接検証（駅名解決とは別経路）。全テスト・probe-all-lang(26/26) PASS。
 
 ### v2.25.2（2026-08-07）— 路線バスの主要系統を拡充（#21-A）
 

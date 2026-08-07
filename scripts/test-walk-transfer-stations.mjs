@@ -2,6 +2,7 @@
 // 1) データ整合性（路線リストの重複駅・WALK_TRANSFERSの駅存在・AMBIGUOUS候補の存在）
 // 2) ルート回帰（近接異名駅の徒歩連絡・同名別駅の曖昧化・データ修正の確認）
 import * as mod from '../src/index.mjs';
+import fs from 'node:fs';
 
 const { resolveStation, computeRoutes, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES } = mod;
 
@@ -175,6 +176,71 @@ assert(weatherZh.includes('为止') && weatherZh.includes('伴有雷电'), `天�
 // 辞書漏れ時のフォールバック（日本語が残る未知語 → en は断片除去/汎用メッセージ）
 const weatherUnknown = mod.translateWeather('晴れ のち へんてこ天気', 'en');
 assert(!/[\u3040-\u30ff\u4e00-\u9fff]/.test(weatherUnknown), `天気enフォールバックに日本語残存: ${weatherUnknown}`);
+
+// 2-2g. v2.25.3 横浜・千葉近郊ランドマーク（テーマパーク・遊園地）の解決
+for (const [lm, expectStn] of [
+  ['よこはまコスモワールド', 'みなとみらい'], ['横浜ランドマークタワー', 'みなとみらい'],
+  ['カップヌードルミュージアム', 'みなとみらい'], ['横浜赤レンガ倉庫', '馬車道'],
+  ['横浜中華街', '元町・中華街'], ['八景島シーパラダイス', '金沢八景'],
+  ['ズーラシア', '鶴ヶ峰'], ['三溪園', '根岸'], ['山下公園', '元町・中華街'],
+  ['横浜ベイクォーター', '新高島'], ['成田ゆめ牧場', '京成成田'],
+  ['千葉市動物公園', '千葉'], ['千葉ポートタワー', '千葉みなと'],
+  ['ZOZOマリンスタジアム', '海浜幕張'], ['浦安市総合公園', '新浦安'],
+  ['Yokohama Cosmo World', 'みなとみらい'], ['Hakkeijima Sea Paradise', '金沢八景'],
+]) {
+  const res = resolveStation(lm);
+  assert(res.landmark && res.station === expectStn, `${lm}: ${expectStn}へ解決 (${res.landmark ? res.station : '未解決'})`);
+}
+// グラフ未収録路線の最寄り駅ランドマークは保留（推測しない）
+const motherFarm = resolveStation('マザー牧場');
+assert(!motherFarm.landmark, 'マザー牧場: 内房線未収録のため保留（推測しない）');
+
+// 2-2h. v2.25.3 駅名の略称/表記揺れエイリアス（resolveStation 経由）
+for (const [alias, expectStn] of [
+  ['Shin-Yokohama', '新横浜'], ['Nishi-Funabashi', '西船橋'], ['Matsudo', '松戸'],
+  ['Kashiwa', '柏'], ['Chiba', '千葉'], ['Maihama', '舞浜'], ['Kaihin-Makuhari', '海浜幕張'],
+  ['Minatomirai', 'みなとみらい'], ['Sakuragicho', '桜木町'], ['Kannai', '関内'],
+  ['Tsudanuma', '津田沼'], ['Keisei-Tsudanuma', '京成津田沼'], ['Funabashi', '船橋'],
+  ['Kamagaya', '鎌ヶ谷'], ['Shin-Kamagaya', '新鎌ヶ谷'], ['Nodashi', '野田市'],
+  ['Kasukabe', '春日部'], ['Omiya', '大宮'], ['Iwatsuki', '岩槻'],
+  ['Kurihama', '久里浜'], ['Yokohama', '横浜'],
+  ['Kawasaki', '川崎'], ['Keikyu-Kawasaki', '京急川崎'], ['Musashi-Kosugi', '武蔵小杉'],
+  ['Mizonokuchi', '溝の口'], ['Musashi-Mizonokuchi', '武蔵溝ノ口'],
+  ['Shibamata', '柴又'], ['Keisei-Kanamachi', '京成金町'], ['Kanamachi', '金町'],
+  ['Katase-Enoshima', '片瀬江ノ島'], ['Fujisawa', '藤沢'], ['Chuo-Rinkan', '中央林間'],
+  ['Sagamiono', '相模大野'], ['Machida', '町田'], ['Hon-Atsugi', '本厚木'],
+  ['Kichijoji', '吉祥寺'], ['Mitaka', '三鷹'], ['Tachikawa', '立川'], ['Hachioji', '八王子'],
+  ['Hino', '日野'], ['Chofu', '調布'], ['Fuchu', '府中'], ['Kokubunji', '国分寺'],
+  ['Zushi-Hayama', '逗子・葉山'], ['Keikyu-Kurihama', '京急久里浜'], ['Misakiguchi', '三崎口'],
+  ['Shonan-Enoshima', '湘南江の島'], ['Kamakura', '鎌倉'], ['Ofuna', '大船'], ['Totsuka', '戸塚'],
+]) {
+  const res = resolveStation(alias);
+  assert(res.station === expectStn, `${alias}: ${expectStn}へ解決 (${res.station || '未解決'})`);
+}
+// 路線名の略称/表記揺れエイリアス（RAILWAY_NAME_MAP を直接検証。駅名解決とは別経路）
+{
+  const src = fs.readFileSync(new URL('../src/index.mjs', import.meta.url), 'utf8');
+  const start = src.indexOf('const RAILWAY_NAME_MAP = {');
+  const end = src.indexOf('\n};', start);
+  const body = src.slice(start, end);
+  const rMap = {};
+  for (const m of body.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) rMap[m[1]] = m[2];
+  for (const [alias, expectLine] of [
+    ['MM線', 'みなとみらい線'], ['ブルーライン', '横浜市営地下鉄ブルーライン'],
+    ['グリーンライン', '横浜市営地下鉄グリーンライン'], ['TX', 'tsukuba'],
+    ['都営', '都営大江戸線'], ['メトロ', '東京メトロ丸ノ内線'],
+    ['東上', '東武東上線'], ['野田線', '東武野田線'], ['アーバンパークライン', '東武野田線'],
+    ['江ノ島線', '小田急江ノ島線'], ['いずみ野線', '相鉄いずみ野線'], ['新横浜線', '相鉄新横浜線'],
+    ['湘南モノレール', '湘南モノレール'], ['都電', '都電荒川線'], ['舎人ライナー', '日暮里舎人ライナー'],
+    ['北総', '北総鉄道'], ['東葉', '東葉高速鉄道'], ['埼玉高速', '埼玉高速鉄道'],
+    ['箱根登山', '箱根登山線'], ['富士急', '富士急行線'], ['青梅', 'JR青梅線'],
+    ['五日市', 'JR五日市線'], ['鶴見', 'JR鶴見線'], ['相模', 'JR相模線'],
+    ['八高', 'JR八高線'], ['川越', 'JR川越線'], ['高崎', 'JR高崎線'], ['宇都宮', 'JR宇都宮線'],
+    ['京葉', 'JR京葉線'], ['武蔵野', 'JR武蔵野線'], ['常磐', 'JR常磐線快速'],
+  ]) {
+    assert(rMap[alias] === expectLine, `路線エイリアス ${alias}: ${expectLine}へ解決 (${rMap[alias] || '未解決'})`);
+  }
+}
 
 // 2-3. 同名別駅の曖昧化
 for (const [name, cands] of [['小川町', 2], ['両国', 2], ['霞ヶ関', 2]]) {
