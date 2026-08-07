@@ -44,6 +44,26 @@ for (const c of normalCases) {
   assert(data.mode !== 'LIMITED_EXPRESS_GUIDANCE', `[${c.language}] ${c.from}→${c.to} が窓口案内に誤検出されない`);
 }
 
+console.log('\n=== 私鉄系特急 → 事業者別案内 ===');
+const privateCases = [
+  { from: '新宿', to: 'ロマンスカー 箱根湯本', language: 'ja', operator: '小田急電鉄' },
+  { from: '浅草', to: 'りょうもう 伊勢崎', language: 'ja', operator: '東武鉄道' },
+  { from: '京成上野', to: 'スカイライナー 成田空港', language: 'ja', operator: '京成電鉄' },
+  { from: '池袋', to: 'レッドアロー 西武秩父', language: 'ja', operator: '西武鉄道' },
+  { from: '品川', to: 'ウィング 横浜', language: 'ja', operator: '京浜急行電鉄' },
+  { from: '新宿', to: '京王ライナー 高尾山口', language: 'ja', operator: '京王電鉄' },
+  { from: '渋谷', to: 'S-TRAIN 横浜', language: 'ja', operator: '東急電鉄' },
+  { from: '大宮', to: 'アーバンパークライナー 船橋', language: 'ja', operator: '東武鉄道（野田線）' },
+  { from: 'Shinjuku', to: 'Romancecar Hakone', language: 'en', operator: '小田急電鉄' },
+  { from: '新宿', to: '罗曼史号 箱根汤本', language: 'zh', operator: '小田急電鉄' },
+];
+for (const c of privateCases) {
+  const data = await parseResult(await searchRoute(c));
+  assert(data.mode === 'LIMITED_EXPRESS_GUIDANCE', `[${c.language}] ${c.from}→${c.to} が窓口案内になる`);
+  assert(data.private_express_guidance?.operator === c.operator, `[${c.language}] 事業者が ${c.operator} になる（実際: ${data.private_express_guidance?.operator}）`);
+  assert(!!data.private_express_guidance?.guidance, `[${c.language}] 事業者案内文が含まれる`);
+}
+
 console.log('\n=== 窓口ガイドの全駅が多言語対応 ===');
 // LIMITED_EXPRESS_STATION_GUIDE は未エクスポートのため、主要駅のみ検証
 for (const st of ['東京', '品川', '新横浜', '大宮', '上野', '高崎', '長野', '新潟', '仙台', '盛岡', '名古屋', '京都', '新大阪']) {

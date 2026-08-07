@@ -4663,13 +4663,33 @@ const LIMITED_EXPRESS_KEYWORDS = [
   '新幹線', 'のぞみ', 'ひかり', 'こだま', 'やまびこ', 'はやぶさ', 'つばさ', 'こまち', 'はやて',
   'なすの', 'たにがわ', 'とき', 'あさま', 'はくたか', 'かがやき', 'みずほ', 'さくら',
   '特急', 'あずさ', 'かいじ', 'ひたち', 'ときわ', 'しおさい', 'わかしお', 'あやめ', '成田エクスプレス',
+  // ja 私鉄系特急
+  'ロマンスカー', 'ロマンスカ', 'はこね', 'えのしま', 'さがみ', 'ホームウェイ', 'あさぎり', 'メトロはこね', 'メトロえのしま',
+  'りょうもう', 'けごん', 'きぬ', 'スペーシア', 'スペーシアX', 'リバティ', 'リバティけごん', 'きりふり',
+  'スカイライナー', 'シティライナー', 'モーニングライナー', 'イブニングライナー',
+  'ウィング', 'モーニング・ウィング', 'イブニング・ウィング', '快特',
+  'レッドアロー', '小江戸', '川越特急', '秩父', '拝島ライナー', 'ドームライナー',
+  '京王ライナー', 'Mt.TAKAO号', 'Mt.TAKAO',
+  'S-TRAIN', '東横特急', 'アーバンパークライナー',
   // en
   'shinkansen', 'nozomi', 'hikari', 'kodama', 'yamabiko', 'hayabusa', 'komachi', 'tsubasa', 'hayate',
   'nasuno', 'tanigawa', 'toki', 'asama', 'hakutaka', 'kagayaki', 'mizuho', 'sakura',
   'limited express', 'azusa', 'kaiji', 'hitachi', 'tokiwa', 'shiosai', 'wakashio', 'ayame', 'narita express', "n'ex",
+  // en 私鉄系特急
+  'romancecar', 'romance car', 'hakone', 'enoshima', 'sagami', 'homeway', 'asagiri',
+  'ryomo', 'kegon', 'kinu', 'spacia', 'liberty', 'kirifuri',
+  'skyliner', 'city liner', 'morning liner', 'evening liner',
+  'wing', 'morning wing', 'evening wing', 'kaisoku tokkyu',
+  'red arrow', 'oedo', 'kawagoe express', 'chichibu', 'haijima liner',
+  'keio liner', 's-train', 'urban park liner',
   // zh
   '新干线', '希望号', '光号', '回声号', '山彦号', '隼号', '小町号', '燕号', '朱鹭号', '浅间号', '白鹰号', '光辉号',
-  '特急', '梓号', '甲斐路号', '常陆号', '常盘号', '潮骚号', '若潮号', '菖蒲号', '成田特快'
+  '特急', '梓号', '甲斐路号', '常陆号', '常盘号', '潮骚号', '若潮号', '菖蒲号', '成田特快',
+  // zh 私鉄系特急
+  '罗曼史号', '箱根号', '江之岛号', '相模号', '朝雾号',
+  '两毛号', '华严号', '鬼怒号', '特快spacia', '利伯缇号',
+  '天空号', '晨间特快', '黄昏特快',
+  '红箭号', '川越特急', '秩父号', '京王特快', '都市公园特快'
 ];
 
 // 特急・新幹線の主要停車駅と窓口案内（みどりの窓口・指定席券売機）
@@ -4741,6 +4761,100 @@ const LIMITED_EXPRESS_STATION_GUIDE = {
   }
 };
 
+// 私鉄系特急の事業者別案内（JR とは異なり各社の窓口・券売機・Web予約で対応）
+// keywords に該当する列車名が入力された場合、この事業者案内を返す
+const PRIVATE_EXPRESS_GUIDE = [
+  {
+    operator: '小田急電鉄', train: 'ロマンスカー',
+    keywords: ['ロマンスカー', 'ロマンスカ', 'はこね', 'えのしま', 'さがみ', 'ホームウェイ', 'あさぎり', 'romancecar', 'romance car', 'hakone', 'enoshima', 'sagami', 'homeway', 'asagiri', '罗曼史号', '箱根号', '江之岛号', '相模号', '朝雾号'],
+    mainStations: ['新宿', '町田', '相模大野', '小田原'],
+    guidance: {
+      ja: '小田急ロマンスカーは特急券が必要です。新宿・町田・相模大野・小田原など主要駅の「ロマンスカー特急券売り場」または駅窓口でご購入ください。Web予約（e-romancecar.com）も利用できます。',
+      en: 'Odakyu Romancecar requires a limited-express ticket. Purchase at the Romancecar ticket counters or station windows at major stations (Shinjuku, Machida, Sagami-Ono, Odawara). Online reservation (e-romancecar.com) is also available.',
+      zh: '小田急罗曼史号需要特急券。请在新宿・町田・相模大野・小田原等主要车站的「罗曼史号特急券售票处」或车站窗口购买。也可使用网上预约（e-romancecar.com）。'
+    }
+  },
+  {
+    operator: '東武鉄道', train: '特急（りょうもう・けごん・スペーシア等）',
+    keywords: ['りょうもう', 'けごん', 'きぬ', 'スペーシア', 'スペーシアX', 'リバティ', 'リバティけごん', 'きりふり', 'ryomo', 'kegon', 'kinu', 'spacia', 'liberty', 'kirifuri', '两毛号', '华严号', '鬼怒号', '特快spacia', '利伯缇号'],
+    mainStations: ['浅草', '北千住', '春日部', '東武動物公園'],
+    guidance: {
+      ja: '東武特急（りょうもう・けごん・スペーシア等）は特急券が必要です。浅草・北千住・春日部・東武動物公園など主要駅の特急券売り場・窓口でご購入ください。Web予約も利用できます。',
+      en: 'Tobu limited expresses (Ryomo, Kegon, Spacia etc.) require a limited-express ticket. Purchase at ticket counters / windows at major stations (Asakusa, Kita-Senju, Kasukabe, Tobu-Dobutsu-Koen). Online reservation is also available.',
+      zh: '东武特急（两毛号・华严号・特快spacia等）需要特急券。请在浅草・北千住・春日部・东武动物公园等主要车站的特急券售票处・窗口购买。也可网上预约。'
+    }
+  },
+  {
+    operator: '京成電鉄', train: 'スカイライナー等',
+    keywords: ['スカイライナー', 'シティライナー', 'モーニングライナー', 'イブニングライナー', 'skyliner', 'city liner', 'morning liner', 'evening liner', '天空号'],
+    mainStations: ['京成上野', '日暮里', '成田空港'],
+    guidance: {
+      ja: '京成スカイライナーは特急券が必要です。京成上野・日暮里・成田空港など主要駅の特急券売り場・窓口（または券売機）でご購入ください。Web予約も利用できます。',
+      en: 'Keisei Skyliner requires a limited-express ticket. Purchase at ticket counters / windows (or machines) at major stations (Keisei-Ueno, Nippori, Narita Airport). Online reservation is also available.',
+      zh: '京成天空号需要特急券。请在京成上野・日暮里・成田机场等主要车站的特急券售票处・窗口（或售票机）购买。也可网上预约。'
+    }
+  },
+  {
+    operator: '京浜急行電鉄', train: 'ウィング号・快特',
+    keywords: ['ウィング', 'モーニング・ウィング', 'イブニング・ウィング', 'wing', 'morning wing', 'evening wing', '快特', 'kaisoku tokkyu'],
+    mainStations: ['品川', '横浜', '京急蒲田'],
+    guidance: {
+      ja: '京急のウィング号・快特は座席指定料金が必要な列車があります。品川・横浜・京急蒲田など主要駅の窓口・券売機でご確認ください（普通特急は追加料金なし）。',
+      en: 'Keikyu Wing / Kaisoku Tokkyu trains may require a reserved-seat fare. Check at ticket windows / machines at major stations (Shinagawa, Yokohama, Keikyu-Kamata). Regular limited expresses need no surcharge.',
+      zh: '京急的Wing号・快特部分列车需要指定座位费。请在品川・横滨・京急蒲田等主要车站的窗口・售票机确认（普通特急无需追加费用）。'
+    }
+  },
+  {
+    operator: '西武鉄道', train: 'レッドアロー・小江戸等',
+    keywords: ['レッドアロー', '小江戸', '川越特急', '秩父', '拝島ライナー', 'ドームライナー', 'red arrow', 'oedo', 'kawagoe express', 'chichibu', 'haijima liner', '红箭号', '川越特急', '秩父号'],
+    mainStations: ['池袋', '所沢', '本川越', '西武秩父'],
+    guidance: {
+      ja: '西武特急（レッドアロー・小江戸・秩父等）は特急券が必要です。池袋・所沢・本川越・西武秩父など主要駅の特急券売り場・窓口でご購入ください。Web予約も利用できます。',
+      en: 'Seibu limited expresses (Red Arrow, Oedo, Chichibu etc.) require a limited-express ticket. Purchase at ticket counters / windows at major stations (Ikebukuro, Tokorozawa, Hon-Kawagoe, Seibu-Chichibu). Online reservation is also available.',
+      zh: '西武特急（红箭号・小江户・秩父号等）需要特急券。请在池袋・所泽・本川越・西武秩父等主要车站的特急券售票处・窗口购买。也可网上预约。'
+    }
+  },
+  {
+    operator: '京王電鉄', train: '京王ライナー・Mt.TAKAO号',
+    keywords: ['京王ライナー', 'Mt.TAKAO号', 'Mt.TAKAO', 'keio liner', '京王特快'],
+    mainStations: ['新宿', '高尾山口'],
+    guidance: {
+      ja: '京王ライナー・Mt.TAKAO号はライナー券が必要です。新宿・高尾山口など主要駅の券売機・窓口でご購入ください。',
+      en: 'Keio Liner / Mt.TAKAO require a liner ticket. Purchase at ticket machines / windows at major stations (Shinjuku, Takaosanguchi).',
+      zh: '京王特快・高尾山号需要特快券。请在新宿・高尾山口等主要车站的售票机・窗口购买。'
+    }
+  },
+  {
+    operator: '東急電鉄', train: 'S-TRAIN・東横特急',
+    keywords: ['S-TRAIN', '東横特急', 's-train', '都市公园特快'],
+    mainStations: ['渋谷', '横浜'],
+    guidance: {
+      ja: '東急のS-TRAINは座席指定制です。渋谷・横浜など主要駅の窓口・券売機、またはWeb予約でご確認ください（東横特急は通常の特急で追加料金なし）。',
+      en: 'Tokyu S-TRAIN is reserved-seat. Check at windows / machines at major stations (Shibuya, Yokohama) or book online. Toyoko limited express needs no surcharge.',
+      zh: '东急S-TRAIN为指定座席制。请在涩谷・横滨等主要车站的窗口・售票机确认，或网上预约（东横特急为普通特急，无需追加费用）。'
+    }
+  },
+  {
+    operator: '東武鉄道（野田線）', train: 'アーバンパークライナー',
+    keywords: ['アーバンパークライナー', 'urban park liner', '都市公园特快'],
+    mainStations: ['大宮', '船橋', '柏'],
+    guidance: {
+      ja: '東武アーバンパークライナーはライナー券が必要です。大宮・船橋・柏など主要駅の窓口・券売機でご購入ください。',
+      en: 'Tobu Urban Park Liner requires a liner ticket. Purchase at windows / machines at major stations (Omiya, Funabashi, Kashiwa).',
+      zh: '东武都市公园特快需要特快券。请在大宫・船桥・柏等主要车站的窗口・售票机购买。'
+    }
+  }
+];
+
+// 私鉄特急の事業者判定: 入力に含まれるキーワードから事業者を特定
+function detectPrivateExpressOperator(fromInput, toInput) {
+  const combined = `${fromInput || ''} ${toInput || ''}`.toLowerCase();
+  for (const op of PRIVATE_EXPRESS_GUIDE) {
+    if (op.keywords.some(kw => combined.includes(kw))) return op;
+  }
+  return null;
+}
+
 // 特急・新幹線リクエストの検出: from/to に列車種別・列車名が含まれるか
 function detectLimitedExpressRequest(fromInput, toInput) {
   const combined = `${fromInput || ''} ${toInput || ''}`.toLowerCase();
@@ -4776,6 +4890,8 @@ function findLimitedExpressStation(fromInput, toInput) {
 function buildLimitedExpressGuidance(userLang, fromInput, toInput) {
   const station = findLimitedExpressStation(fromInput, toInput);
   const guide = station ? LIMITED_EXPRESS_STATION_GUIDE[station] : null;
+  // 私鉄系特急の事業者判定（例: ロマンスカー・スカイライナー・りょうもう等）
+  const privateOp = detectPrivateExpressOperator(fromInput, toInput);
   const notice = userLang === 'en'
     ? '🚄 Limited express / Shinkansen transfers are not supported by the route graph yet (scheduled for a future major update).'
     : userLang === 'zh'
@@ -4797,7 +4913,7 @@ function buildLimitedExpressGuidance(userLang, fromInput, toInput) {
         : `${station || '該当駅'}では、みどりの窓口または駅係員に特急・新幹線のチケットと乗り換えをお問い合わせください。`;
     stationBlock = { station: station || null, window_guidance: fallback };
   }
-  return {
+  const resp = {
     status: 'SUCCESS',
     mode: 'LIMITED_EXPRESS_GUIDANCE',
     detected_language: userLang,
@@ -4813,6 +4929,22 @@ function buildLimitedExpressGuidance(userLang, fromInput, toInput) {
         : '本サーバーは普通・快速・各駅停車（普通運賃）の経路検索に対応しています。新幹線・特急の指定席予約はJR窓口でお取り扱いください。',
     direct_search_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(fromInput || '')}&to=${encodeURIComponent(toInput || '')}`
   };
+  // 私鉄系特急の場合は事業者別案内を追加
+  if (privateOp) {
+    const opLabel = privateOp.train || privateOp.operator;
+    resp.private_express_guidance = {
+      operator: privateOp.operator,
+      train: opLabel,
+      main_stations: privateOp.mainStations,
+      guidance: privateOp.guidance[userLang],
+      how_to_proceed: userLang === 'en'
+        ? `Purchase limited-express tickets at the operator's ticket counters / windows (${privateOp.mainStations.join(', ')}) or book online.`
+        : userLang === 'zh'
+          ? `请在该公司的主要车站（${privateOp.mainStations.join('・')}）的特急券售票处・窗口购票，或使用网上预约。`
+          : `${privateOp.operator}の主要駅（${privateOp.mainStations.join('・')}）の特急券売り場・窓口でご購入ください。Web予約も利用できます。`
+    };
+  }
+  return resp;
 }
 
 // ==========================================
