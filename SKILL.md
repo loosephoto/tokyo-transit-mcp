@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.25.4
+version: 2.26.0
 ---
 
 # Tokyo Transit MCP Server
@@ -133,7 +133,16 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.26.0（2026-08-08）— ディズニーリゾートライン（舞浜リゾートライン）追加＋周回路線対応
+
+- **ディズニーリゾートライン（舞浜リゾートライン）を追加**: リゾートゲートウェイ・東京ディズニーランド・ベイサイド・東京ディズニーシーの4駅を周回するモノレール（1周約13分・均一運賃300円・公式サイト確認）。
+  - **🔴 初の周回路線対応（CIRCULAR_LINES）**: グラフ構築ループに CIRCULAR_LINES Set を導入し、末尾駅→先頭駅の隣接エッジを追加。ディズニーリゾートラインは 東京ディズニーシー・ステーション ⇔ リゾートゲートウェイ・ステーション が直接接続される。
+  - **連絡駅（WALK_TRANSFERS）**: JR京葉線 舞浜 ⇔ リゾートゲートウェイ・ステーション（徒歩2分・公式）。
+  - **多言語・エイリアス**: LINE_DISPLAY_NAMES（Disney Resort Line / 迪士尼度假区线）、STATION_DISPLAY_NAMES 4駅分、STATION_NAME_MAP に表記揺れ（リゾートゲートウェイ駅・ベイサイド・TDL駅・TDS駅等）と英字エイリアス（Resort Gateway Station・Bayside Station・Tokyo Disneyland Station 等）を追加。
+  - **検証**: scripts/test-disney-resort-line.mjs（全4駅解決・全経路・周回接続・舞浜連絡・searchRoute フル応答）新設。probe-all-lang(26/26)・test:walk・test-issues・test:bus 全PASS。
+
 ### v2.25.4（2026-08-07）— 旧駅名エイリアス35件＋ランドマーク旧名称（#26・#27）
+（2026-08-07）— 旧駅名エイリアス35件＋ランドマーク旧名称（#26・#27）
 
 - **STATION_NAME_MAP に旧駅名エイリアス35件追加（#26）**: 業平橋→とうきょうスカイツリー・京浜蒲田→京急蒲田・営団赤塚→地下鉄赤塚・西武遊園地→多摩湖・船の科学館→東京国際クルーズターミナル・富士吉田→富士山 等。参考: desktoptetsu.com「駅名改称 1987-2024」。スクリプト: scripts/add-old-station-name-aliases.mjs（再利用可）
   - **🔴 2段階改称の扱い**: 国鉄千葉駅前（→京成千葉→千葉中央）は現駅名「千葉中央」へ直接マップ。中間名「京成千葉」もエイリアス登録（'京成千葉': '千葉中央'）

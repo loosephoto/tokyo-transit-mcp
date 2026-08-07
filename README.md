@@ -29,31 +29,31 @@
 | ✈️ フライト | 羽田(HND)・成田(NRT) の到着/出発フライト（AviationStack）。キー未設定時は空港アクセス経路のみ表示（graceful degradation） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API・1,878ポート） |
 
-### 🛤️ 路線網の網羅性とデータ確認
-
-公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
-
-**現在の対応路線（計99路線・1,286駅）**:
+**現在の対応路線（計100路線・1,290駅）**:
 
 - **JR東日本**: 山手線、京浜東北線、中央線快速、中央総武線各停、総武線各停、埼京線、京葉線、武蔵野線、常磐線快速、常磐線各停、南武線、南武支線、東海道線、横須賀線、湘南新宿ライン、横浜線、青梅線、五日市線、鶴見線、相模線、八高線、川越線、高崎線、宇都宮線
 - **東京メトロ**: 銀座線、丸ノ内線（支線含む）、日比谷線、東西線、千代田線、半蔵門線、有楽町線、副都心線、南北線
 - **都営**: 浅草線、三田線、新宿線、大江戸線、都電荒川線
 - **私鉄・第三セクター**: 小田急（小田原線・多摩線・江ノ島線）、京王（本線・高尾線・相模原線・動物園線・井の頭線）、西武（池袋線・新宿線・多摩湖線・山口線・西武園線・多摩川線・国分寺線・豊島線）、東武（東上線・伊勢崎線・大師線・亀戸線・野田線・宇都宮線）、京急（本線・空港線・大師線・逗子線・久里浜線）、京成（本線・押上線・支線・金町線・千葉線・千原線）、新京成線、東急（東横線・田園都市線・目黒線・大井町線・池上線・多摩川線・世田谷線）、相鉄（本線・いずみ野線・新横浜線）、湘南モノレール、北総鉄道、埼玉高速鉄道、東葉高速鉄道、芝山鉄道、つくばエクスプレス、りんかい線、みなとみらい線、箱根登山線、富士急行線
-- **AGT・モノレール**: ゆりかもめ、日暮里・舎人ライナー、東京モノレール、多摩モノレール
+- **AGT・モノレール**: ゆりかもめ、日暮里・舎人ライナー、東京モノレール、多摩モノレール、**ディズニーリゾートライン（舞浜リゾートライン・4駅周回）**
 - **横浜市営地下鉄**: ブルーライン、グリーンライン
 
-**直近の更新内容（v2.25.4）**:
+### 🛤️ 路線網の網羅性とデータ確認
+
+公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
+
+**直近の更新内容（v2.26.0）**:
+
+- **ディズニーリゾートライン（舞浜リゾートライン）を追加** — リゾートゲートウェイ・東京ディズニーランド・ベイサイド・東京ディズニーシーの4駅を周回するモノレール（1周約13分・均一運賃300円・公式サイト確認）。グラフに初の周回路線（CIRCULAR_LINES）対応を導入し、JR舞浜駅との乗換（徒歩2分）を WALK_TRANSFERS に追加。駅名・路線名の ja/en/zh 表記と表記揺れエイリアス（リゾートゲートウェイ駅・ベイサイド・TDL駅・Resort Gateway Station 等）を整備
+
+**直近の更新内容（v2.25.3〜v2.25.4）**:
 
 - **旧駅名エイリアス35件を追加（#26）** — STATION_NAME_MAP に改称前の駅名で検索可能に（業平橋→とうきょうスカイツリー・京浜蒲田→京急蒲田・営団赤塚→地下鉄赤塚・西武遊園地→多摩湖・船の科学館→東京国際クルーズターミナル・富士吉田→富士山 ほか）
 - **幻駅統合（#26）** — 京成千葉→千葉中央（1991年改称）・遊園地西→西武園ゆうえんち（2021年改称）をグラフ統合。駅数 1,288→1,286。旧駅名エイリアスがランドマーク部分一致に奪われないよう resolveLandmark に完全一致モードを追加
 - **ランドマーク旧名称エイリアス（#27）** — カップヌードルミュージアムに「インスタントラーメン発明記念館」を追加。カップヌードルミュージアムパーク（旧・新港パーク）を新規ランドマークとして追加（みなとみらい駅・徒歩約5分、ja/en/zh）
-- **検証** — test-walk に2-2g（ランドマーク旧名）・2-2h2（旧駅名エイリアス35件）を追加して全PASS。probe-all-lang（26/26）も全PASS
-
-**直近の更新内容（v2.25.3）**:
-
-- **全路線の略称・表記揺れエイリアスを充実** — RAILWAY_NAME_MAP に207件（MM線・ブルーライン・グリーンライン・TX・都営・メトロ・東上・野田線・アーバンパークライン・江ノ島線・いずみ野線・湘南モノレール・都電・舎人ライナー・北総・東葉・埼玉高速・箱根登山・富士急・青梅・鶴見・相模・八高・高崎・宇都宮 など）、STATION_NAME_MAP に227件（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba など英字表記）を追加
+- **全路線の略称・表記揺れエイリアスを充実** — RAILWAY_NAME_MAP に207件、STATION_NAME_MAP に227件（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba など英字表記）を追加
 - **横浜・千葉近郊のランドマークを17件追加**（特にテーマパーク・遊園地） — よこはまコスモワールド・横浜ランドマークタワー・カップヌードルミュージアム・横浜赤レンガ倉庫・横浜中華街・八景島シーパラダイス・ズーラシア・三溪園・山下公園・横浜ベイクォーター・成田ゆめ牧場・千葉市動物公園・千葉ポートタワー・ZOZOマリンスタジアム・浦安市総合公園 ほか（ja/en/zh対応）。マザー牧場・東京ドイツ村・市原ぞうの国はJR内房線が未収録のため保留
-- **検証** — test-walk に2-2g（ランドマーク解決）・2-2h（エイリアス）を追加して全PASS。test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）も全PASS
+- **検証** — test-walk に2-2g（ランドマーク解決）・2-2h（エイリアス）・2-2h2（旧駅名エイリアス35件）を追加して全PASS。test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）も全PASS
 
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
@@ -600,31 +600,31 @@ Beyond simple route search, this server integrates weather data and public trans
 | ✈️ Flights | Haneda (HND) / Narita (NRT) arrivals & departures (AviationStack). Without a key, airport access routes are shown only (graceful degradation) |
 | 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
 
-### 🛤️ Route Coverage and Data Validation
-
-The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
-
-**Currently supported network (99 lines / 1,286 stations)**:
+**Currently supported network (100 lines / 1,290 stations)**:
 
 - **JR East**: Yamanote, Keihin-Tohoku, Chuo (Rapid), Chuo-Sobu (Local), Sobu (Local), Saikyo, Keiyo, Musashino, Joban (Rapid), Joban (Local), Nambu, Nambu Branch, Tokaido, Yokosuka, Shonan-Shinjuku, Yokohama, Ome, Itsukaichi, Tsurumi, Sagami, Hachiko, Kawagoe, Takasaki, Utsunomiya Lines
 - **Tokyo Metro**: Ginza, Marunouchi (incl. branch), Hibiya, Tozai, Chiyoda, Hanzomon, Yurakucho, Fukutoshin, Namboku Lines
 - **Toei**: Asakusa, Mita, Shinjuku, Oedo Lines, Toden Arakawa Line
 - **Private / third-sector**: Odakyu (Odawara, Tama, Enoshima), Keio (Main, Takao, Sagamihara, Dobutsuen, Inokashira), Seibu (Ikebukuro, Shinjuku, Tamako, Yamaguchi, Seibuen, Tamagawa, Kokubunji, Toshima), Tobu (Tojo, Isesaki, Daishi, Kameido, Noda, Utsunomiya), Keikyu (Main, Airport, Daishi, Zushi, Kurihama), Keisei (Main, Oshiage, Branch, Kanamachi, Chiba, Chihara), Shin-Keisei, Tokyu (Toyoko, Den-en-toshi, Meguro, Oimachi, Ikegami, Tamagawa, Setagaya), Sotetsu (Main, Izumino, Shin-Yokohama), Shonan Monorail, Hokuso, Saitama Rapid, Toyo Rapid, Shibayama, Tsukuba Express, Rinkai, Minatomirai, Hakone Tozan, Fujikyu Lines
-- **AGT / Monorail**: Yurikamome, Nippori-Toneri Liner, Tokyo Monorail, Tama Monorail
+- **AGT / Monorail**: Yurikamome, Nippori-Toneri Liner, Tokyo Monorail, Tama Monorail, **Disney Resort Line (Maihama Resort Line, 4-station loop)**
 - **Yokohama Municipal Subway**: Blue Line, Green Line
 
-**Latest updates (v2.25.4)**:
+### 🛤️ Route Coverage and Data Validation
+
+The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
+
+**Latest updates (v2.26.0)**:
+
+- **Disney Resort Line (Maihama Resort Line) added** — a monorail looping the four Resort Gateway / Tokyo Disneyland / Bayside / Tokyo DisneySea stations (~13 min per loop, flat fare ¥300, verified from the official site). This is the first ring/loop route in the graph, implemented via CIRCULAR_LINES, with a transfer to JR Maihama (2-min walk) added to WALK_TRANSFERS. ja/en/zh names and alias variants (Resort Gateway Stn, Bayside, TDL Stn, Resort Gateway Station etc.) are wired up
+
+**Latest updates (v2.25.3–v2.25.4)**:
 
 - **35 former station-name aliases added (#26)** — search by pre-renaming names in STATION_NAME_MAP (Oiribashi→Tokyo Skytree, Keihin-Kamata→Keikyu Kamata, Eidan-Akatsuka→Chikatetsu Akatsuka, Seibu-Yuenchi→Tamako, Fune-no-Kagakukan→Tokyo International Cruise Terminal, Fujiyoshida→Fujisan etc.)
 - **Phantom station consolidation (#26)** — Keisei-Chiba→Chiba-Chuo (renamed 1991) and Yuenchi-Nishi→Seibuen-Yuenchi (renamed 2021) merged in the graph (1,288→1,286 stations). resolveLandmark gained an exact-match-only mode so former station names are not captured by partial landmark matching
 - **Landmark former-name aliases (#27)** — "Instant Ramen Invention Memorial Hall" added to CupNoodles Museum; CupNoodles Museum Park (formerly Shinko Park) added as a new landmark (Minatomirai Stn, ~5 min walk, ja/en/zh)
-- **Verification** — test-walk extended with 2-2g (former landmark names) & 2-2h2 (35 former station aliases), all PASS. probe-all-lang (26/26) all PASS
-
-**Latest updates (v2.25.3)**:
-
-- **Line/station alias expansion (abbreviations & spelling variants)** — 207 aliases added to RAILWAY_NAME_MAP (MM Line, Blue Line, Green Line, TX, Toei, Metro, Tojo, Noda Line, Urban Park Line, Enoshima Line, Izumino Line, Shonan Monorail, Toden, Nippori-Toneri, Hokuso, Toyo Rapid, Saitama Rapid, Hakone Tozan, Fujikyu, Ome, Tsurumi, Sagami, Hachiko, Takasaki, Utsunomiya etc.) and 227 to STATION_NAME_MAP (Shin-Yokohama, Minatomirai, Maihama, Kaihin-Makuhari, Nishi-Funabashi, Matsudo, Kashiwa, Chiba etc.)
+- **Line/station alias expansion (abbreviations & spelling variants)** — 207 aliases added to RAILWAY_NAME_MAP and 227 to STATION_NAME_MAP (Shin-Yokohama, Minatomirai, Maihama, Kaihin-Makuhari, Nishi-Funabashi, Matsudo, Kashiwa, Chiba etc.)
 - **17 Yokohama/Chiba landmarks added** (theme parks & amusement parks in particular) — Yokohama Cosmo World, Yokohama Landmark Tower, CupNoodles Museum, Red Brick Warehouse, Chinatown, Hakkeijima Sea Paradise, Zoorasia, Sankeien Garden, Yamashita Park, Bay Quarter, Narita Yume Farm, Chiba City Zoo, Chiba Port Tower, ZOZO Marine Stadium, Urayasu General Park etc. (ja/en/zh). Mother Farm / Tokyo German Village / Ichihara Elephant Kingdom held back (JR Uchibo Line not yet in the graph)
-- **Verification** — test-walk extended with 2-2g (landmark resolution) & 2-2h (aliases), all PASS. test-issues/test-kanamachi/test-bus/community/probe-all-lang (26/26) all PASS
+- **Verification** — test-walk extended with 2-2g (landmark resolution) & 2-2h (aliases) & 2-2h2 (35 former station aliases), all PASS. testers/test-kanamachi/test-bus/community/probe-all-lang (26/26) all PASS
 
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
@@ -1133,31 +1133,31 @@ MIT License
 | ✈️ 航班 | 羽田 (HND) / 成田 (NRT) 的到达/出发航班（AviationStack）。未配置密钥时仅显示机场接驳路线（优雅降级） |
 | 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878 个站点） |
 
-### 🛤️ 路线覆盖与数据确认
-
-项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
-
-**当前支持的线路（共99条线路/1,286站）**：
+**当前支持的线路（共100条线路/1,290站）**：
 
 - **JR东日本**：山手线、京滨东北线、中央线快速、中央总武线各站停车、总武线各站停车、埼京线、京叶线、武藏野线、常磐线快速、常磐线各站停车、南武线、南武支线、东海道线、横须贺线、湘南新宿线、横滨线、青梅线、五日市线、鹤见线、相模线、八高线、川越线、高崎线、宇都宫线
 - **东京地铁**：银座线、丸之内线（含支线）、日比谷线、东西线、千代田线、半藏门线、有乐町线、副都心线、南北线
 - **都营**：浅草线、三田线、新宿线、大江户线、都电荒川线
 - **私铁・第三部门**：小田急（小田原线・多摩线・江之岛线）、京王（本线・高尾线・相模原线・动物园线・井之头线）、西武（池袋线・新宿线・多摩湖线・山口线・西武园线・多摩川线・国分寺线・丰岛线）、东武（东上线・伊势崎线・大师线・龟户线・野田线・宇都宫线）、京急（本线・机场线・大师线・逗子线・久里浜线）、京成（本线・押上线・支线・金町线・千叶线・千原线）、新京成线、东急（东横线・田园都市线・目黑线・大井町线・池上线・多摩川线・世田谷线）、相铁（本线・泉野线・新横滨线）、湘南单轨电车、北总铁道、埼玉高速铁道、东叶高速铁道、芝山铁道、筑波快线、临海线、港未来线、箱根登山线、富士急行线
-- **AGT・单轨**：百合海鸥号、日暮里-舍人线、东京单轨电车、多摩单轨电车
+- **AGT・单轨**：百合海鸥号、日暮里-舍人线、东京单轨电车、多摩单轨电车、**迪士尼度假区线（舞浜度假区线・4站环线）**
 - **横滨市营地铁**：蓝线、绿线
 
-**最近更新（v2.25.4）**：
+### 🛤️ 路线覆盖与数据确认
+
+项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
+
+**最近更新（v2.26.0）**：
+
+- **新增迪士尼度假区线（舞浜度假区线）** — 环绕度假区总站・东京迪士尼乐园・海滨・东京迪士尼海洋4站的单轨电车（一周约13分钟・均一票价300日元・官方站点确认）。线路图首次支持环线（CIRCULAR_LINES），并在 WALK_TRANSFERS 中新增与JR舞浜站的换乘（步行2分钟）。已完善车站・线路名称的日英中表记及别名变体（度假区总站・海滨・乐园站・Resort Gateway Station 等）
+
+**最近更新（v2.25.3〜v2.25.4）**：
 
 - **新增旧站名别名35条（#26）** — 通过 STATION_NAME_MAP 支持用改名前的站名搜索（业平桥→东京晴空塔・京滨蒲田→京急蒲田・营团赤塚→地铁赤塚・西武游园地→多摩湖・船的科学馆→东京国际邮轮码头・富士吉田→富士山 等）
 - **幻影车站整合（#26）** — 京成千叶→千叶中央（1991年改名）・游园地西→西武园游乐园（2021年改名）已并入线路图（1,288→1,286站）。为 resolveLandmark 新增完全一致模式，避免旧站名被地标的部分一致误夺
 - **地标旧名称别名（#27）** — 杯面博物馆新增「方便面发明纪念馆」。杯面博物馆公园（原・新港公园）作为新地标追加（港未来站・步行约5分钟・日英中）
-- **验证** — test-walk 新增2-2g（地标旧名）・2-2h2（旧站名别名35条）全部PASS；probe-all-lang（26/26）全部PASS
-
-**最近更新（v2.25.3）**：
-
-- **扩充全线略称・表记变体别名** — RAILWAY_NAME_MAP 新增207条（MM线・蓝线・绿线・TX・都营・Metro・东上・野田线・Urban Park Line・江之岛线・泉野线・湘南单轨・都电・舍人线・北总・东叶・埼玉高速・箱根登山・富士急・青梅・鹤见・相模・八高・高崎・宇都宫等），STATION_NAME_MAP 新增227条（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba 等英文拼写）
+- **扩充全线略称・表记变体别名** — RAILWAY_NAME_MAP 新增207条，STATION_NAME_MAP 新增227条（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba 等英文拼写）
 - **新增横滨・千叶近郊地标17处**（特别是主题公园・游乐园） — 横滨宇宙世界游乐园・横滨地标大厦・杯面博物馆・横滨红砖仓库・横滨中华街・八景岛海岛乐园・Zoorasia动物园・三溪园・山下公园・Bay Quarter・成田梦牧场・千叶市动物公园・千叶港塔・ZOZO海洋球场・浦安市综合公园等（日英中对应）。母亲牧场・东京德国村・市原象之国因JR内房线未收录而暂缓
-- **验证** — test-walk 新增2-2g（地标解析）・2-2h（别名）全部PASS；test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）全部PASS
+- **验证** — test-walk 新增2-2g（地标解析）・2-2h（别名）・2-2h2（旧站名别名35条）全部PASS；test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）全部PASS
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 

@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.25.4 (Production Ready)
+ * Tokyo Transit MCP Server v2.26.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -1493,6 +1493,30 @@ const STATION_NAME_MAP = {
   'Gakuenmae': '学園前',
   'Oyumino': 'おゆみ野',
   'Chiharadai': 'ちはら台',
+  // 2026-08 ディズニーリゾートライン（v2.26.0）
+  // 日本語表記揺れ（「駅」省略・「・ステーション」省略）
+  'リゾートゲートウェイ': 'リゾートゲートウェイ・ステーション',
+  'リゾートゲートウェイ駅': 'リゾートゲートウェイ・ステーション',
+  'ベイサイド': 'ベイサイド・ステーション',
+  'ベイサイド駅': 'ベイサイド・ステーション',
+  '東京ディズニーランド駅': '東京ディズニーランド・ステーション',
+  '東京ディズニーシー駅': '東京ディズニーシー・ステーション',
+  'ディズニーランド・ステーション': '東京ディズニーランド・ステーション',
+  'ディズニーシー・ステーション': '東京ディズニーシー・ステーション',
+  // 英字エイリアス
+  'ResortGateway': 'リゾートゲートウェイ・ステーション',
+  'Resort Gateway': 'リゾートゲートウェイ・ステーション',
+  'Resort Gateway Station': 'リゾートゲートウェイ・ステーション',
+  'ResortGatewayStation': 'リゾートゲートウェイ・ステーション',
+  'Bayside': 'ベイサイド・ステーション',
+  'BaysideStation': 'ベイサイド・ステーション',
+  'Bayside Station': 'ベイサイド・ステーション',
+  'TokyoDisneylandStation': '東京ディズニーランド・ステーション',
+  'Tokyo Disneyland Station': '東京ディズニーランド・ステーション',
+  'Tokyo Disneyland Stn': '東京ディズニーランド・ステーション',
+  'TokyoDisneySeaStation': '東京ディズニーシー・ステーション',
+  'Tokyo DisneySea Station': '東京ディズニーシー・ステーション',
+  'Tokyo DisneySea Stn': '東京ディズニーシー・ステーション',
 };
 
 // 路線名: 日本語 → ODPT ローマ字IDキー（odpt:railway の末尾セグメント）
@@ -2557,6 +2581,11 @@ const STATION_DISPLAY_NAMES = {
   '八丁畷': { en: 'Hatchonawate', zh: '八丁畷' },
   '川崎新町': { en: 'Kawasaki-Shimmachi', zh: '川崎新町' },
   '浜川崎': { en: 'Hama-Kawasaki', zh: '浜川崎' },
+  // 2026-08 ディズニーリゾートライン（v2.26.0）公式表記
+  'リゾートゲートウェイ・ステーション': { en: 'Resort Gateway Station', zh: '度假区总站' },
+  '東京ディズニーランド・ステーション': { en: 'Tokyo Disneyland Station', zh: '东京迪士尼乐园站' },
+  'ベイサイド・ステーション': { en: 'Bayside Station', zh: '海滨站' },
+  '東京ディズニーシー・ステーション': { en: 'Tokyo DisneySea Station', zh: '东京迪士尼海洋站' },
 };
 
 function getDisplayStationName(stationName, userLang) {
@@ -2731,7 +2760,8 @@ const LINE_DISPLAY_NAMES = {
   '東武野田線': { en: 'Tobu Noda Line (Urban Park Line)', zh: '东武野田线' },
   '東武宇都宮線': { en: 'Tobu Utsunomiya Line', zh: '东武宇都宫线' },
   '京成千葉線': { en: 'Keisei Chiba Line', zh: '京成千叶线' },
-  '京成千原線': { en: 'Keisei Chihara Line', zh: '京成千原线' }
+  '京成千原線': { en: 'Keisei Chihara Line', zh: '京成千原线' },
+  'ディズニーリゾートライン': { en: 'Disney Resort Line', zh: '迪士尼度假区线' }
 };
 
 function getDisplayLineName(lineName, userLang) {
@@ -3346,7 +3376,12 @@ const RAILWAY_LINES = {
   '東武宇都宮線': ['新栃木','野州平川','野州大塚','壬生','国谷','おもちゃのまち','安塚','西川田','江曽島','南宇都宮','東武宇都宮'],
   '京成千葉線': ['京成津田沼','京成幕張本郷','京成幕張','検見川','京成稲毛','みどり台','西登戸','新千葉','千葉中央'], // 1991 京成千葉→千葉中央改称（#26 幻駅統合）
   '京成千原線': ['千葉中央','千葉寺','大森台','学園前','おゆみ野','ちはら台'],
-  '富士急行線': ['大月','田野倉','禾生','赤坂','都留市','谷村町','都留文科大学前','十日市場','東桂','三つ峠','寿','葭池温泉前','下吉田','月江寺','富士山','富士急ハイランド','河口湖']
+  '富士急行線': ['大月','田野倉','禾生','赤坂','都留市','谷村町','都留文科大学前','十日市場','東桂','三つ峠','寿','葭池温泉前','下吉田','月江寺','富士山','富士急ハイランド','河口湖'],
+  // ===== ディズニーリゾートライン（舞浜リゾートライン）=====
+  // 2026-08 追加（v2.26.0）: 4駅を周回するモノレール。1周約13分・均一運賃300円（公式サイト確認）。
+  // 周回のため、末尾（東京ディズニーシー・ステーション）と先頭（リゾートゲートウェイ・ステーション）は
+  // CIRCULAR_LINES 定義によりグラフ上でも隣接エッジで結ばれる。
+  'ディズニーリゾートライン': ['リゾートゲートウェイ・ステーション','東京ディズニーランド・ステーション','ベイサイド・ステーション','東京ディズニーシー・ステーション']
 };
 
 // 駅→路線リスト の逆引きインデックス
@@ -3375,11 +3410,20 @@ function addEdge(a, b, w) {
 function stationEdgeWeight(a, b) {
   return 1; // 均等重み（駅数ベース）。距離ベースは座標未登録駅で不均一になるため使用しない
 }
+// 周回路線（リング状に運行する路線）: 末尾駅と先頭駅も隣接エッジで結ぶ。
+// 2026-08 v2.26.0: ディズニーリゾートライン（4駅を周回・1周約13分）で初適用。
+const CIRCULAR_LINES = new Set(['ディズニーリゾートライン']);
 for (const [lineName, stations] of Object.entries(RAILWAY_LINES)) {
   for (let i = 0; i < stations.length - 1; i++) {
     const a = `${stations[i]}@${lineName}`;
     const b = `${stations[i + 1]}@${lineName}`;
     addEdge(a, b, stationEdgeWeight(stations[i], stations[i + 1]));
+  }
+  // 周回: 最終駅 → 先頭駅 も隣接エッジ（例: 東京ディズニーシー・ステーション ⇔ リゾートゲートウェイ・ステーション）
+  if (CIRCULAR_LINES.has(lineName) && stations.length >= 3) {
+    const last = `${stations[stations.length - 1]}@${lineName}`;
+    const first = `${stations[0]}@${lineName}`;
+    addEdge(last, first, stationEdgeWeight(stations[stations.length - 1], stations[0]));
   }
 }
 // 同一駅での路線間を結ぶ（乗換エッジ）
@@ -3447,6 +3491,8 @@ const WALK_TRANSFERS = [
   { from: '柴又', to: '金町', minutes: 3 },                // 京成金町線 ⇔ JR常磐線（柴又駅と金町駅は隣接）
   { from: '京成金町', to: '金町', minutes: 3 },            // 京成金町線終点 ⇔ JR常磐線（同一駅扱い）
   { from: '川越', to: '本川越', minutes: 4 },              // JR川越線・東武東上線 ⇔ 西武新宿線（約350m）
+  // 2026-08 v2.26.0 ディズニーリゾートライン追加の連絡駅
+  { from: '舞浜', to: 'リゾートゲートウェイ・ステーション', minutes: 2 }, // JR京葉線 ⇔ ディズニーリゾートライン（JR舞浜駅南口から徒歩2分・公式）
 ];
 // 双方向ルックアップ（buildRouteSegments での徒歩連絡検出と徒歩時間取得に使用）
 const WALK_TRANSFER_LOOKUP = new Map();
@@ -3905,7 +3951,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.25.4' },
+  { name: 'tokyo-transit-mcp', version: '2.26.0' },
   { capabilities: { tools: {} } }
 );
 
