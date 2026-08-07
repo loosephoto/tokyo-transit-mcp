@@ -17,26 +17,19 @@
 
 ### 🚉 全交通機関を統合
 
-| 種別 | 対応事業者 |
+**計100路線・1,290駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
+
+| 種別 | 対応事業者（対応路線） |
 |:---|:---|
-| 🚃 鉄道 | JR東日本・東京メトロ・都営地下鉄・小田急・京王・西武・東武・京急・京成・相鉄・東急・横浜市営・**つくばエクスプレス(MIR)**・**りんかい線(TWR)**・**みなとみらい線**・**箱根登山線**・北総・埼玉高速・東葉高速・芝山鉄道・JR東海 |
+| 🚃 鉄道 | **JR東日本**: 山手線、京浜東北線、中央線快速、中央総武線各停、総武線各停、埼京線、京葉線、武蔵野線、常磐線快速、常磐線各停、南武線、南武支線、東海道線、横須賀線、湘南新宿ライン、横浜線、青梅線、五日市線、鶴見線、相模線、八高線、川越線、高崎線、宇都宮線<br>**東京メトロ**: 銀座線、丸ノ内線（支線含む）、日比谷線、東西線、千代田線、半蔵門線、有楽町線、副都心線、南北線<br>**都営**: 浅草線、三田線、新宿線、大江戸線、都電荒川線<br>**私鉄・第三セクター**: 小田急（小田原線・多摩線・江ノ島線）、京王（本線・高尾線・相模原線・動物園線・井の頭線）、西武（池袋線・新宿線・多摩湖線・山口線・西武園線・多摩川線・国分寺線・豊島線）、東武（東上線・伊勢崎線・大師線・亀戸線・野田線・宇都宮線）、京急（本線・空港線・大師線・逗子線・久里浜線）、京成（本線・押上線・支線・金町線・千葉線・千原線）、新京成線、東急（東横線・田園都市線・目黒線・大井町線・池上線・多摩川線・世田谷線）、相鉄（本線・いずみ野線・新横浜線）、湘南モノレール、北総鉄道、埼玉高速鉄道、東葉高速鉄道、芝山鉄道、つくばエクスプレス、りんかい線、みなとみらい線、箱根登山線、富士急行線<br>**横浜市営地下鉄**: ブルーライン、グリーンライン |
 | 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT 並列取得）＋ JRバス関東・都内コミュニティバス41自治体（GTFS-JP個別取得）。バス停検索・乗り継ぎ探索・**バス⇔電車⇔バス横断乗り継ぎ**・ノンステップバス表示に対応 |
 | 🚡 AGT | ゆりかもめ・日暮里舎人ライナー |
-| 🚝 モノレール | 東京モノレール・多摩モノレール |
+| 🚝 モノレール | 東京モノレール・多摩モノレール・**ディズニーリゾートライン（舞浜リゾートライン・4駅周回）** |
 | 🚋 路面電車 | 都電荒川線（東京さくらトラム） |
 | 🚢 フェリー | 東海汽船（伊豆諸島・小笠原航路）。ODPT GTFS が利用できない場合は内蔵ポートリスト（19港）で検索 |
 | 🚤 水上バス | 東京クルーズ（浅草〜お台場〜豊洲） |
 | ✈️ フライト | 羽田(HND)・成田(NRT) の到着/出発フライト（AviationStack）。キー未設定時は空港アクセス経路のみ表示（graceful degradation） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API・1,878ポート） |
-
-**現在の対応路線（計100路線・1,290駅）**:
-
-- **JR東日本**: 山手線、京浜東北線、中央線快速、中央総武線各停、総武線各停、埼京線、京葉線、武蔵野線、常磐線快速、常磐線各停、南武線、南武支線、東海道線、横須賀線、湘南新宿ライン、横浜線、青梅線、五日市線、鶴見線、相模線、八高線、川越線、高崎線、宇都宮線
-- **東京メトロ**: 銀座線、丸ノ内線（支線含む）、日比谷線、東西線、千代田線、半蔵門線、有楽町線、副都心線、南北線
-- **都営**: 浅草線、三田線、新宿線、大江戸線、都電荒川線
-- **私鉄・第三セクター**: 小田急（小田原線・多摩線・江ノ島線）、京王（本線・高尾線・相模原線・動物園線・井の頭線）、西武（池袋線・新宿線・多摩湖線・山口線・西武園線・多摩川線・国分寺線・豊島線）、東武（東上線・伊勢崎線・大師線・亀戸線・野田線・宇都宮線）、京急（本線・空港線・大師線・逗子線・久里浜線）、京成（本線・押上線・支線・金町線・千葉線・千原線）、新京成線、東急（東横線・田園都市線・目黒線・大井町線・池上線・多摩川線・世田谷線）、相鉄（本線・いずみ野線・新横浜線）、湘南モノレール、北総鉄道、埼玉高速鉄道、東葉高速鉄道、芝山鉄道、つくばエクスプレス、りんかい線、みなとみらい線、箱根登山線、富士急行線
-- **AGT・モノレール**: ゆりかもめ、日暮里・舎人ライナー、東京モノレール、多摩モノレール、**ディズニーリゾートライン（舞浜リゾートライン・4駅周回）**
-- **横浜市営地下鉄**: ブルーライン、グリーンライン
 
 ### 🛤️ 路線網の網羅性とデータ確認
 
@@ -588,26 +581,19 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🚉 Integrated Transit Agencies
 
-| Type | Supported Operators |
+**Covers 100 lines / 1,290 stations** (route search runs on the built-in graph without an API key):
+
+| Type | Supported Operators (Lines) |
 |:---|:---|
-| 🚃 Railways | JR East, Tokyo Metro, Toei Subway, Odakyu, Keio, Seibu, Tobu, Keikyu, Keisei, Sotetsu, Tokyu, Yokohama Municipal, **Tsukuba Express (MIR)**, **Rinkai Line (TWR)**, **Minatomirai Line**, **Hakone Tozan Railway**, Hokuso, Saitama Railway, Toyo Rapid, Shibayama Railway, JR Central |
+| 🚃 Railways | **JR East**: Yamanote, Keihin-Tohoku, Chuo (Rapid), Chuo-Sobu (Local), Sobu (Local), Saikyo, Keiyo, Musashino, Joban (Rapid), Joban (Local), Nambu, Nambu Branch, Tokaido, Yokosuka, Shonan-Shinjuku, Yokohama, Ome, Itsukaichi, Tsurumi, Sagami, Hachiko, Kawagoe, Takasaki, Utsunomiya<br>**Tokyo Metro**: Ginza, Marunouchi (incl. branch), Hibiya, Tozai, Chiyoda, Hanzomon, Yurakucho, Fukutoshin, Namboku<br>**Toei**: Asakusa, Mita, Shinjuku, Oedo, Toden Arakawa<br>**Private / third-sector**: Odakyu (Odawara, Tama, Enoshima), Keio (Main, Takao, Sagamihara, Dobutsuen, Inokashira), Seibu (Ikebukuro, Shinjuku, Tamako, Yamaguchi, Seibuen, Tamagawa, Kokubunji, Toshima), Tobu (Tojo, Isesaki, Daishi, Kameido, Noda, Utsunomiya), Keikyu (Main, Airport, Daishi, Zushi, Kurihama), Keisei (Main, Oshiage, Branch, Kanamachi, Chiba, Chihara), Shin-Keisei, Tokyu (Toyoko, Den-en-toshi, Meguro, Oimachi, Ikegami, Tamagawa, Setagaya), Sotetsu (Main, Izumino, Shin-Yokohama), Shonan Monorail, Hokuso, Saitama Rapid, Toyo Rapid, Shibayama, Tsukuba Express, Rinkai, Minatomirai, Hakone Tozan, Fujikyu<br>**Yokohama Municipal Subway**: Blue Line, Green Line |
 | 🚌 Buses | Toei / Seibu / Yokohama City Bus (parallel ODPT merge) + JR Bus Kanto & 41 Tokyo community buses (individual GTFS-JP feeds). Stop search, transfer search, **bus⇔train⇔bus cross-modal transfers**, and non-step bus display supported |
 | 🚡 AGT | Yurikamome, Nippori-Toneri Liner |
-| 🚝 Monorails | Tokyo Monorail, Tama Monorail |
+| 🚝 Monorails | Tokyo Monorail, Tama Monorail, **Disney Resort Line (Maihama Resort Line, 4-station loop)** |
 | 🚋 Trams | Toden Arakawa Line (Tokyo Sakura Tram) |
 | 🚢 Ferries | Tokai Kisen (Izu Islands & Ogasawara routes). Falls back to the built-in port list (19 ports) when ODPT GTFS is unavailable |
 | 🚤 Water Buses | Tokyo Cruise (Asakusa - Odaiba - Toyosu) |
 | ✈️ Flights | Haneda (HND) / Narita (NRT) arrivals & departures (AviationStack). Without a key, airport access routes are shown only (graceful degradation) |
 | 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
-
-**Currently supported network (100 lines / 1,290 stations)**:
-
-- **JR East**: Yamanote, Keihin-Tohoku, Chuo (Rapid), Chuo-Sobu (Local), Sobu (Local), Saikyo, Keiyo, Musashino, Joban (Rapid), Joban (Local), Nambu, Nambu Branch, Tokaido, Yokosuka, Shonan-Shinjuku, Yokohama, Ome, Itsukaichi, Tsurumi, Sagami, Hachiko, Kawagoe, Takasaki, Utsunomiya Lines
-- **Tokyo Metro**: Ginza, Marunouchi (incl. branch), Hibiya, Tozai, Chiyoda, Hanzomon, Yurakucho, Fukutoshin, Namboku Lines
-- **Toei**: Asakusa, Mita, Shinjuku, Oedo Lines, Toden Arakawa Line
-- **Private / third-sector**: Odakyu (Odawara, Tama, Enoshima), Keio (Main, Takao, Sagamihara, Dobutsuen, Inokashira), Seibu (Ikebukuro, Shinjuku, Tamako, Yamaguchi, Seibuen, Tamagawa, Kokubunji, Toshima), Tobu (Tojo, Isesaki, Daishi, Kameido, Noda, Utsunomiya), Keikyu (Main, Airport, Daishi, Zushi, Kurihama), Keisei (Main, Oshiage, Branch, Kanamachi, Chiba, Chihara), Shin-Keisei, Tokyu (Toyoko, Den-en-toshi, Meguro, Oimachi, Ikegami, Tamagawa, Setagaya), Sotetsu (Main, Izumino, Shin-Yokohama), Shonan Monorail, Hokuso, Saitama Rapid, Toyo Rapid, Shibayama, Tsukuba Express, Rinkai, Minatomirai, Hakone Tozan, Fujikyu Lines
-- **AGT / Monorail**: Yurikamome, Nippori-Toneri Liner, Tokyo Monorail, Tama Monorail, **Disney Resort Line (Maihama Resort Line, 4-station loop)**
-- **Yokohama Municipal Subway**: Blue Line, Green Line
 
 ### 🛤️ Route Coverage and Data Validation
 
@@ -1121,26 +1107,19 @@ MIT License
 
 ### 🚉 整合所有公共交通工具
 
-| 类别 | 支持的运营商 |
+**共覆盖100条线路/1,290站**（路线搜索由无需 API 密钥的内置图执行）：
+
+| 类别 | 支持的运营商（线路） |
 |:---|:---|
-| 🚃 铁路 | JR东日本、东京地下铁（Tokyo Metro）、都营地下铁、小田急、京王、西武、东武、京急、京成、相铁、东急、横滨市营、**筑波快线 (MIR)**、**临海线 (TWR)**、**港区未来线**、**箱根登山电车**、北总、埼玉高速、东叶高速、芝山铁道、JR东海 |
+| 🚃 铁路 | **JR东日本**：山手线、京滨东北线、中央线快速、中央总武线各站停车、总武线各站停车、埼京线、京叶线、武藏野线、常磐线快速、常磐线各站停车、南武线、南武支线、东海道线、横须贺线、湘南新宿线、横滨线、青梅线、五日市线、鹤见线、相模线、八高线、川越线、高崎线、宇都宫线<br>**东京地铁**：银座线、丸之内线（含支线）、日比谷线、东西线、千代田线、半藏门线、有乐町线、副都心线、南北线<br>**都营**：浅草线、三田线、新宿线、大江户线、都电荒川线<br>**私铁・第三部门**：小田急（小田原线・多摩线・江之岛线）、京王（本线・高尾线・相模原线・动物园线・井之头线）、西武（池袋线・新宿线・多摩湖线・山口线・西武园线・多摩川线・国分寺线・丰岛线）、东武（东上线・伊势崎线・大师线・龟户线・野田线・宇都宫线）、京急（本线・机场线・大师线・逗子线・久里浜线）、京成（本线・押上线・支线・金町线・千叶线・千原线）、新京成线、东急（东横线・田园都市线・目黑线・大井町线・池上线・多摩川线・世田谷线）、相铁（本线・泉野线・新横滨线）、湘南单轨电车、北总铁道、埼玉高速铁道、东叶高速铁道、芝山铁道、筑波快线、临海线、港未来线、箱根登山线、富士急行线<br>**横滨市营地铁**：蓝线、绿线 |
 | 🚌 公交 | 都营/西武/横滨市营公交（ODPT 并行获取）+ JR巴士关东及东京 41 个自治体的社区公交（GTFS-JP 单独数据源）。支持公交站查询、换乘搜索、**公交⇔电车⇔公交跨方式换乘**及无障碍公交显示 |
 | 🚡 AGT | 百合海鸥号（Yurikamome）、日暮里-舍人线 |
-| 🚝 单轨铁路 | 东京单轨电车、多摩单轨电车 |
+| 🚝 单轨铁路 | 东京单轨电车、多摩单轨电车、**迪士尼度假区线（舞浜度假区线・4站环线）** |
 | 🚋 有轨电车 | 都电荒川线（东京樱花路面电车） |
 | 🚢 轮渡 | 东海汽船（伊豆群岛、小笠原航线）。ODPT GTFS 不可用时回退至内置港口列表（19 港） |
 | 🚤 水上巴士 | 东京观光汽船（浅草〜台场〜丰洲） |
 | ✈️ 航班 | 羽田 (HND) / 成田 (NRT) 的到达/出发航班（AviationStack）。未配置密钥时仅显示机场接驳路线（优雅降级） |
 | 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878 个站点） |
-
-**当前支持的线路（共100条线路/1,290站）**：
-
-- **JR东日本**：山手线、京滨东北线、中央线快速、中央总武线各站停车、总武线各站停车、埼京线、京叶线、武藏野线、常磐线快速、常磐线各站停车、南武线、南武支线、东海道线、横须贺线、湘南新宿线、横滨线、青梅线、五日市线、鹤见线、相模线、八高线、川越线、高崎线、宇都宫线
-- **东京地铁**：银座线、丸之内线（含支线）、日比谷线、东西线、千代田线、半藏门线、有乐町线、副都心线、南北线
-- **都营**：浅草线、三田线、新宿线、大江户线、都电荒川线
-- **私铁・第三部门**：小田急（小田原线・多摩线・江之岛线）、京王（本线・高尾线・相模原线・动物园线・井之头线）、西武（池袋线・新宿线・多摩湖线・山口线・西武园线・多摩川线・国分寺线・丰岛线）、东武（东上线・伊势崎线・大师线・龟户线・野田线・宇都宫线）、京急（本线・机场线・大师线・逗子线・久里浜线）、京成（本线・押上线・支线・金町线・千叶线・千原线）、新京成线、东急（东横线・田园都市线・目黑线・大井町线・池上线・多摩川线・世田谷线）、相铁（本线・泉野线・新横滨线）、湘南单轨电车、北总铁道、埼玉高速铁道、东叶高速铁道、芝山铁道、筑波快线、临海线、港未来线、箱根登山线、富士急行线
-- **AGT・单轨**：百合海鸥号、日暮里-舍人线、东京单轨电车、多摩单轨电车、**迪士尼度假区线（舞浜度假区线・4站环线）**
-- **横滨市营地铁**：蓝线、绿线
 
 ### 🛤️ 路线覆盖与数据确认
 
