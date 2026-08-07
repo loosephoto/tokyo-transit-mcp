@@ -50,26 +50,6 @@
 - **近接異名駅（徒歩連絡）を13組追加** — 御徒町⇔仲御徒町、上野⇔上野御徒町、有楽町⇔日比谷、津田沼⇔京成津田沼、川崎⇔京急川崎、溝の口⇔武蔵溝ノ口、曳舟⇔京成曳舟、新御茶ノ水⇔小川町、人形町⇔水天宮前、小田急多摩センター⇔京王多摩センター⇔多摩センター（合計38組）
 - **検証** — test-walk（近接異名駅・駅データ回帰: 2-2c/2-2d新規アサート追加）、test-issues-10-19（#16〜#18を公式駅順前提に更新）、probe-all-lang（既知の天気翻訳4件以外は全PASS）
 
-**v2.23.0 では大量イシュー（#10〜#25）に対応しました**:
-
-**v2.22.1 では徒歩連絡（近接異名駅）の2バグを修正しました**:
-
-- **徒歩エッジによる乗車エッジの上書き** — 近接異名駅ペアの徒歩エッジが同一路線の乗車エッジを上書きし、新橋⇔汐留の「ゆりかもめ1駅」・東京⇔大手町の「丸ノ内線1駅」が徒歩連絡に置き換わっていた問題を修正（既存エッジは上書きしない）
-- **徒歩判定の誤表示** — 駅名ペアだけで徒歩連絡を判定していたため、同一路線の隣接駅（新橋⇔汐留）の乗車エッジまで「🚶 徒歩連絡」と表示される問題を修正（エッジの実重みで一意に判定）
-
-**v2.22.0 では近接異名駅（連絡駅）と同名別駅の取り扱いを強化しました**:
-
-- **近接異名駅（連絡駅）の徒歩連絡** — 名称は異なるが実質1つの乗換駅として機能する駅の組（牛田⇔京成関屋、田町⇔三田、浜松町⇔大門、東京⇔大手町、秋葉原⇔岩本町、馬喰横山⇔東日本橋、蒲田⇔京急蒲田、勝田台⇔東葉勝田台、上野⇔京成上野 ほか25組）を経路グラフに接続。ルート上は「🚶 徒歩連絡」セグメント（徒歩時間付き・日英中対応）として表示され、例: 牛田→矢切 が3乗換37分 → 2乗換30分に改善
-- **同名別駅の曖昧化（disambiguation）** — 同じ駅名だが別の場所にある駅（小川町=都営新宿線/東武東上線、両国=JR/都営大江戸線、霞ヶ関=東京メトロ/東武東上線）は入力時に検索を中断し候補を提示（サイレント推測を廃止）
-- **路線データの正確性修正** — 都営浅草線の駅リスト破損（半蔵門線・新宿線の駅が混入）を公式駅順に修正、千代田線に北千住を追加・幻の内幸町を削除、京浜東北線に新橋を追加、南北線の市ケ谷を市ヶ谷に表記統合（乗換接続が機能）、大江戸線に新宿西口⇔都庁前の隣接を追加
-
-**v2.21.0 では路線データの欠落を一括補完し、駅名解決と多言語表示を強化しました（計954駅・64路線）**:
-
-- **駅データ欠落の補完** — 東京メトロ丸ノ内線（新宿〜荻窪間の7駅＋方南町支線）、京王高尾線（7駅）、横浜市営地下鉄ブルーライン（33駅）・グリーンライン（14駅）、京浜東北線（桜木町〜根岸の延伸）を追加
-- **芝山鉄道の孤立解消** — 京成本線支線（京成成田⇄東成田）を追加し、芝山千代田から都心への経路を接続
-- **駅名解決の強化** — 京成線の略称（関屋・高砂・立石・臼井）と、全路線の表記ゆれ（お茶の水→御茶ノ水、市谷→市ヶ谷、茅ケ崎/茅ヶ崎の表記統合など18件）をエイリアス登録
-- **多言語対応の強化** — ライブ運行情報（振替輸送・運転見合わせ）を英語・中国語にローカライズ（en/zh 応答に日本語が漏れない）
-
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
 ### 🤖 AI インテリジェントアドバイス
@@ -636,26 +616,6 @@ The supported network is expanded continuously using public transit data and off
 - **13 walk-transfer pairs (adjacent alias stations) added** — Okachimachi⇔Naka-Okachimachi, Ueno⇔Ueno-Okachimachi, Yurakucho⇔Hibiya, Tsudanuma⇔Keisei-Tsudanuma, Kawasaki⇔Keikyu-Kawasaki, Mizonokuchi⇔Musashi-Mizonokuchi, Hikifune⇔Keisei-Hikifune, Shin-Ochanomizu⇔Ogawamachi, Ningyocho⇔Suitengumae, Odakyu-Tama-Center⇔Keio-Tama-Center⇔Tama-Center (38 pairs total)
 - **Verification** — test-walk (adjacent-alias-station & station-data regression; new 2-2c/2-2d assertions), test-issues-10-19 (#16-#18 updated to the official station order), probe-all-lang (all PASS except the 4 known weather-translation failures)
 
-**v2.23.0 handled the large issue batch (#10-#25)**:
-
-**v2.22.1 fixes two bugs in walk transfers (adjacent alias stations)**:
-
-- **Walk edge overwrote ride edge** — Walk edges between adjacent alias station pairs overwrote same-line ride edges, replacing "Yurikamome 1 stop" (Shimbashi⇔Shiodome) and "Marunouchi Line 1 stop" (Tokyo⇔Otemachi) with walk transfers. Fixed: existing edges are no longer overwritten.
-- **Mislabeled walk detection** — Walk transfer was detected by station-name pair alone, so same-line adjacent stations (Shimbashi⇔Shiodome) were shown as "🚶 Walk transfer" even when riding. Fixed: walk edges are now identified by actual edge weight.
-
-**v2.22.0 strengthens handling of adjacent alias stations (connected stations) and same-name-different-station cases**:
-
-- **Walk-transfer edges for adjacent alias stations** — 25 pairs of stations that function as a single interchange despite different names (Ushida⇔Keisei Sekiya, Tamachi⇔Mita, Hamamatsucho⇔Daimon, Tokyo⇔Otemachi, Akihabara⇔Iwamotocho, Bakuroyokoyama⇔Higashi-Nihombashi, Kamata⇔Keikyu Kamata, Katsutadai⇔Toyokatsutadai, Ueno⇔Keisei Ueno, etc.) are now connected in the route graph, shown as "🚶 Walk transfer" segments with walk time (ja/en/zh). E.g. Ushida→Yagiri improves from 3 transfers / 37 min to 2 transfers / 30 min
-- **Disambiguation for same-name different stations** — Stations that share a name but are at different locations (Ogawamachi=Toei Shinjuku Line / Tobu Tojo Line, Ryogoku=JR / Toei Oedo Line, Kasumigaseki=Tokyo Metro / Tobu Tojo Line) now stop the search and present candidates instead of silently guessing
-- **Route data accuracy fixes** — Toei Asakusa Line station list corruption (Hanzomon/Shinjuku Line stations mixed in) corrected to the official order; Kita-Senju added to Chiyoda Line (phantom Uchisaiwaicho removed); Shimbashi added to Keihin-Tohoku Line; Ichigaya spelling unified (Namboku Line transfer restored); Oedo Line Shinjuku-Nishiguchi⇔Tochomae adjacency added
-
-**v2.21.0 completes missing route data and strengthens station-name resolution and multilingual output (954 stations / 64 lines total)**:
-
-- **Missing station data completed** — Tokyo Metro Marunouchi Line (7 stations between Shinjuku and Ogikubo + the Honancho branch), Keio Takao Line (7 stations), Yokohama Municipal Subway Blue Line (33 stations) and Green Line (14 stations), and the Keihin-Tohoku Line extension (Sakuragicho–Negishi)
-- **Shibayama Railway un-isolated** — the Keisei Main Line branch (Keisei-Narita ⇄ Higashi-Narita) was added, connecting Shibayama-Chiyoda to central Tokyo
-- **Station-name resolution strengthened** — Keisei abbreviations (Sekiya, Takasago, Tateishi, Usui) and notation variants across all lines (e.g. Ochanomizu→御茶ノ水, Ichigaya→市ヶ谷, unified 茅ケ崎/茅ヶ崎 — 18 entries) registered as aliases
-- **Multilingual output strengthened** — live train information (substitute bus transport, service suspension) is now localized to English/Chinese (no Japanese leaks into en/zh responses)
-
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
 ### 🤖 AI Intelligent Advice
@@ -1183,26 +1143,6 @@ MIT License
 - **站名修正为官方写法** — 小田急多摩线的「多摩中心」修正为「小田急多摩中心」（与京王相模原线的京王多摩中心・多摩单轨的多摩中心区分）。3站通过人行天桥直连，故以步行换乘连接
 - **新增13组步行换乘（近接异名站）** — 御徒町⇔仲御徒町、上野⇔上野御徒町、有乐町⇔日比谷、津田沼⇔京成津田沼、川崎⇔京急川崎、沟之口⇔武藏沟之口、曳舟⇔京成曳舟、新御茶之水⇔小川町、人形町⇔水天宫前、小田急多摩中心⇔京王多摩中心⇔多摩中心（合计38组）
 - **验证** — test-walk（近接异名站・车站数据回归：新增2-2c/2-2d断言）、test-issues-10-19（#16〜#18按官方站序更新）、probe-all-lang（除已知天气翻译4项外全部PASS）
-
-**v2.23.0 处理了大规模议题（#10〜#25）**：
-
-**v2.22.1 修复了步行换乘（近接异名站）的两个问题**：
-
-- **步行边覆盖乘车边** — 近接异名站的步行边覆盖了同一条线路的乘车边，导致新桥⇔汐留的「百合海鸥线1站」、东京⇔大手町的「丸之内线1站」被替换为步行换乘。已修复（不再覆盖已有边）。
-- **步行判定误显示** — 仅凭站名组合判断步行换乘，导致同线路相邻站（新桥⇔汐留）的乘车边也被显示为「🚶 步行换乘」。已修复（按边的实际权重唯一判定）。
-
-**v2.22.0 强化了近接异名站（连络站）与同名异站的处理**：
-
-- **近接异名站（连络站）的步行换乘** — 名称不同但实质为同一换乘站的组合（牛田⇔京成关屋、田町⇔三田、滨松町⇔大门、东京⇔大手町、秋叶原⇔岩本町、马喰横山⇔东日本桥、蒲田⇔京急蒲田、胜田台⇔东叶胜田台、上野⇔京成上野 等25组）已接入路线图。路线上以「🚶 步行换乘」区段（含步行时间・支持日英中）显示。例：牛田→矢切 从3次换乘37分钟改善为2次换乘30分钟
-- **同名异站的消歧（disambiguation）** — 站名相同但位置不同的车站（小川町=都营新宿线/东武东上线、两国=JR/都营大江户线、霞关=东京地铁/东武东上线）在输入时中断搜索并提示候选（废除静默推测）
-- **路线数据准确性修正** — 都营浅草线站名列表损坏（混入半藏门线・新宿线的车站）已按官方顺序修正、千代田线补充北千住并删除幻之内幸町、京滨东北线补充新桥、南北线市ケ谷统一为市ヶ谷（换乘连接恢复）、大江户线补充新宿西口⇔都厅前邻接
-
-**v2.21.0 一次性补齐路线数据缺失，并强化车站名解析与多语言输出（共954站/64条线路）**：
-
-- **车站数据缺失补齐** — 东京地铁丸之内线（新宿〜荻窪间7站＋方南町支线）、京王高尾线（7站）、横滨市营地铁蓝线（33站）/绿线（14站）、京滨东北线（樱木町〜根岸延伸）
-- **芝山铁道孤立解除** — 新增京成本线支线（京成成田⇄东成田），连通芝山千代田至都心
-- **车站名解析强化** — 京成线简称（关屋・高砂・立石・臼井）及全路线表记差异（お茶の水→御茶ノ水、市谷→市ヶ谷、茅ケ崎/茅ヶ崎统一等18项）已注册为别名
-- **多语言输出强化** — 实时运行信息（接驳换乘・暂停运行）已本地化为英/中（en/zh 响应不再泄漏日文）
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 
