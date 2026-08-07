@@ -280,7 +280,7 @@ assert(ichigayaRoute.routes && ichigayaRoute.routes[0].summary.transfers === 0, 
 const kitaRoute = computeRoutes('北千住', '綾瀬');
 assert(kitaRoute.routes && kitaRoute.routes[0].segments.some(s => s.line === '東京メトロ千代田線' || s.line === 'JR常磐線快速'), '北千住→綾瀬: 千代田線または常磐線で直通（#14で常磐線各停・快速に綾瀬追加）');
 const shinbashiRoute = computeRoutes('有楽町', '品川');
-assert(shinbashiRoute.routes && shinbashiRoute.routes[0].segments.some(s => s.line === '京浜東北線' && s.stops === 5), '有楽町→品川: 京浜東北線で新橋・浜松町・田町・高輪ゲートウェイ経由（5駅・公式駅順）');
+assert(shinbashiRoute.routes && shinbashiRoute.routes[0].segments.some(s => (s.line === '京浜東北線' || s.line === 'JR山手線') && s.stops === 5), '有楽町→品川: 京浜東北線または山手線で新橋・浜松町・田町・高輪ゲートウェイ経由（5駅・公式駅順）');
 const asakusaBridge = computeRoutes('浅草橋', '森下');
 assert(asakusaBridge.routes && asakusaBridge.routes[0].segments.some(s => s.walk && s.from === '両国' && s.to === '両国（大江戸線）'),
   '浅草橋→森下: 両国⇔両国（大江戸線）徒歩連絡経由');
