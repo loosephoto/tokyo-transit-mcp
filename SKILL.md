@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.26.0
+version: 2.26.1
 ---
 
 # Tokyo Transit MCP Server
@@ -133,7 +133,16 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.26.1（2026-08-08）— 竹芝駅周辺の観光連携拡充（フェリーポート・文化施設・多言語表記揺れ）
+
+- **フェリーポートをランドマーク化**: LANDMARK_DEFS に takeshiba_pier（竹芝桟橋・東海汽船ターミナル、竹芝駅徒歩3分）・hinode_pier（日の出桟橋・水上バス、浜松町駅徒歩5分）・edotokyo_museum（江戸東京博物館、両国駅徒歩3分）を追加。
+  - 🔴 **落とし穴（再発バグクラス）**: フェリーポート名（竹芝桟橋・東京・竹芝・日の出桟橋等）は FERRY_PORT_MAP にのみ存在し、search_route の resolveStation では解決されず STATION_NOT_FOUND になる。港名を検索可能にするには LANDMARK_DEFS（station: 最寄り駅, walk_min）に追加すること。FERRY_PORT_MAP は search_ferry 専用。
+- **浜離宮ランドマークの多言語表記揺れを補強**: en（Hamarikyu）・zh（滨离宫/滨离宫恩赐庭园）等の別名を追加。
+- **DESTINATION_CULTURAL_FACILITIES に竹芝を追加**: 浜離宮恩賜庭園（徒歩5分）・竹芝桟橋/東海汽船ターミナル（徒歩3分）・日の出桟橋/水上バス（徒歩10分）。
+- **検証**: scripts/test-takeshiba.mjs・test-takeshiba-extended.mjs・test-ferry-port-links.mjs・probe-landmark-all-lang.mjs（主要ランドマーク91件の ja/en/zh 解決）を新設。probe-all-lang(26/26)・test:walk・test-issues 全PASS。
+
 ### v2.26.0（2026-08-08）— ディズニーリゾートライン（舞浜リゾートライン）追加＋周回路線対応
+
 
 - **ディズニーリゾートライン（舞浜リゾートライン）を追加**: リゾートゲートウェイ・東京ディズニーランド・ベイサイド・東京ディズニーシーの4駅を周回するモノレール（1周約13分・均一運賃300円・公式サイト確認）。
   - **🔴 初の周回路線対応（CIRCULAR_LINES）**: グラフ構築ループに CIRCULAR_LINES Set を導入し、末尾駅→先頭駅の隣接エッジを追加。ディズニーリゾートラインは 東京ディズニーシー・ステーション ⇔ リゾートゲートウェイ・ステーション が直接接続される。

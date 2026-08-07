@@ -35,6 +35,13 @@
 
 公開交通データと公式・公開の路線一覧を参考に、対応路線を継続的に拡張しています。v2.20.0では東京メトロ南北線、京王井の頭線、小田急多摩線、東急目黒線・大井町線、京急空港線、JR横須賀線・湘南新宿ライン・横浜線、富士急行線を追加しました。
 
+**直近の更新内容（v2.26.1）**:
+
+- **竹芝駅周辺の観光連携を拡充** — LANDMARK_DEFS に**竹芝桟橋**（東海汽船ターミナル・竹芝駅徒歩3分）・**日の出桟橋**（水上バス・浜松町駅徒歩5分）・**江戸東京博物館**（両国駅徒歩3分）を追加。これまで search_route でフェリーポート名（竹芝桟橋・東京・竹芝・日の出桟橋等）が「駅が見つかりません」になっていた問題を修正（ja/en/zh対応）
+- **浜離宮ランドマークの多言語表記揺れを補強** — en（Hamarikyu）・zh（滨离宫）等の別名を追加
+- **竹芝駅到着時の文化施設表示を追加** — DESTINATION_CULTURAL_FACILITIES に竹芝（浜離宮恩賜庭園・竹芝桟橋・日の出桟橋）を登録
+- **検証** — scripts/test-takeshiba.mjs・test-takeshiba-extended.mjs・test-ferry-port-links.mjs・probe-landmark-all-lang.mjs（91件）を新設。probe-all-lang（26/26）・test:walk・test-issues 全PASS
+
 **直近の更新内容（v2.26.0）**:
 
 - **ディズニーリゾートライン（舞浜リゾートライン）を追加** — リゾートゲートウェイ・東京ディズニーランド・ベイサイド・東京ディズニーシーの4駅を周回するモノレール（1周約13分・均一運賃300円・公式サイト確認）。グラフに初の周回路線（CIRCULAR_LINES）対応を導入し、JR舞浜駅との乗換（徒歩2分）を WALK_TRANSFERS に追加。駅名・路線名の ja/en/zh 表記と表記揺れエイリアス（リゾートゲートウェイ駅・ベイサイド・TDL駅・Resort Gateway Station 等）を整備
@@ -599,6 +606,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 The supported network is expanded continuously using public transit data and official/public railway lists. In v2.20.0, the Tokyo Metro Namboku Line, Keio Inokashira Line, Odakyu Tama Line, Tokyu Meguro/Oimachi Lines, Keikyu Airport Line, JR Yokosuka/Shonan-Shinjuku/Yokohama Lines, and Fujikyu Line were added.
 
+**Latest updates (v2.26.1)**:
+
+- **Takeshiba area tourist connectivity expanded** — LANDMARK_DEFS gained **Takeshiba Pier** (Tokai Kisen ferry terminal, 3-min walk from Takeshiba Stn), **Hinode Pier** (water bus, 5-min walk from Hamamatsucho Stn), and **Edo-Tokyo Museum** (3-min walk from Ryogoku Stn). Ferry-port names (Takeshiba Pier, Tokyo Takeshiba Pier, Hinode Pier etc.) previously returned "station not found" in search_route; now resolved (ja/en/zh)
+- **Hama-rikyu landmark multilingual aliases reinforced** — en (Hamarikyu) / zh (滨离宫) variants added
+- **Takeshiba destination cultural facilities added** — Hama-rikyu Gardens / Takeshiba Pier / Hinode Pier registered for arrival display
+- **Verification** — new scripts/test-takeshiba.mjs, test-takeshiba-extended.mjs, test-ferry-port-links.mjs, probe-landmark-all-lang.mjs (91 cases). probe-all-lang (26/26) / test:walk / test-issues all PASS
+
 **Latest updates (v2.26.0)**:
 
 - **Disney Resort Line (Maihama Resort Line) added** — a monorail looping the four Resort Gateway / Tokyo Disneyland / Bayside / Tokyo DisneySea stations (~13 min per loop, flat fare ¥300, verified from the official site). This is the first ring/loop route in the graph, implemented via CIRCULAR_LINES, with a transfer to JR Maihama (2-min walk) added to WALK_TRANSFERS. ja/en/zh names and alias variants (Resort Gateway Stn, Bayside, TDL Stn, Resort Gateway Station etc.) are wired up
@@ -1124,6 +1138,13 @@ MIT License
 ### 🛤️ 路线覆盖与数据确认
 
 项目参考公开交通数据、官方及公开线路列表，持续扩展支持的路线。v2.20.0 新增东京地铁南北线、京王井之头线、小田急多摩线、东急目黑线/大井町线、京急机场线、JR横须贺线/湘南新宿线/横滨线及富士急行线。
+
+**最近更新（v2.26.1）**：
+
+- **扩充竹芝站周边观光衔接** — LANDMARK_DEFS 新增**竹芝码头**（东海汽船轮渡码头・竹芝站步行3分钟）・**日出码头**（水上巴士・滨松町站步行5分钟）・**江户东京博物馆**（两国站步行3分钟）。此前 search_route 对渡轮港名称（竹芝码头・东京·竹芝码头・日出码头等）会返回「找不到车站」，现已修复（日英中对应）
+- **补强滨离宫地标的多语言表记变体** — 新增 en（Hamarikyu）・zh（滨离宫）等别名
+- **新增竹芝站到达时的文化设施显示** — DESTINATION_CULTURAL_FACILITIES 注册竹芝（滨离宫恩赐庭园・竹芝码头・日出码头）
+- **验证** — 新增 scripts/test-takeshiba.mjs・test-takeshiba-extended.mjs・test-ferry-port-links.mjs・probe-landmark-all-lang.mjs（91项）。probe-all-lang（26/26）・test:walk・test-issues 全部通过
 
 **最近更新（v2.26.0）**：
 
