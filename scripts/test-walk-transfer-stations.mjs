@@ -164,6 +164,18 @@ assert(iriya.candidates && iriya.candidates.length === 2, `入谷: 曖昧化（�
 const iriyaSagami = STATION_TO_LINES['入谷（相模線）'].map(e => e.line);
 assert(iriyaSagami.includes('JR相模線'), '入谷（相模線）: JR相模線に分離');
 
+// 2-2f. 天気表示の多言語化（v2.25 障害修正: 「まで」「雷を伴う」等の辞書漏れ）
+const weatherJa = '晴れ　時々　くもり　所により　夜のはじめ頃　まで　雨　で　雷を伴う';
+const weatherEn = mod.translateWeather(weatherJa, 'en');
+const weatherZh = mod.translateWeather(weatherJa, 'zh');
+assert(!/[\u3040-\u30ff\u4e00-\u9fff]/.test(weatherEn), `天気en翻訳に日本語残存: ${weatherEn}`);
+assert(!/[\u3040-\u30ff]/.test(weatherZh), `天気zh翻訳にかな残存: ${weatherZh}`);
+assert(weatherEn.includes('until') && weatherEn.includes('with thunder'), `天気en: まで/雷を伴う 未翻訳 (${weatherEn})`);
+assert(weatherZh.includes('为止') && weatherZh.includes('伴有雷电'), `天気zh: まで/雷を伴う 未翻訳 (${weatherZh})`);
+// 辞書漏れ時のフォールバック（日本語が残る未知語 → en は断片除去/汎用メッセージ）
+const weatherUnknown = mod.translateWeather('晴れ のち へんてこ天気', 'en');
+assert(!/[\u3040-\u30ff\u4e00-\u9fff]/.test(weatherUnknown), `天気enフォールバックに日本語残存: ${weatherUnknown}`);
+
 // 2-3. 同名別駅の曖昧化
 for (const [name, cands] of [['小川町', 2], ['両国', 2], ['霞ヶ関', 2]]) {
   const res = resolveStation(name);

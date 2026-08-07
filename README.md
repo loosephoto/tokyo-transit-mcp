@@ -42,13 +42,10 @@
 - **AGT・モノレール**: ゆりかもめ、日暮里・舎人ライナー、東京モノレール、多摩モノレール
 - **横浜市営地下鉄**: ブルーライン、グリーンライン
 
-**直近の更新内容（v2.25.0）**:
+**直近の更新内容（v2.25.1）**:
 
-- **未収録路線を27路線追加（イシュー#20 残タスク対応）** — 公式駅順（rosen-zu.net）で確認して一括追加。東急（池上線・多摩川線・世田谷線）、京成金町線（柴又）、東武亀戸線、京急大師線、西武（多摩川線・国分寺線・豊島線）、小田急江ノ島線、京急（逗子線・久里浜線）、相鉄（いずみ野線・新横浜線）、湘南モノレール、JR（青梅線・五日市線・鶴見線・相模線・八高線・川越線・高崎線・宇都宮線）、東武（野田線・宇都宮線）、京成（千葉線・千原線）を収録
-- **非鉄道カテゴリの拡充（イシュー#21-D）** — list_transit_operators に「路線バス」（都営・西武・横浜市営・京王・東急・小田急・京成・JRバス関東）と「水上バス・フェリー」（東海汽船・東京クルーズ）のカテゴリを追加（type_filter=bus/ferry 対応）
-- **同名別駅の曖昧化を追加** — JR相模線の「入谷」を「入谷（相模線）」に分離（東京メトロ日比谷線の入谷と約50km離隔）。入力時は候補提示
-- **連絡駅の徒歩連絡を追加** — 柴又⇔金町、京成金町⇔金町（京成金町線⇔JR常磐線）、川越⇔本川越（JR・東武⇔西武新宿線）
-- **検証** — 新規27路線のルート検索を全線実測、既存テスト（test-walk/test-issues/test-kanamachi/test-bus/community）全PASS、probe-all-lang（既知の天気翻訳4件以外は全PASS）
+- **天気表示のテスト障害を修正** — 気象庁テキストの翻訳辞書（WEATHER_TERM_MAP）の漏れを補強。「まで」（→ until/为止）・「雷を伴う」（→ with thunder/伴有雷电）等のJMA常用語を追加し、en/zh応答に日本語が残らないことを保証（probe-all-lang 全26件PASS）。辞書漏れ時は未翻訳断片を除去するフォールバック付き
+- **コミュニティバス名・バス停名の多言語化** — 41自治体のバス事業者名とバス停名（西口/東口/駅前等の接尾辞含む）を en/zh 対応（例: 新宿WEバス→Shinjuku WE Bus、新宿駅西口→Shinjuku Sta.West Exit）
 
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
@@ -546,7 +543,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.25.0）
+├── SKILL.md             # プロジェクトスキル定義（v2.25.1）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -608,13 +605,10 @@ The supported network is expanded continuously using public transit data and off
 - **AGT / Monorail**: Yurikamome, Nippori-Toneri Liner, Tokyo Monorail, Tama Monorail
 - **Yokohama Municipal Subway**: Blue Line, Green Line
 
-**Latest updates (v2.25.0)**:
+**Latest updates (v2.25.1)**:
 
-- **27 previously missing lines added (issue #20 remaining tasks)** — Station orders verified against rosen-zu.net and added in one batch: Tokyu (Ikegami, Tamagawa, Setagaya), Keisei Kanamachi (Shibamata), Tobu Kameido, Keikyu Daishi, Seibu (Tamagawa, Kokubunji, Toshima), Odakyu Enoshima, Keikyu (Zushi, Kurihama), Sotetsu (Izumino, Shin-Yokohama), Shonan Monorail, JR (Ome, Itsukaichi, Tsurumi, Sagami, Hachiko, Kawagoe, Takasaki, Utsunomiya), Tobu (Noda, Utsunomiya), Keisei (Chiba, Chihara)
-- **Non-rail categories expanded (issue #21-D)** — list_transit_operators now includes "Bus" (Toei, Seibu, Yokohama Municipal, Keio, Tokyu, Odakyu, Keisei, JR Bus Kanto) and "Water bus / Ferry" (Tokai Kisen, Tokyo Cruise) categories (type_filter=bus/ferry supported)
-- **Same-name different-station disambiguation added** — JR Sagami Line's "Iriya" separated as "Iriya (Sagami Line)" (about 50 km from Tokyo Metro Hibiya Line's Iriya). Candidates are presented on input
-- **Walk-transfer pairs added** — Shibamata⇔Kanamachi, Keisei-Kanamachi⇔Kanamachi (Keisei Kanamachi Line⇔JR Joban Line), Kawagoe⇔Hon-Kawagoe (JR/Tobu⇔Seibu Shinjuku Line)
-- **Verification** — Route search verified on all 27 new lines; all existing tests (test-walk/test-issues/test-kanamachi/test-bus/community) PASS; probe-all-lang all PASS except the 4 known weather-translation failures
+- **Weather display test failures fixed** — JMA weather-term translation dictionary (WEATHER_TERM_MAP) gaps filled. Added "まで" (→ until), "雷を伴う" (→ with thunder / 伴有雷电) and other common JMA terms; en/zh responses are now guaranteed free of leftover Japanese (probe-all-lang: all 26 cases PASS). Fallback strips untranslated fragments when the dictionary misses a word
+- **Community bus names & stops localized** — Bus operator names for all 41 municipalities and stop suffixes (West/East/North/South Exit, Station Front etc.) are now en/zh localized (e.g. 新宿WEバス→Shinjuku WE Bus, 新宿駅西口→Shinjuku Sta.West Exit)
 
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
@@ -1074,7 +1068,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.25.0)
+├── SKILL.md             # Project skill definition (v2.25.1)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1136,13 +1130,10 @@ MIT License
 - **AGT・单轨**：百合海鸥号、日暮里-舍人线、东京单轨电车、多摩单轨电车
 - **横滨市营地铁**：蓝线、绿线
 
-**最近更新（v2.25.0）**：
+**最近更新（v2.25.1）**：
 
-- **新增27条此前未收录的线路（议题#20 剩余任务）** — 按官方站序（rosen-zu.net）确认后批量添加：东急（池上线・多摩川线・世田谷线）、京成金町线（柴又）、东武龟户线、京急大师线、西武（多摩川线・国分寺线・丰岛线）、小田急江之岛线、京急（逗子线・久里浜线）、相铁（泉野线・新横滨线）、湘南单轨电车、JR（青梅线・五日市线・鹤见线・相模线・八高线・川越线・高崎线・宇都宫线）、东武（野田线・宇都宫线）、京成（千叶线・千原线）
-- **非铁路类别扩充（议题#21-D）** — list_transit_operators 新增「路线巴士」（都营・西武・横滨市营・京王・东急・小田急・京成・JR巴士关东）与「水上巴士、渡轮」（东海汽船・东京游船）类别（支持 type_filter=bus/ferry）
-- **新增同名异站的消歧** — JR相模线的「入谷」分离为「入谷（相模线）」（与东京地铁日比谷线的入谷相距约50公里）。输入时提示候选
-- **新增步行换乘** — 柴又⇔金町、京成金町⇔金町（京成金町线⇔JR常磐线）、川越⇔本川越（JR・东武⇔西武新宿线）
-- **验证** — 新规27条线路的路由搜索全部实测通过；既有测试（test-walk/test-issues/test-kanamachi/test-bus/community）全部PASS；probe-all-lang（除已知天气翻译4项外全部PASS）
+- **修复天气显示测试故障** — 补齐气象厅文本翻译词典（WEATHER_TERM_MAP）的缺失词条，新增「まで」（→ 为止）、「雷を伴う」（→ 伴有雷电）等JMA常用语，确保 en/zh 响应不再残留日语（probe-all-lang 全部26项PASS）。词典未命中时自动剔除未翻译片段
+- **社区公交名称与站名多语化** — 41个自治体的巴士运营商名称及站名后缀（西口/东口/站前等）实现 en/zh 本地化（例：新宿WE巴士、新宿站西口）
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 
@@ -1601,7 +1592,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.25.0）
+├── SKILL.md             # 项目技能定义（v2.25.1）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥

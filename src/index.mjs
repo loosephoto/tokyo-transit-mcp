@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.25.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.25.1 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -2079,6 +2079,69 @@ function getDisplayStationName(stationName, userLang) {
   return stationName;
 }
 
+// 2026-08 コミュニティバス名・バス停名の多言語化（天気表示障害と同時修正・v2.25.0）
+// コミュニティバス事業者名（41自治体）の en/zh 表示名
+const COMMUNITY_BUS_NAME_MAP = {
+  en: {
+    'ちぃばす': 'Chii Bus', 'ハチ公バス': 'Hachiko Bus', 'ムーバス': 'M-Bus', 'はなバス': 'Hana Bus',
+    'すぎ丸': 'Sugimaru', 'くるりんバス': 'Kururin Bus', 'ちゅうバス': 'Chu Bus', 'Bーぐる': 'B-Guru',
+    '江戸バス': 'Edo Bus', 'めぐりん': 'Megurin', 'るのバス': 'Runobus', 'はるかぜ': 'Harukaze',
+    'さくら': 'Sakura', 'みどりバス': 'Midori Bus', 'Kバス': 'K-Bus', 'みたかシティバス': 'Mitaka City Bus',
+    'はちバス': 'Hachi Bus', 'せたがやくるりん': 'Setagaya Kururin', '新宿WEバス': 'Shinjuku WE Bus',
+    'すみまるくん': 'Sumimaru-kun', 'しおかぜ': 'Shiokaze', 'りんりんGO': 'Rinrin GO', 'ぶんバス': 'Bun Bus',
+    'こまバス': 'Koma Bus', 'にじバス': 'Niji Bus', 'くにっこ': 'Kunikko', 'きよバス': 'Kiyo Bus',
+    'たまちゃんバス': 'Tama-chan Bus', 'ｉバス': 'i-Bus', '多摩市ミニバス': 'Tama City Mini Bus',
+    '調布市ミニバス': 'Chofu City Mini Bus', 'グリーンバス': 'Green Bus', 'まちっこ': 'Machikko',
+    'Aバス': 'A-Bus', '日野市ミニバス': 'Hino City Mini Bus', 'ちょこバス': 'Choko Bus',
+    'MMシャトル': 'MM Shuttle', 'はむらん': 'Hamuran', 'やまびこ': 'Yamabiko', '池07系統': 'Ike 07 Route',
+    'CoCoバス': 'CoCo Bus'
+  },
+  zh: {
+    'ちぃばす': '千代田循环巴士', 'ハチ公バス': '八公巴士', 'ムーバス': 'M巴士', 'はなバス': '花巴士',
+    'すぎ丸': '杉丸', 'くるりんバス': '巡回巴士', 'ちゅうバス': '中巴士', 'Bーぐる': 'B-guru',
+    '江戸バス': '江户巴士', 'めぐりん': '惠巡', 'るのバス': 'RU之巴士', 'はるかぜ': '春风',
+    'さくら': '樱花', 'みどりバス': '绿巴士', 'Kバス': 'K巴士', 'みたかシティバス': '三鹰市巴士',
+    'はちバス': '八巴士', 'せたがやくるりん': '世田谷巡回', '新宿WEバス': '新宿WE巴士',
+    'すみまるくん': '隅丸君', 'しおかぜ': '潮风', 'りんりんGO': '铃铃GO', 'ぶんバス': '文巴士',
+    'こまバス': '驹巴士', 'にじバス': '虹巴士', 'くにっこ': '国分寺巴士', 'きよバス': '清巴士',
+    'たまちゃんバス': '玉酱巴士', 'ｉバス': 'i巴士', '多摩市ミニバス': '多摩市迷你巴士',
+    '調布市ミニバス': '调布市迷你巴士', 'グリーンバス': '绿色巴士', 'まちっこ': '街小',
+    'Aバス': 'A巴士', '日野市ミニバス': '日野市迷你巴士', 'ちょこバス': '小步巴士',
+    'MMシャトル': 'MM班车', 'はむらん': '羽村巴士', 'やまびこ': '山彦', '池07系統': '池07路',
+    'CoCoバス': 'CoCo巴士'
+  }
+};
+// バス停名の接尾辞（西口/東口/北口/南口/駅前 等）の en/zh 変換
+const BUS_STOP_SUFFIX_MAP = {
+  en: { '西口': 'West Exit', '東口': 'East Exit', '北口': 'North Exit', '南口': 'South Exit', '駅前': 'Station Front', '中央': 'Central' },
+  zh: { '西口': '西口', '東口': '东口', '北口': '北口', '南口': '南口', '駅前': '站前', '中央': '中央' }
+};
+// コミュニティバス事業者名の多言語表示
+function getCommunityBusDisplayName(busName, userLang) {
+  if (!busName || userLang === 'ja') return busName;
+  const t = (COMMUNITY_BUS_NAME_MAP[userLang] || {})[busName];
+  return t || busName;
+}
+// バス停名の多言語表示（駅名部分は getDisplayStationName、接尾辞は BUS_STOP_SUFFIX_MAP で変換）
+function getCommunityBusStopDisplayName(stopName, userLang) {
+  if (!stopName || userLang === 'ja') return stopName;
+  // 「新宿駅西口」→ 駅名「新宿」＋接尾辞「西口」 に分解
+  for (const [suffix, trans] of Object.entries(BUS_STOP_SUFFIX_MAP[userLang] || {})) {
+    if (stopName.endsWith(suffix)) {
+      const stationPart = stopName.slice(0, -suffix.length);
+      const stName = stationPart.replace(/駅$/, '');
+      const stTrans = getDisplayStationName(stName, userLang);
+      return stTrans + (stationPart.endsWith('駅') ? (userLang === 'en' ? ' Sta.' : '站') : '') + trans;
+    }
+  }
+  // 接尾辞なし: 駅名のみ
+  if (stopName.endsWith('駅')) {
+    const stTrans = getDisplayStationName(stopName.replace(/駅$/, ''), userLang);
+    return stTrans + (userLang === 'en' ? ' Sta.' : '站');
+  }
+  return stopName;
+}
+
 // 路線名の多言語表示（経路探索グラフの日本語路線名 → en/zh）
 const LINE_DISPLAY_NAMES = {
   '都営浅草線': { en: 'Toei Asakusa Line', zh: '都营浅草线' },
@@ -2205,19 +2268,34 @@ const WEATHER_TERM_MAP = {
     ['昼過ぎ', 'in the afternoon'], ['時々', 'occasionally'], ['一時', 'temporarily'], ['のち', 'then'], ['後', 'then'],
     ['所により雨', 'scattered rain'], ['所により雪', 'scattered snow'], ['所により', 'in places'],
     ['夜遅く', 'late at night'], ['夜のはじめ頃', 'in the early night'], ['明け方', 'dawn'], ['未明', 'before dawn'],
-    ['雷を伴い', 'with thunder'], ['激しく', 'heavily'], ['で', 'then'],
+    ['雷を伴う', 'with thunder'], ['雷を伴い', 'with thunder'], ['激しく', 'heavily'], ['で', 'then'],
     ['夕方', 'evening'], ['夜', 'night'], ['朝', 'morning'], ['日中', 'during the day'], ['から', 'from'],
     ['晴れ', 'sunny'], ['くもり', 'cloudy'], ['曇り', 'cloudy'], ['雨', 'rain'],
-    ['雪', 'snow'], ['雷', 'thunder'], ['風', 'wind'], ['強い', 'strong'], ['弱い', 'light'], ['降る', 'falling']
+    ['雪', 'snow'], ['雷', 'thunder'], ['風', 'wind'], ['強い', 'strong'], ['弱い', 'light'], ['降る', 'falling'],
+    // 2026-08 天気表示障害の修正（v2.25.0）
+    // 「まで」は「で」→then より先に最長一致で翻訳される必要がある（旧: まthen/ま并 に化けていた）
+    ['まで', 'until'],
+    ['大雨', 'heavy rain'], ['大雪', 'heavy snow'], ['非常に', 'very'], ['激しい', 'intense'],
+    ['降り続く', 'continuing to fall'], ['台風', 'typhoon'], ['おおむね', 'mostly'],
+    ['晴れ間', 'clear spells'], ['山沿い', 'mountain areas'], ['平地', 'plains'],
+    ['暖かい', 'warm'], ['寒い', 'cold'], ['蒸し暑い', 'humid'], ['荒れた天気', 'rough weather'],
+    ['回復', 'recovering'], ['回復する', 'recovering'], ['吹く', 'blowing'], ['風が強い', 'windy']
   ],
   zh: [
     ['昼過ぎ', '午后'], ['時々', '有时'], ['一時', '短暂'], ['のち', '转'], ['後', '转'],
     ['所により雨', '局部有雨'], ['所により雪', '局部有雪'], ['所により', '局部'],
     ['夜遅く', '深夜'], ['夜のはじめ頃', '入夜时分'], ['明け方', '清晨'], ['未明', '凌晨'],
-    ['雷を伴い', '伴有雷电'], ['激しく', '猛烈地'], ['で', '并'],
+    ['雷を伴う', '伴有雷电'], ['雷を伴い', '伴有雷电'], ['激しく', '猛烈地'], ['で', '并'],
     ['夕方', '傍晚'], ['夜', '夜间'], ['朝', '早晨'], ['日中', '白天'], ['から', '从'],
     ['晴れ', '晴'], ['くもり', '多云'], ['曇り', '多云'], ['雨', '雨'],
-    ['雪', '雪'], ['雷', '雷'], ['風', '风'], ['強い', '强'], ['弱い', '弱'], ['降る', '下']
+    ['雪', '雪'], ['雷', '雷'], ['風', '风'], ['強い', '强'], ['弱い', '弱'], ['降る', '下'],
+    // 2026-08 天気表示障害の修正（v2.25.0）
+    ['まで', '为止'],
+    ['大雨', '大雨'], ['大雪', '大雪'], ['非常に', '非常'], ['激しい', '猛烈'],
+    ['降り続く', '持续下'], ['台風', '台风'], ['おおむね', '大致'],
+    ['晴れ間', '晴间'], ['山沿い', '山区'], ['平地', '平原'],
+    ['暖かい', '温暖'], ['寒い', '寒冷'], ['蒸し暑い', '闷热'], ['荒れた天気', '恶劣天气'],
+    ['回復', '转好'], ['回復する', '转好'], ['吹く', '刮'], ['風が強い', '风大']
   ]
 };
 function translateWeather(text, userLang) {
@@ -2231,7 +2309,24 @@ function translateWeather(text, userLang) {
   }) : text;
   // 全角スペースは英中では通常のスペースに（JMAテキスト由来の整形用スペース）
   t = t.split('\u3000').join(' ');
-  return t.trim();
+  t = t.trim();
+  // 2026-08 天気表示障害の修正（v2.25.0）: 辞書漏れで日本語が残った場合、
+  // en は漢字・かなとも NG、zh はかな NG → 未翻訳語を除去し、全体が日本語のままなら汎用メッセージへ。
+  if (userLang === 'en' ? /[\u3040-\u30ff\u4e00-\u9fff]/.test(t) : /[\u3040-\u30ff]/.test(t)) {
+    if (userLang === 'en') {
+      // かな・漢字を含む断片を除去（例: 「thunderを伴う」→「thunder」）
+      t = t.replace(/[\u3040-\u30ff\u4e00-\u9fff]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    } else {
+      // かなのみ除去（漢字は中国語として通用する）
+      t = t.replace(/[\u3040-\u30ff]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    }
+    if (!t) {
+      t = userLang === 'en'
+        ? 'Weather forecast for the area is available in Japanese (see JMA).'
+        : '该地区天气预报目前仅提供日语（请参阅日本气象厅）。';
+    }
+  }
+  return t;
 }
 
 // ODPT運行情報テキスト（振替輸送・運転見合わせ・人身事故等）の英中ローカライズ。
@@ -3320,7 +3415,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.25.0' },
+  { name: 'tokyo-transit-mcp', version: '2.25.1' },
   { capabilities: { tools: {} } }
 );
 
@@ -6956,7 +7051,10 @@ function buildCommunityBusAccessBlock(stationInput, userLang) {
           "🚌 【コミュニティバス接続（駅までの足・駅からの足）】",
     station: getDisplayStationName(hit.station, userLang),
     buses: hit.entries.map(e => ({
-      bus: e.bus, municipality: e.municipality, stop: e.stop, url: e.url,
+      bus: getCommunityBusDisplayName(e.bus, userLang),
+      municipality: e.municipality,
+      stop: getCommunityBusStopDisplayName(e.stop, userLang),
+      url: e.url,
       barrier_free_note: userLang === 'en'
         ? "Wheelchair / low-floor availability varies by service — check the official municipal page."
         : userLang === 'zh'
@@ -7593,7 +7691,7 @@ async function searchFlight(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES };
 
 async function main() {
   const transport = new StdioServerTransport();

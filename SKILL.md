@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.25.0
+version: 2.25.1
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,14 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.25.1（2026-08-07）— 天気表示のテスト障害を修正
+
+- **WEATHER_TERM_MAP の辞書漏れを補強**: 「まで」（→ until/为止）、「雷を伴う」（→ with thunder/伴有雷电。旧: 「雷を伴い」のみで「を伴う」が未翻訳）、大雨・大雪・非常に・激しい・降り続く・台風・おおむね・晴れ間・山沿い・平地・暖かい・寒い・蒸し暑い・荒れた天気・回復・吹く・風が強い 等のJMA常用語を追加。
+- **🔴 根本原因（落とし穴）**: 「まで」が辞書に無いと、短い語「で」→then/并 が「ま**で**」の末尾に部分マッチし「まthen」「ま并」に化ける。置換は最長一致ソートだが、辞書に「まで」が存在しない限り「で」がマッチするため、**部分文字列を持つ語は必ず長い語として登録する**こと。
+- **translateWeather に日本語残存フォールバックを追加**: 辞書漏れで日本語が残った場合、en はかな・漢字の断片を除去、zh はかなのみ除去。全体が日本語のままなら汎用メッセージ（en: "Weather forecast ... available in Japanese (see JMA)." / zh: "该地区天气预报目前仅提供日语..."）。
+- **コミュニティバス名・バス停名の多言語化**: COMMUNITY_BUS_NAME_MAP（41事業者の en/zh 表示名）と BUS_STOP_SUFFIX_MAP（西口/東口/北口/南口/駅前/中央 の en/zh）を新設し、buildCommunityBusAccessBlock で bus/stop に適用（例: 新宿WEバス→Shinjuku WE Bus/新宿WE巴士、新宿駅西口→Shinjuku Sta.West Exit/新宿站西口）。
+- **検証**: probe-all-lang 全26件 PASS（旧: 22/26、天気en/zh×2ツール=4件FAIL→0）、test-walk に 2-2f（天気翻訳回帰）を追加して ALL PASS。getWeather/getWeather の en/zh/ja 実測確認済み。
 
 ### v2.25.0（2026-08-07）— 残タスクイシュー#20/#21対応（未収録路線27本・非鉄道カテゴリ拡充）
 
