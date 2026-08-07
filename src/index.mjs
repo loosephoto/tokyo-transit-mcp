@@ -5700,7 +5700,17 @@ async function searchBusTransfer(fromInput, toInput, vehiclePref) {
     // 指定乗り物（ferry等）の経路が見つからず通常探索で代替した場合
     // （優先探索は他モードでも経路を「見つけて」しまうため、採用経路に指定モードが含まれるかを判定）
     vehicleFallback: validPref !== 'any' && !segments.some(s => s.mode === validPref),
-    betterAlternative
+    betterAlternative,
+    // #24: バス停を転々とする無意味な複雑バス連鎖（例: 羽田→新宿で港湾バースを5連続乗継）の検出。
+    // バス/コミュニティバスが3つ以上連続する場合は「バス直行なし」とみなし、鉄道ルートを推奨する。
+    complexBusChain: (() => {
+      let busRun = 0;
+      for (const s of segments) {
+        if (s.mode === 'bus' || s.mode === 'community_bus') { busRun++; if (busRun >= 3) return true; }
+        else busRun = 0;
+      }
+      return false;
+    })()
   };
 }
 // ============================================================
@@ -5861,6 +5871,13 @@ async function searchBus(args) {
         : userLang === 'zh'
         ? `未找到${result.vehicleRequested}路线，已用其他交通方式替代。`
         : `指定の乗り物（${result.vehicleRequested}）の経路が見つからず、他の交通手段で代替しました。`) : undefined;
+      // #24: バス停を転々とする無意味な複雑バス連鎖（例: 羽田→新宿で港湾バースを5連続乗継）を
+      // そのまま提示せず、「バス直行なし」を明示して鉄道ルートを推奨する。
+      const noDirectBusNote = result.complexBusChain ? (userLang === 'en'
+        ? '🚌 No direct bus service — the found route chains 3+ local bus segments (e.g. harbor berths), which is impractical. Prefer the railway route below (or an airport limousine bus).'
+        : userLang === 'zh'
+        ? '🚌 无直达公交——检索结果需连续换乘3段以上区内公交（如港区泊位），不切实际。建议优先选择下方的铁路路线（或机场利木津巴士）。'
+        : '🚌 バス直行便はありません。検索された経路は3連続以上のバス乗り継ぎ（港湾バース等）で非現実的なため、下記の鉄道路線（または空港リムジンバス）をご利用ください。') : undefined;
       // 🚌 乗り物指定優先の進言ブロック（better_alternative）
       let betterAlternativeBlock = undefined;
       if (result.betterAlternative && result.betterAlternative.exists) {
@@ -5904,6 +5921,8 @@ async function searchBus(args) {
         route: segments,
         barrier_free_note: barrierFreeNote,
         note: crossModal || undefined,
+        no_direct_bus: result.complexBusChain || undefined,
+        no_direct_bus_note: noDirectBusNote,
         vehicle_fallback: result.vehicleFallback || undefined,
         vehicle_fallback_note: vehicleFallbackNote,
         vehicle_requested: result.vehicleRequested || 'any',
@@ -6082,7 +6101,9 @@ function normalizeAirportQuery(name) {
 }
 // IATA → 日本語表示名（到着連携用の駅名マップ）
 const IATA_TO_TERMINAL_STATION = {
-  HND: '羽田空港第1ターミナル', // 代表的ターミナル駅（実際はターミナル番号で上書き）
+  // #24: HND graceful 到着の既定は国際線ターミナルの第3（フライト実データがある場合は
+  // 実ターミナルで上書きされる）。第1は国内線専用のため、既定のままでは国際到着の最寄り駅が誤る。
+  HND: '羽田空港第3ターミナル',
   NRT: '成田空港',
   IBR: '茨城空港（小美玉）'
 };
