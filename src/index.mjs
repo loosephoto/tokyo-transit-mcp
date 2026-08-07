@@ -1719,6 +1719,8 @@ const RAILWAY_NAME_MAP = {
   '久里浜': '京急久里浜線',
   '西武新宿線': '西武新宿線',
   '西武新宿': '西武新宿線',
+  '西武拝島線': '西武拝島線',
+  '拝島線': '西武拝島線',
   '西武多摩湖線': '西武多摩湖線',
   '多摩湖線': '西武多摩湖線',
   '西武山口線': '西武山口線',
@@ -1883,6 +1885,8 @@ const STATION_DISPLAY_NAMES = {
   '京成成田': { en: 'Keisei-Narita', zh: '京成成田' },
   '空港第2ビル': { en: 'Airport Terminal 2', zh: '机场第2航站楼' },
   '成田湯川': { en: 'Narita Yukawa', zh: '成田汤川' },
+  '東大和市': { en: 'Higashi-Yamatoshi', zh: '东大和市' },
+  '武蔵大和': { en: 'Musashi-Yamato', zh: '武藏大和' },
   '東中野': { en: 'Higashi-Nakano', zh: '东中野' },
   '中井': { en: 'Nakai', zh: '中井' },
   '落合南長崎': { en: 'Ochiai-Minami-Nagasaki', zh: '落合南长崎' },
@@ -2683,6 +2687,7 @@ const LINE_DISPLAY_NAMES = {
   '京浜東北線': { en: 'Keihin-Tohoku Line', zh: '京滨东北线' },
   '西武池袋線': { en: 'Seibu Ikebukuro Line', zh: '西武池袋线' },
   '西武新宿線': { en: 'Seibu Shinjuku Line', zh: '西武新宿线' },
+  '西武拝島線': { en: 'Seibu Haijima Line', zh: '西武拜岛线' },
   '西武多摩湖線': { en: 'Seibu Tamako Line', zh: '西武多摩湖线' },
   '西武山口線': { en: 'Seibu Yamaguchi Line', zh: '西武山口线' },
   '西武園線': { en: 'Seibu-en Line', zh: '西武园线' },
@@ -3296,6 +3301,7 @@ const RAILWAY_LINES = {
   // 西武鉄道（池袋線・新宿線）— 久米川への接続のため追加
   '西武池袋線': ['池袋','椎名町','東長崎','江古田','桜台','練馬','中村橋','富士見台','練馬高野台','石神井公園','大泉学園','保谷','ひばりヶ丘','東久留米','清瀬','秋津','所沢','西所沢','小手指','狭山ヶ丘','武蔵藤沢','稲荷山公園','入間市','仏子','元加治','飯能','東飯能','高麗','武蔵横手','東吾野','吾野'],
   '西武新宿線': ['西武新宿','高田馬場','下落合','中井','新井薬師前','沼袋','野方','都立家政','鷺ノ宮','下井草','井荻','上井草','上石神井','武蔵関','東伏見','西武柳沢','田無','花小金井','小平','久米川','東村山','所沢','航空公園','新所沢','入曽','狭山市','新狭山','南大塚','本川越'],
+  '西武拝島線': ['小平','小川','東大和市','玉川上水','武蔵大和','拝島'],
   '西武多摩湖線': ['国分寺','一橋学園','青梅街道','萩山','多摩湖'],
   '西武山口線': ['多摩湖','西武園ゆうえんち','西武球場前'], // 2021-03 遊園地西→西武園ゆうえんち改称（#26 幻駅統合）
   '西武園線': ['東村山','西武園'],
@@ -4552,6 +4558,11 @@ const LANDMARK_DEFS = {
     station: '両国', walk_min: 3,
     note: { ja: '江戸東京博物館へは両国駅から徒歩約3分（大相撲の国技館も隣接）', en: 'About 3 min walk from Ryogoku Stn to the Edo-Tokyo Museum (Ryogoku Kokugikan sumo hall is adjacent)', zh: '从两国站步行约3分钟即可到达江户东京博物馆（国技馆相扑馆就在旁边）' },
     names: { ja: ['江戸東京博物館', '江戸東京博物館（EDOMUS）'], en: ['Edo-Tokyo Museum', 'Edo Tokyo Museum'], zh: ['江户东京博物馆'] }
+  },
+  tokyo_summerland: {
+    station: '武蔵引田', walk_min: 5,
+    note: { ja: 'JR五日市線 武蔵引田駅から徒歩約5分（プール・温泉・遊園地の複合レジャー施設）', en: 'About 5 min walk from Musashi-Hikida Stn on the JR Itsukaichi Line (pool, hot spring & amusement park complex)', zh: '从JR五日市线武藏引田站步行约5分钟（泳池・温泉・游乐园综合休闲设施）' },
+    names: { ja: ['東京サマーランド', 'サマーランド'], en: ['Tokyo Summerland', 'Summerland'], zh: ['东京夏日乐园', '夏日乐园'] }
   }
 };
 
