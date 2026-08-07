@@ -4654,6 +4654,168 @@ function normalizeStationName(name) {
 }
 
 // ==========================================
+// 🚄 特急・新幹線の乗り換え案内（大規模改修は見送り → 該当駅の窓口案内のみ）
+// ==========================================
+// 特急・新幹線の種別名・列車名（ja/en/zh）。これらの単語が from/to に含まれる場合、
+// 経路検索（普通列車ベースのグラフ）では正しく案内できないため、窓口案内を返す。
+const LIMITED_EXPRESS_KEYWORDS = [
+  // ja
+  '新幹線', 'のぞみ', 'ひかり', 'こだま', 'やまびこ', 'はやぶさ', 'つばさ', 'こまち', 'はやて',
+  'なすの', 'たにがわ', 'とき', 'あさま', 'はくたか', 'かがやき', 'みずほ', 'さくら',
+  '特急', 'あずさ', 'かいじ', 'ひたち', 'ときわ', 'しおさい', 'わかしお', 'あやめ', '成田エクスプレス',
+  // en
+  'shinkansen', 'nozomi', 'hikari', 'kodama', 'yamabiko', 'hayabusa', 'komachi', 'tsubasa', 'hayate',
+  'nasuno', 'tanigawa', 'toki', 'asama', 'hakutaka', 'kagayaki', 'mizuho', 'sakura',
+  'limited express', 'azusa', 'kaiji', 'hitachi', 'tokiwa', 'shiosai', 'wakashio', 'ayame', 'narita express', "n'ex",
+  // zh
+  '新干线', '希望号', '光号', '回声号', '山彦号', '隼号', '小町号', '燕号', '朱鹭号', '浅间号', '白鹰号', '光辉号',
+  '特急', '梓号', '甲斐路号', '常陆号', '常盘号', '潮骚号', '若潮号', '菖蒲号', '成田特快'
+];
+
+// 特急・新幹線の主要停車駅と窓口案内（みどりの窓口・指定席券売機）
+const LIMITED_EXPRESS_STATION_GUIDE = {
+  '東京': {
+    ja: 'JR東京駅のみどりの窓口（丸の内地下・八重洲地下）または指定席券売機で、乗車券と特急券・新幹線指定席券をご購入ください（営業: 5:30〜23:10頃）。新幹線は東海道・東北・上越・北陸新幹線が発着します。',
+    en: 'Purchase tickets at JR Tokyo Station\'s Midori-no-Madoguchi (Marunouchi underground / Yaesu underground) or ticket machines (approx. 5:30–23:10). Tokaido, Tohoku, Joetsu and Hokuriku Shinkansen depart from here.',
+    zh: '请在JR东京站绿色窗口（丸之内地下・八重洲地下）或指定席售票机购买车票与特急券・新干线指定席券（营业约5:30〜23:10）。东海道・东北・上越・北陆新干线均在此发车。'
+  },
+  '品川': {
+    ja: 'JR品川駅のみどりの窓口（中央改札付近）または指定席券売機でご購入ください。東海道・山陽新幹線が停車します（のぞみ・ひかり・こだま）。',
+    en: 'Purchase tickets at JR Shinagawa Station\'s Midori-no-Madoguchi (near the central gate) or ticket machines. Tokaido / Sanyo Shinkansen stop here (Nozomi, Hikari, Kodama).',
+    zh: '请在JR品川站绿色窗口（中央检票口附近）或指定席售票机购买。东海道・山阳新干线在此停靠（希望号・光号・回声号）。'
+  },
+  '新横浜': {
+    ja: 'JR新横浜駅のみどりの窓口（北改札・南改札）または指定席券売機でご購入ください。東海道・山陽新幹線が停車します。',
+    en: 'Purchase tickets at JR Shin-Yokohama Station\'s Midori-no-Madoguchi (north / south gates) or ticket machines. Tokaido / Sanyo Shinkansen stop here.',
+    zh: '请在JR新横滨站绿色窗口（北检票口・南检票口）或指定席售票机购买。东海道・山阳新干线在此停靠。'
+  },
+  '大宮': {
+    ja: 'JR大宮駅のみどりの窓口（中央改札・東口改札）または指定席券売機でご購入ください。東北・上越・北陸新幹線が停車します。',
+    en: 'Purchase tickets at JR Omiya Station\'s Midori-no-Madoguchi (central / east gates) or ticket machines. Tohoku, Joetsu and Hokuriku Shinkansen stop here.',
+    zh: '请在JR大宫站绿色窗口（中央检票口・东口检票口）或指定席售票机购买。东北・上越・北陆新干线在此停靠。'
+  },
+  '上野': {
+    ja: 'JR上野駅のみどりの窓口（中央改札・入谷口）または指定席券売機でご購入ください。東北・上越・北陸新幹線が発着します。',
+    en: 'Purchase tickets at JR Ueno Station\'s Midori-no-Madoguchi (central gate / Iriya exit) or ticket machines. Tohoku, Joetsu and Hokuriku Shinkansen depart from here.',
+    zh: '请在JR上野站绿色窗口（中央检票口・入谷口）或指定席售票机购买。东北・上越・北陆新干线在此发车。'
+  },
+  '高崎': {
+    ja: 'JR高崎駅のみどりの窓口または指定席券売機でご購入ください。上越・北陸新幹線（とき・たにがわ・はくたか等）が停車します。',
+    en: 'Purchase tickets at JR Takasaki Station\'s Midori-no-Madoguchi or ticket machines. Joetsu / Hokuriku Shinkansen (Toki, Tanigawa, Hakutaka etc.) stop here.',
+    zh: '请在JR高崎站绿色窗口或指定席售票机购买。上越・北陆新干线（朱鹭号・谷川号・白鹰号等）在此停靠。'
+  },
+  '長野': {
+    ja: 'JR長野駅のみどりの窓口（東西自由通路）または指定席券売機でご購入ください。北陸新幹線（かがやき・はくたか）が発着します。',
+    en: 'Purchase tickets at JR Nagano Station\'s Midori-no-Madoguchi (east-west passage) or ticket machines. Hokuriku Shinkansen (Kagayaki, Hakutaka) depart from here.',
+    zh: '请在JR长野站绿色窗口（东西自由通道）或指定席售票机购买。北陆新干线（光辉号・白鹰号）在此发车。'
+  },
+  '新潟': {
+    ja: 'JR新潟駅のみどりの窓口（中央改札・南口）または指定席券売機でご購入ください。上越新幹線（とき・たにがわ）が発着します。',
+    en: 'Purchase tickets at JR Niigata Station\'s Midori-no-Madoguchi (central gate / south exit) or ticket machines. Joetsu Shinkansen (Toki, Tanigawa) depart from here.',
+    zh: '请在JR新潟站绿色窗口（中央检票口・南口）或指定席售票机购买。上越新干线（朱鹭号・谷川号）在此发车。'
+  },
+  '仙台': {
+    ja: 'JR仙台駅のみどりの窓口（中央改札）または指定席券売機でご購入ください。東北新幹線（はやぶさ・やまびこ等）が発着します。',
+    en: 'Purchase tickets at JR Sendai Station\'s Midori-no-Madoguchi (central gate) or ticket machines. Tohoku Shinkansen (Hayabusa, Yamabiko etc.) depart from here.',
+    zh: '请在JR仙台站绿色窗口（中央检票口）或指定席售票机购买。东北新干线（隼号・山彦号等）在此发车。'
+  },
+  '盛岡': {
+    ja: 'JR盛岡駅のみどりの窓口または指定席券売機でご購入ください。東北新幹線（はやぶさ・やまびこ・こまち）が発着します。',
+    en: 'Purchase tickets at JR Morioka Station\'s Midori-no-Madoguchi or ticket machines. Tohoku Shinkansen (Hayabusa, Yamabiko, Komachi) depart from here.',
+    zh: '请在JR盛冈站绿色窗口或指定席售票机购买。东北新干线（隼号・山彦号・小町号）在此发车。'
+  },
+  '名古屋': {
+    ja: 'JR名古屋駅のみどりの窓口（桜通口・太閤通口）または指定席券売機でご購入ください。東海道・山陽新幹線が停車します。',
+    en: 'Purchase tickets at JR Nagoya Station\'s Midori-no-Madoguchi (Sakura-dori / Taiko-dori exits) or ticket machines. Tokaido / Sanyo Shinkansen stop here.',
+    zh: '请在JR名古屋站绿色窗口（樱通口・太阁通口）或指定席售票机购买。东海道・山阳新干线在此停靠。'
+  },
+  '京都': {
+    ja: 'JR京都駅のみどりの窓口（中央口・八条口）または指定席券売機でご購入ください。東海道・山陽新幹線が停車します。',
+    en: 'Purchase tickets at JR Kyoto Station\'s Midori-no-Madoguchi (central / Hachijo exits) or ticket machines. Tokaido / Sanyo Shinkansen stop here.',
+    zh: '请在JR京都站绿色窗口（中央口・八条口）或指定席售票机购买。东海道・山阳新干线在此停靠。'
+  },
+  '新大阪': {
+    ja: 'JR新大阪駅のみどりの窓口（中央改札）または指定席券売機でご購入ください。東海道・山陽新幹線が発着します。',
+    en: 'Purchase tickets at JR Shin-Osaka Station\'s Midori-no-Madoguchi (central gate) or ticket machines. Tokaido / Sanyo Shinkansen depart from here.',
+    zh: '请在JR新大阪站绿色窗口（中央检票口）或指定席售票机购买。东海道・山阳新干线在此发车。'
+  }
+};
+
+// 特急・新幹線リクエストの検出: from/to に列車種別・列車名が含まれるか
+function detectLimitedExpressRequest(fromInput, toInput) {
+  const combined = `${fromInput || ''} ${toInput || ''}`.toLowerCase();
+  return LIMITED_EXPRESS_KEYWORDS.some(kw => combined.includes(kw));
+}
+
+// 該当駅の特定: キーワードを除去した残り（またはキーワードを含まない入力）を駅名として解決
+// 新幹線駅（新大阪など）は経路グラフに存在しないため、窓口ガイドのキーとも直接照合する。
+function findLimitedExpressStation(fromInput, toInput) {
+  const inputs = [fromInput, toInput];
+  const candidates = [];
+  for (const input of inputs) {
+    const s = String(input || '').trim();
+    if (!s) continue;
+    // キーワード（列車名・種別）を除去した残りを駅名候補にする（大文字小文字を無視）
+    let stripped = s;
+    for (const kw of LIMITED_EXPRESS_KEYWORDS) {
+      try { stripped = stripped.replace(new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' '); } catch (_) {}
+    }
+    stripped = stripped.replace(/[、。・\s]+/g, ' ').trim();
+    if (stripped) candidates.push(stripped);
+  }
+  for (const c of candidates) {
+    const r = resolveStation(c);
+    if (r && r.station) return r.station;
+    // グラフに存在しない新幹線駅（新大阪等）は窓口ガイドのキーと直接照合
+    if (LIMITED_EXPRESS_STATION_GUIDE[c]) return c;
+  }
+  return null;
+}
+
+// 特急・新幹線リクエストに対する窓口案内レスポンス
+function buildLimitedExpressGuidance(userLang, fromInput, toInput) {
+  const station = findLimitedExpressStation(fromInput, toInput);
+  const guide = station ? LIMITED_EXPRESS_STATION_GUIDE[station] : null;
+  const notice = userLang === 'en'
+    ? '🚄 Limited express / Shinkansen transfers are not supported by the route graph yet (scheduled for a future major update).'
+    : userLang === 'zh'
+      ? '🚄 目前线路图暂不支持特急・新干线换乘（计划在未来的大版本更新中支持）。'
+      : '🚄 特急・新幹線の乗り換えは、現在の経路検索グラフでは未対応です（将来の大規模改修で対応予定）。';
+  const howTo = userLang === 'en'
+    ? 'Please check ticket availability and connections at the station\'s JR Midori-no-Madoguchi (green window) or designated-seat ticket machines.'
+    : userLang === 'zh'
+      ? '请在该站的JR绿色窗口（Midori-no-Madoguchi）或指定席售票机确认余票与换乘方式。'
+      : '該当駅の JR みどりの窓口（または指定席券売機）で、乗車券・特急券の購入と乗り換えをご確認ください。';
+  let stationBlock;
+  if (guide) {
+    stationBlock = { station, window_guidance: guide[userLang] };
+  } else {
+    const fallback = userLang === 'en'
+      ? `For station ${station || 'the requested station'}: ask at the Midori-no-Madoguchi or ticket office for limited-express / Shinkansen tickets and transfers.`
+      : userLang === 'zh'
+        ? `关于${station || '所查询的车站'}：请到该站的绿色窗口或售票处咨询特急・新干线车票与换乘。`
+        : `${station || '該当駅'}では、みどりの窓口または駅係員に特急・新幹線のチケットと乗り換えをお問い合わせください。`;
+    stationBlock = { station: station || null, window_guidance: fallback };
+  }
+  return {
+    status: 'SUCCESS',
+    mode: 'LIMITED_EXPRESS_GUIDANCE',
+    detected_language: userLang,
+    from: fromInput,
+    to: toInput,
+    notice,
+    how_to_proceed: howTo,
+    guidance: stationBlock,
+    limited_express_note: userLang === 'en'
+      ? 'This server covers local / rapid / express (ordinary-fare) rail. Shinkansen and limited-express fares require seat reservations handled at JR counters.'
+      : userLang === 'zh'
+        ? '本服务器支持普通列车・快速・普通特急（普通票价）的路线。新干线与特急的座位预约请在JR窗口办理。'
+        : '本サーバーは普通・快速・各駅停車（普通運賃）の経路検索に対応しています。新幹線・特急の指定席予約はJR窓口でお取り扱いください。',
+    direct_search_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(fromInput || '')}&to=${encodeURIComponent(toInput || '')}`
+  };
+}
+
+// ==========================================
 // 🚃 乗り換えルート検索（統合版）
 // ==========================================
 async function searchRoute(args) {
@@ -4697,6 +4859,12 @@ async function searchRoute(args) {
   // 地震時は鉄道・トラム・バス等の通常経路を提示せず、安全確保を優先する。
   if (simulatedFailure && detectFailureType(simulatedFailure, userLang)?.adviceKey === 'earthquake') {
     return await buildEarthquakeSafetyResponse('ground', userLang, { from: fromInput, to: toInput });
+  }
+
+  // 🚄 特急・新幹線リクエスト: 経路グラフは普通列車ベースのため、該当駅の窓口案内を返す。
+  // （新幹線・特急の乗り換え対応は大規模改修が必要なため見送り。窓口案内のみ表示）
+  if (detectLimitedExpressRequest(fromInput, toInput)) {
+    return jsonResponse(buildLimitedExpressGuidance(userLang, fromInput, toInput));
   }
 
   if (!fromInput || !toInput) {
