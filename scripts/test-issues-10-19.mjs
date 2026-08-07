@@ -16,8 +16,12 @@ const route = (f, t) => {
 
 // ===== 既存路線の駅収録漏れ是正 =====
 // #13 国立: JR中央線快速に追加（国立競技場への誤解決解消）
+// #28 修正後: 国立は快速通過駅のため「JR中央線各停」所属（v2.29.0 で各停ラインをグラフに追加）
 let s = route('国立', '立川');
-assert(s.error === undefined && s.transfers === 0 && s.main_line === 'JR中央線快速', `#13 国立→立川: 中央線快速直通 (${s.error || s.transfers + '乗換'})`);
+assert(s.error === undefined && s.transfers === 0 && s.main_line === 'JR中央線各停', `#13 国立→立川: 中央線各停直通 (${s.error || s.transfers + '乗換'})`);
+// 快速通過駅（国立・西国分寺・武蔵小金井・東小金井）が到達可能になったこと
+s = route('西国分寺', '国立');
+assert(s.error === undefined && s.transfers === 0 && s.main_line === 'JR中央線各停', `#13 西国分寺→国立: 中央線各停直通 (${s.error || s.transfers + '乗換'})`);
 
 // #16 永田町→国会議事堂前: 永田町は丸ノ内線に存在しない（公式駅順: 赤坂見附→四ツ谷）。
 // 正しい乗換は永田町(半蔵門線)→赤坂見附(徒歩連絡)→丸ノ内線→国会議事堂前。

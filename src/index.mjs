@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.28.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.29.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -2311,6 +2311,9 @@ const STATION_DISPLAY_NAMES = {
   '下吉田': { en: 'Shimoyoshida', zh: '下吉田' }, '月江寺': { en: 'Gekkoji', zh: '月江寺' },
   // ===== 2026-08 追加路線（#10〜#19）の主要駅 =====
   '国立': { en: 'Kunitachi', zh: '国立' },
+  '西国分寺': { en: 'Nishi-Kokubunji', zh: '西国分寺' },
+  '武蔵小金井': { en: 'Musashi-Koganei', zh: '武藏小金井' },
+  '東小金井': { en: 'Higashi-Koganei', zh: '东小金井' },
   '永田町': { en: 'Nagatacho', zh: '永田町' },
   '代々木公園': { en: 'Yoyogi-Koen', zh: '代代木公园' },
   '虎ノ門ヒルズ': { en: 'Toranomon Hills', zh: '虎之门Hills' },
@@ -2777,6 +2780,7 @@ const LINE_DISPLAY_NAMES = {
   '西武山口線': { en: 'Seibu Yamaguchi Line', zh: '西武山口线' },
   '西武園線': { en: 'Seibu-en Line', zh: '西武园线' },
   'JR中央線快速': { en: 'JR Chuo Line (Rapid)', zh: 'JR中央线快速' },
+  'JR中央線各停': { en: 'JR Chuo Line (Local)', zh: 'JR中央线各站停车' },
   'JR総武線各停': { en: 'JR Sobu Line (Local)', zh: 'JR总武线各站停车' },
   'JR総武線快速': { en: 'JR Sobu Line (Rapid)', zh: 'JR总武线快速' },
   'JR成田線': { en: 'JR Narita Line', zh: 'JR成田线' },
@@ -3125,6 +3129,15 @@ const NON_RAIL_OPERATORS = {
   odakyu_bus: { id: 'OdakyuBus', type: 'bus', label: '小田急バス', labelEn: 'Odakyu Bus', labelZh: '小田急巴士', description: '路線バス - 多摩・世田谷', descEn: 'City bus - Tama / Setagaya', descZh: '路线巴士 - 多摩、世田谷', website: 'https://www.odakyubus.co.jp/' },
   keisei_bus: { id: 'KeiseiBus', type: 'bus', label: '京成バス', labelEn: 'Keisei Bus', labelZh: '京成巴士', description: '路線バス - 千葉・江戸川区', descEn: 'City bus - Chiba / Edogawa', descZh: '路线巴士 - 千叶、江户川区', website: 'https://www.keiseibus.co.jp/' },
   jrbuskanto: { id: 'JRBuskanto', type: 'bus', label: 'JRバス関東', labelEn: 'JR Bus Kanto', labelZh: 'JR巴士关东', description: '高速・路線バス - 関東広域', descEn: 'Highway / city bus - Kanto wide area', descZh: '高速路线巴士 - 关东广域', website: 'https://www.jrbuskanto.co.jp/' },
+  // #45: 千葉・埼玉・神奈川のローカルバス（延伸駅周辺）
+  chiba_flower_bus: { id: 'ChibaFlowerBus', type: 'bus', label: 'ちばフラワーバス（佐倉）', labelEn: 'Chiba Flower Bus (Sakura)', labelZh: '千叶花巴士（佐仓）', description: '路線バス - 佐倉市・四街道市', descEn: 'City bus - Sakura / Yotsukaido', descZh: '路线巴士 - 佐仓市、四街道市', website: 'https://www.chiba-flowerbus.jp/' },
+  saitama_city_bus: { id: 'SaitamaCityBus', type: 'bus', label: 'さいたま市営バス', labelEn: 'Saitama City Bus', labelZh: '埼玉市营巴士', description: '路線バス - さいたま市（大宮・浦和）', descEn: 'City bus - Saitama City (Omiya / Urawa)', descZh: '路线巴士 - 埼玉市（大宫、浦和）', website: 'https://www.city.saitama.lg.jp/003/001/kotsu/' },
+  tobu_bus_saitama: { id: 'TobuBusSaitama', type: 'bus', label: '東武バス（埼玉）', labelEn: 'Tobu Bus (Saitama)', labelZh: '东武巴士（埼玉）', description: '路線バス - 埼玉県南東部', descEn: 'City bus - southeastern Saitama', descZh: '路线巴士 - 埼玉县东南部', website: 'https://www.tobu-bus.com/' },
+  seibu_kanko_chichibu: { id: 'SeibuKankoBusChichibu', type: 'bus', label: '西武観光バス（秩父）', labelEn: 'Seibu Kanko Bus (Chichibu)', labelZh: '西武观光巴士（秩父）', description: '路線バス - 秩父・長瀞エリア', descEn: 'City bus - Chichibu / Nagatoro area', descZh: '路线巴士 - 秩父、长瀞地区', website: 'https://www.seibubus.co.jp/rosen/chichibu/' },
+  enoden_bus: { id: 'EnodenBus', type: 'bus', label: '江ノ電バス', labelEn: 'Enoden Bus', labelZh: '江之电巴士', description: '路線バス - 藤沢・鎌倉・大船', descEn: 'City bus - Fujisawa / Kamakura / Ofuna', descZh: '路线巴士 - 藤泽、镰仓、大船', website: 'https://www.enoden.co.jp/bus/' },
+  chiba_chuo_bus: { id: 'ChibaChuoBus', type: 'bus', label: '千葉中央バス', labelEn: 'Chiba Chuo Bus', labelZh: '千叶中央巴士', description: '路線バス - 千葉市', descEn: 'City bus - Chiba City', descZh: '路线巴士 - 千叶市', website: 'https://www.chibachuobus.co.jp/' },
+  maruken_tsubasa: { id: 'MarukenTsubasa', type: 'bus', label: '丸建つばさ交通（けんちゃんバス）', labelEn: 'Maruken Tsubasa Kotsu (Ina)', labelZh: '丸建翼交通（伊奈）', description: 'コミュニティバス - 伊奈町・上尾市', descEn: 'Community bus - Ina / Ageo', descZh: '社区巴士 - 伊奈町、上尾市', website: 'https://maru-ken.co.jp/route-bus/' },
+  kawagoe_kanko_ogose: { id: 'KawagoeKankoOgose', type: 'bus', label: '川越観光自動車（越生）', labelEn: 'Kawagoe Kanko Bus (Ogose)', labelZh: '川越观光汽车（越生）', description: '路線バス - 越生・ときがわ町', descEn: 'City bus - Ogose / Tokigawa', descZh: '路线巴士 - 越生、都几川町', website: 'https://www.kawagoebus.jp/' },
   tokaikisen: { id: 'TokaiKisen', type: 'ferry', label: '東海汽船', labelEn: 'Tokai Kisen', labelZh: '东海汽船', description: 'フェリー - 伊豆諸島・小笠原航路', descEn: 'Ferry - Izu Islands / Ogasawara routes', descZh: '渡轮 - 伊豆诸岛、小笠原航线', website: 'https://www.tokaikisen.co.jp/' },
   tokyocruise: { id: 'TokyoCruise', type: 'ferry', label: '東京クルーズ（水上バス）', labelEn: 'Tokyo Cruise (Water Bus)', labelZh: '东京游船（水上巴士）', description: '水上バス - 隅田川・お台場', descEn: 'Water bus - Sumida River / Odaiba', descZh: '水上巴士 - 隅田川、御台场', website: 'https://www.tokyo-park.or.jp/cruise/' }
 };
@@ -3405,6 +3418,8 @@ const RAILWAY_LINES = {
   '西武園線': ['東村山','西武園'],
   // ===== JR東日本（山手線・京浜東北線に加え主要路線を追加）=====
   'JR中央線快速': ['東京','神田','御茶ノ水','四ツ谷','新宿','中野','荻窪','吉祥寺','三鷹','武蔵境','国分寺','立川','日野','豊田','八王子','西八王子','高尾'],
+  // #28 補完: 中央線各停（快速通過駅: 武蔵小金井・東小金井・西国分寺・国立）。快速駅は各停駅に包含される。
+  'JR中央線各停': ['三鷹','武蔵小金井','東小金井','国分寺','西国分寺','国立','立川','日野','豊田','八王子','西八王子','高尾'],
   'JR総武線各停': ['御茶ノ水','秋葉原','浅草橋','両国','錦糸町','亀戸','平井','新小岩','小岩','市川','本八幡','下総中山','西船橋','船橋','東船橋','津田沼','幕張','幕張本郷','新検見川','稲毛','西千葉','千葉'],
   'JR総武線快速': ['東京','新日本橋','馬喰町','錦糸町','新小岩','市川','船橋','津田沼','千葉','東千葉','都賀','四街道','物井','佐倉'],
   'JR成田線': ['佐倉','酒々井','成田','空港第2ビル','成田空港'],
@@ -4089,7 +4104,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.28.0' },
+  { name: 'tokyo-transit-mcp', version: '2.29.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -4203,42 +4218,42 @@ function handleApiError(error, details = {}) {
 // ・最寄り駅(station)はSTATION_TO_LINESに存在する駅名
 const LANDMARK_DEFS = {
   tokyo_disneyland: {
-    station: '舞浜', walk_min: 10,
+    station: '舞浜', walk_min: 10, category: 'テーマパーク',
     note: { ja: '舞浜駅から徒歩約10分（ディズニーリゾートライン利用可）', en: 'About 10 min walk from Maihama Stn (Disney Resort Line available)', zh: '从舞滨站步行约10分钟（可乘坐迪士尼度假区线）' },
     names: { ja: ['東京ディズニーランド', 'ディズニーランド', 'ディズニーリゾート', 'ディズニー'], en: ['Tokyo Disneyland', 'Disneyland', 'Tokyo Disney Resort', 'Disney', 'TDL'], zh: ['东京迪士尼乐园', '迪士尼乐园', '迪士尼', '东京迪士尼度假区'] }
   },
   tokyo_disneysea: {
-    station: '舞浜', walk_min: 10,
+    station: '舞浜', walk_min: 10, category: 'テーマパーク',
     note: { ja: '舞浜駅からディズニーリゾートライン「リゾートゲートウェイ・ステーション」乗換', en: 'Transfer at Resort Gateway Stn on the Disney Resort Line from Maihama Stn', zh: '在舞滨站换乘迪士尼度假区线至度假区门户站' },
     names: { ja: ['東京ディズニーシー', 'ディズニーシー'], en: ['Tokyo DisneySea', 'DisneySea'], zh: ['东京迪士尼海洋', '迪士尼海洋'] }
   },
   tokyo_skytree: {
-    station: 'とうきょうスカイツリー', walk_min: 1,
+    station: 'とうきょうスカイツリー', walk_min: 1, category: '展望・建築',
     note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
     names: { ja: ['東京スカイツリー', 'スカイツリー'], en: ['Tokyo Skytree', 'Skytree'], zh: ['东京晴空塔', '晴空塔'] }
   },
   tokyo_tower: {
-    station: '御成門', walk_min: 10,
+    station: '御成門', walk_min: 10, category: '展望・建築',
     note: { ja: '御成門駅から徒歩約10分（赤羽橋駅からも約10分）', en: 'About 10 min walk from Onarimon Stn (also ~10 min from Akabanebashi Stn)', zh: '从御成门站步行约10分钟（赤羽桥站也可步行约10分钟）' },
     names: { ja: ['東京タワー'], en: ['Tokyo Tower'], zh: ['东京塔'] }
   },
   odaiba: {
-    station: '台場', walk_min: 2,
+    station: '台場', walk_min: 2, category: '複合文化施設',
     note: { ja: 'りんかい線・ゆりかもめ', en: 'Rinkai Line / Yurikamome', zh: '临海线・百合海鸥号' },
     names: { ja: ['お台場', '台場'], en: ['Odaiba'], zh: ['台场', '御台场'] }
   },
   tokyo_dome: {
-    station: '水道橋', walk_min: 5,
+    station: '水道橋', walk_min: 5, category: 'スポーツ施設',
     note: { ja: '水道橋駅から徒歩約5分', en: 'About 5 min walk from Suidobashi Stn', zh: '从水道桥站步行约5分钟' },
     names: { ja: ['東京ドーム'], en: ['Tokyo Dome'], zh: ['东京巨蛋'] }
   },
   nippon_budokan: {
-    station: '九段下', walk_min: 5,
+    station: '九段下', walk_min: 5, category: 'スポーツ施設',
     note: { ja: '九段下駅から徒歩約5分', en: 'About 5 min walk from Kudanshita Stn', zh: '从九段下站步行约5分钟' },
     names: { ja: ['日本武道館'], en: ['Nippon Budokan', 'Budokan'], zh: ['日本武道馆'] }
   },
   tokyo_bigsight: {
-    station: '国際展示場', walk_min: 3,
+    station: '国際展示場', walk_min: 3, category: '展示施設',
     note: { ja: 'りんかい線', en: 'Rinkai Line', zh: '临海线' },
     names: { ja: ['東京ビッグサイト'], en: ['Tokyo Big Sight'], zh: ['东京国际展览中心', '东京国际展示场'] }
   },
@@ -4263,7 +4278,7 @@ const LANDMARK_DEFS = {
     names: { ja: ['新宿御苑'], en: ['Shinjuku Gyoen'], zh: ['新宿御苑'] }
   },
   ueno_zoo: {
-    station: '上野', walk_min: 5,
+    station: '上野', walk_min: 5, category: '動物園',
     note: { ja: '上野駅から徒歩約5分', en: 'About 5 min walk from Ueno Stn', zh: '从上野站步行约5分钟' },
     names: { ja: ['上野動物園'], en: ['Ueno Zoo'], zh: ['上野动物园'] }
   },
@@ -4303,7 +4318,7 @@ const LANDMARK_DEFS = {
     names: { ja: ['横浜みなとみらい'], en: ['Yokohama Minatomirai', 'Minatomirai'], zh: ['横滨港未来', '港未来'] }
   },
   makuhari_messe: {
-    station: '海浜幕張', walk_min: 1,
+    station: '海浜幕張', walk_min: 1, category: '展示施設',
     note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
     names: { ja: ['幕張メッセ'], en: ['Makuhari Messe'], zh: ['幕张展览馆'] }
   },
@@ -4329,12 +4344,12 @@ const LANDMARK_DEFS = {
     names: { ja: ['明治神宮', '明治神社', 'めいじじんぐう'], en: ['Meiji Shrine', 'Meiji Jingu'], zh: ['明治神宫'] }
   },
   narita_san: {
-    station: '成田空港', walk_min: 10,
-    note: { ja: '成田駅から徒歩約10分（京成成田駅からも。データ上の最寄り実在駅は「成田空港」）', en: 'About 10 min walk from Narita Stn (also Keisei Narita Stn; nearest mapped station is "Narita Airport")', zh: '从成田站步行约10分钟（亦可使用京成成田站；数据上最近实存车站为「成田机场」）' },
+    station: '成田', walk_min: 15,
+    note: { ja: '成田駅から徒歩約15分（京成成田駅からも。JR成田線「成田」駅が最寄り）', en: 'About 15 min walk from Narita Stn (also Keisei Narita Stn)', zh: '从成田站步行约15分钟（亦可使用京成成田站）' },
     names: { ja: ['成田山新勝寺', '成田山', '成田山公園'], en: ['Naritasan Shinshoji', 'Naritasan', 'Narita Temple'], zh: ['成田山新胜寺', '成田山'] }
   },
   ueno_park: {
-    station: '上野', walk_min: 5,
+    station: '上野', walk_min: 5, category: '公園',
     note: { ja: '上野駅から徒歩約5分（恩賜上野動物園・東京国立博物館・寛永寺等）', en: 'About 5 min walk from Ueno Stn (Ueno Zoo, Tokyo National Museum, Kaneiji Temple)', zh: '从上野站步行约5分钟（上野动物园・东京国立博物馆・宽永寺等）' },
     names: { ja: ['上野恩賜公園', '恩賜上野動物園', '上野動物園', '寛永寺', '東京国立博物館', '国立科学博物館'], en: ['Ueno Park', 'Ueno Zoo', 'Tokyo National Museum', 'Kaneiji'], zh: ['上野恩赐公园', '上野动物园', '东京国立博物馆', '宽永寺'] }
   },
@@ -4522,12 +4537,12 @@ const LANDMARK_DEFS = {
     names: { ja: ['国立新美術館'], en: ['The National Art Center, Tokyo', 'National Art Center Tokyo'], zh: ['国立新美术馆'] }
   },
   teamlab_planets: {
-    station: '新豊洲', walk_min: 1,
+    station: '新豊洲', walk_min: 1, category: 'デジタルアート',
     note: { ja: '新豊洲駅から徒歩約1分', en: 'About 1 min walk from Shin-toyosu Stn', zh: '从新丰洲站步行约1分钟' },
     names: { ja: ['チームラボプラネッツ', 'チームラボプラネッツTOKYO'], en: ['teamLab Planets', 'teamLab Planets TOKYO'], zh: ['teamLab Planets', 'teamLab行星'] }
   },
   teamlab_borderless: {
-    station: '神谷町', walk_min: 3,
+    station: '神谷町', walk_min: 3, category: 'デジタルアート',
     note: { ja: '麻布台ヒルズ内。神谷町駅から徒歩約3分', en: 'Inside Azabudai Hills; about 3 min walk from Kamiyacho Stn', zh: '位于麻布台之丘内；从神谷町站步行约3分钟' },
     names: { ja: ['チームラボボーダレス', '麻布台ヒルズチームラボ'], en: ['teamLab Borderless', 'teamLab Borderless Azabudai Hills'], zh: ['teamLab无界', '麻布台之丘teamLab'] }
   },
@@ -4552,7 +4567,7 @@ const LANDMARK_DEFS = {
     names: { ja: ['東京都庁展望室', '東京都庁', '都庁展望台'], en: ['Tokyo Metropolitan Government Building', 'Tokyo Metropolitan Government Observation Deck'], zh: ['东京都厅展望室', '东京都厅'] }
   },
   sunshine_city: {
-    station: '池袋', walk_min: 8,
+    station: '池袋', walk_min: 8, category: '複合文化施設',
     note: { ja: '池袋駅から徒歩約8分（サンシャイン水族館・展望台）', en: 'About 8 min walk from Ikebukuro Stn (aquarium and observatory)', zh: '从池袋站步行约8分钟（阳光水族馆・展望台）' },
     names: { ja: ['サンシャインシティ', 'サンシャイン水族館', 'サンシャイン60'], en: ['Sunshine City', 'Sunshine Aquarium', 'Sunshine 60'], zh: ['太阳城', '阳光水族馆', 'Sunshine 60'] }
   },
@@ -4568,17 +4583,17 @@ const LANDMARK_DEFS = {
   },
   // ===== 首都圏の主要テーマパーク（追加） =====
   sanrio_puroland: {
-    station: '多摩センター', walk_min: 5,
+    station: '多摩センター', walk_min: 5, category: 'テーマパーク',
     note: { ja: '多摩センター駅から徒歩約5分（京王線・小田急線・多摩モノレール）', en: 'About 5 min walk from Tama Center Stn (Keio, Odakyu and Tama Monorail)', zh: '从多摩中心站步行约5分钟（京王线・小田急线・多摩单轨电车）' },
     names: { ja: ['サンリオピューロランド', 'サンリオ ピューロランド', 'ピューロランド'], en: ['Sanrio Puroland', 'Puroland'], zh: ['三丽鸥彩虹乐园', '三丽鸥彩虹乐园 Puroland'] }
   },
   yomiuriland: {
-    station: '京王よみうりランド', walk_min: 10,
+    station: '京王よみうりランド', walk_min: 10, category: '遊園地',
     note: { ja: '京王よみうりランド駅からゴンドラまたはバス等を利用', en: 'Use the gondola or bus from Keio-yomiuriland Stn', zh: '从京王读卖乐园站乘坐缆车或巴士前往' },
     names: { ja: ['よみうりランド', 'よみうりランド遊園地', 'HANA・BIYORI'], en: ['Yomiuriland', 'Yomiuri Land', 'HANA・BIYORI'], zh: ['读卖乐园', '读卖乐园游乐园'] }
   },
   moomin_valley_park: {
-    station: '飯能', walk_min: 30,
+    station: '飯能', walk_min: 30, category: 'テーマパーク',
     note: { ja: '飯能駅からバス利用（メッツァ・ムーミンバレーパーク）', en: 'Take a bus from Hanno Stn to Metsä / Moominvalley Park', zh: '从饭能站乘坐巴士前往Metsa・姆明谷公园' },
     names: { ja: ['ムーミンバレーパーク', 'メッツァ', 'メッツァビレッジ'], en: ['Moominvalley Park', 'Metsa', 'Metsa Village'], zh: ['姆明谷公园', 'Metsa'] }
   },
@@ -4620,7 +4635,7 @@ const LANDMARK_DEFS = {
     names: { ja: ['横浜中華街', '中華街', '山下町公園'], en: ['Yokohama Chinatown', 'Chinatown'], zh: ['横滨中华街', '中华街'] }
   },
   hakkeijima_seaparadise: {
-    station: '金沢八景', walk_min: 30,
+    station: '金沢八景', walk_min: 30, category: '遊園地',
     note: { ja: '金沢八景駅からシーサイドライン八景島駅へ乗換（徒歩約3分）またはバス。水族館＋遊園地', en: 'Transfer to Seaside Line Hakkeijima Stn at Kanazawa-Hakkei (about 3 min walk) or take a bus. Aquarium + amusement park', zh: '在金泽八景站换乘海岸线至八景岛站（步行约3分钟）或乘坐巴士。水族馆+游乐园' },
     names: { ja: ['横浜・八景島シーパラダイス', '八景島シーパラダイス', 'シーパラダイス', '八景島'], en: ['Yokohama Hakkeijima Sea Paradise', 'Hakkeijima Sea Paradise', 'Sea Paradise'], zh: ['横滨八景岛海岛乐园', '八景岛海岛乐园', '海岛乐园'] }
   },
@@ -4653,22 +4668,22 @@ const LANDMARK_DEFS = {
     names: { ja: ['成田ゆめ牧場', 'ゆめ牧場', '成田夢牧場'], en: ['Narita Yume Farm', 'Narita Dream Farm'], zh: ['成田梦牧场', '梦牧场'] }
   },
   chiba_zoo: {
-    station: '千葉', walk_min: 30,
+    station: '千葉', walk_min: 30, category: '動物園',
     note: { ja: '千葉駅から千葉都市モノレールまたはバス（千葉市動物公園）', en: 'Take the Chiba Urban Monorail or bus from Chiba Stn (Chiba City Zoo)', zh: '从千叶站乘坐千叶都市单轨电车或巴士（千叶市动物公园）' },
     names: { ja: ['千葉市動物公園', '千葉動物公園', '千葉市動物公園 モノレール'], en: ['Chiba City Zoo', 'Chiba Zoo'], zh: ['千叶市动物公园', '千叶动物公园'] }
   },
   chiba_port_tower: {
-    station: '千葉みなと', walk_min: 5,
+    station: '千葉みなと', walk_min: 5, category: '展望・建築',
     note: { ja: '千葉みなと駅から徒歩約5分（千葉ポートタワー）', en: 'About 5 min walk from Chiba-Minato Stn (Chiba Port Tower)', zh: '从千叶港站步行约5分钟（千叶港塔）' },
     names: { ja: ['千葉ポートタワー', 'ポートタワー'], en: ['Chiba Port Tower', 'Port Tower'], zh: ['千叶港塔', '港塔'] }
   },
   zozo_marine_stadium: {
-    station: '海浜幕張', walk_min: 15,
+    station: '海浜幕張', walk_min: 15, category: 'スポーツ施設',
     note: { ja: '海浜幕張駅から徒歩約15分（ZOZOマリンスタジアム・千葉マリンスタジアム）', en: 'About 15 min walk from Kaihin-Makuhari Stn (ZOZO Marine Stadium)', zh: '从海滨幕张站步行约15分钟（ZOZO海洋球场）' },
     names: { ja: ['ZOZOマリンスタジアム', '千葉マリンスタジアム', 'マリンスタジアム'], en: ['ZOZO Marine Stadium', 'Chiba Marine Stadium', 'Marine Stadium'], zh: ['ZOZO海洋球场', '千叶海洋球场'] }
   },
   kashima_sea: {
-    station: '新浦安', walk_min: 5,
+    station: '新浦安', walk_min: 5, category: 'スポーツ施設',
     note: { ja: '新浦安駅から徒歩約5分（浦安市総合公園・総合体育館）', en: 'About 5 min walk from Shin-Urayasu Stn (Urayasu General Park)', zh: '从新浦安站步行约5分钟（浦安市综合公园）' },
     names: { ja: ['浦安市総合公園', '浦安総合公園'], en: ['Urayasu General Park'], zh: ['浦安市综合公园'] }
   },
@@ -4684,7 +4699,7 @@ const LANDMARK_DEFS = {
   },
   // ===== Issue #40: 鉄道博物館系（7施設） =====
   railway_museum: {
-    station: '鉄道博物館（大成）', walk_min: 1,
+    station: '鉄道博物館（大成）', walk_min: 1, category: '博物館',
     note: { ja: '埼玉新都市交通 鉄道博物館（大成）駅から徒歩約1分（大宮駅からニューシャトルで約3分）', en: 'About 1 min walk from Tetsudo-Hakubutsukan (Taisho) Stn on the New Shuttle (approx. 3 min from Omiya Stn)', zh: '从埼玉新都市交通铁道博物馆（大成）站步行约1分钟（大宫站乘新交通系统约3分钟）' },
     names: { ja: ['鉄道博物館', '大宮鉄道博物館'], en: ['The Railway Museum', 'Railway Museum'], zh: ['铁道博物馆'] }
   },
@@ -4751,24 +4766,146 @@ const LANDMARK_DEFS = {
     names: { ja: ['サントリーホール'], en: ['Suntory Hall'], zh: ['三得利音乐厅'] }
   },
   minato_mirai_21: {
-    station: 'みなとみらい', walk_min: 1,
+    station: 'みなとみらい', walk_min: 1, category: '複合文化施設',
     note: { ja: 'みなとみらい駅直結（みなとみらい21エリア）', en: 'Directly connected to Minatomirai Stn (Minato Mirai 21 area)', zh: '与港未来站直接连通（港未来21区域）' },
     names: { ja: ['みなとみらい21', 'みなとみらい'], en: ['Minato Mirai 21', 'Minatomirai 21'], zh: ['港未来21'] }
   },
   sumida_aquarium: {
-    station: 'とうきょうスカイツリー', walk_min: 1,
+    station: 'とうきょうスカイツリー', walk_min: 1, category: '水族館',
     note: { ja: 'とうきょうスカイツリー駅直結（東京スカイツリータウン内）', en: 'Directly connected to Tokyo Skytree Stn (Tokyo Skytree Town)', zh: '与东京晴空塔站直接连通（东京晴空塔城内）' },
     names: { ja: ['すみだ水族館'], en: ['Sumida Aquarium'], zh: ['墨田水族馆'] }
   },
   kidzania_tokyo: {
-    station: '豊洲', walk_min: 3,
+    station: '豊洲', walk_min: 3, category: '屋内型遊園地',
     note: { ja: '豊洲駅から徒歩約3分（ららぽーと豊洲内・子供向け体験型施設）', en: 'About 3 min walk from Toyosu Stn (LaLaport Toyosu, kids experience facility)', zh: '从丰洲站步行约3分钟（LaLaport丰洲内・儿童职业体验设施）' },
     names: { ja: ['キッザニア東京'], en: ['KidZania Tokyo'], zh: ['东京KidZania'] }
   },
   aqua_city_odaiba: {
-    station: '台場', walk_min: 1,
+    station: '台場', walk_min: 1, category: '複合文化施設',
     note: { ja: 'ゆりかもめ 台場駅から徒歩約1分（お台場の商業施設）', en: 'About 1 min walk from Daiba Stn on the Yurikamome (shopping complex)', zh: '从百合海鸥号台场站步行约1分钟（台场商业设施）' },
     names: { ja: ['アクアシティお台場'], en: ['Aqua City Odaiba'], zh: ['台场Aqua City'] }
+  },
+  // === #47: 延伸地域（千葉・埼玉・神奈川）の天文台・科学館・公園 ===
+  national_astronomical_observatory: {
+    station: '三鷹', walk_min: 15, category: '天文台',
+    note: { ja: '三鷹駅からバス約15分（日本最大の天文研究機関・公開日あり）', en: 'About 15 min by bus from Mitaka Stn (Japan\'s largest astronomical research institute; public open days available)', zh: '从三鹰站乘巴士约15分钟（日本最大的天文研究机构・有公众开放日）' },
+    names: { ja: ['国立天文台', 'NAOJ', '三鷹キャンパス'], en: ['National Astronomical Observatory of Japan', 'NAOJ', 'Mitaka Campus'], zh: ['国立天文台'] }
+  },
+  chiba_city_science_museum: {
+    station: '県庁前', walk_min: 5, category: '科学館',
+    note: { ja: '千葉モノレール 県庁前駅から徒歩約5分（プラネタリウム・体験型展示）', en: 'About 5 min walk from Kenchomae Stn on the Chiba Monorail (planetarium and hands-on exhibits)', zh: '从千叶单轨电车县厅前站步行约5分钟（天文馆・体验型展示）' },
+    names: { ja: ['千葉市科学館'], en: ['Chiba City Museum of Science'], zh: ['千叶市科学馆'] }
+  },
+  national_museum_japanese_history: {
+    station: '佐倉', walk_min: 10, category: '博物館',
+    note: { ja: '佐倉駅からバス約10分（日本の歴史・民俗の総合博物館）', en: 'About 10 min by bus from Sakura Stn (comprehensive museum of Japanese history and folklore)', zh: '从佐仓站乘巴士约10分钟（日本历史・民俗综合博物馆）' },
+    names: { ja: ['国立歴史民俗博物館', '歴博', 'れきはく'], en: ['National Museum of Japanese History', 'Rekihaku'], zh: ['国立历史民俗博物馆'] }
+  },
+  hamagin_children_science_museum: {
+    station: '平沼橋', walk_min: 3, category: '科学館',
+    note: { ja: '相鉄 平沼橋駅から徒歩約3分（宇宙・科学の体験型施設・愛称は「はまぎん」）', en: 'About 3 min walk from Hiranumabashi Stn on the Sotetsu Line (hands-on space & science museum nicknamed "Hama Wing")', zh: '从相铁平沼桥站步行约3分钟（宇宙・科学体验型设施・昵称「Hama Wing」）' },
+    names: { ja: ['はまぎんこども宇宙科学館', 'はまぎん', 'Hama Wing'], en: ['Hamagin Children\'s Science Museum', 'Hama Wing'], zh: ['滨银儿童宇宙科学馆', 'Hama Wing'] }
+  },
+  saitama_youth_science_museum: {
+    station: '与野本町', walk_min: 10, category: '科学館',
+    note: { ja: '与野本町駅から徒歩約10分（プラネタリウム・科学実験）', en: 'About 10 min walk from Yono-Honmachi Stn (planetarium and science experiments)', zh: '从与野本町站步行约10分钟（天文馆・科学实验）' },
+    names: { ja: ['さいたま市青少年科学館', 'サイエンスワールド'], en: ['Saitama City Youth Science Museum', 'Science World'], zh: ['埼玉市青少年科学馆'] }
+  },
+  kawaguchi_science_museum: {
+    station: '川口', walk_min: 10, category: '科学館',
+    note: { ja: '川口駅からバス約10分（プラネタリウム）', en: 'About 10 min by bus from Kawaguchi Stn (planetarium)', zh: '从川口站乘巴士约10分钟（天文馆）' },
+    names: { ja: ['川口市立科学館', 'サイエンスワールド川口'], en: ['Kawaguchi City Science Museum', 'Science World Kawaguchi'], zh: ['川口市立科学馆'] }
+  },
+  sagamihara_city_museum: {
+    station: '相模原', walk_min: 15, category: '博物館',
+    note: { ja: '相模原駅からバス約15分（JAXA相模原キャンパス隣接・はやぶさ実物大模型）', en: 'About 15 min by bus from Sagamihara Stn (next to JAXA Sagamihara Campus; full-scale Hayabusa model)', zh: '从相模原站乘巴士约15分钟（紧邻JAXA相模原校区・隼鸟号实物大模型）' },
+    names: { ja: ['相模原市立博物館'], en: ['Sagamihara City Museum'], zh: ['相模原市立博物馆'] }
+  },
+  chiba_modern_industry_museum: {
+    station: '国府台', walk_min: 10, category: '科学館',
+    note: { ja: '京成 国府台駅から徒歩約10分（科学技術の体験展示・市川）', en: 'About 10 min walk from Konodai Stn on the Keisei Line (hands-on science & technology exhibits, Ichikawa)', zh: '从京成国府台站步行约10分钟（科学技术体验展示・市川）' },
+    names: { ja: ['千葉県立現代産業科学館'], en: ['Chiba Prefectural Museum of Modern Industrial Science'], zh: ['千叶县立现代产业科学馆'] }
+  },
+  chiba_prefectural_central_museum: {
+    station: '千葉公園', walk_min: 10, category: '博物館',
+    note: { ja: '千葉モノレール 千葉公園駅から徒歩約10分（千葉の自然・歴史・千葉公園隣接）', en: 'About 10 min walk from Chiba-Koen Stn on the Chiba Monorail (nature & history of Chiba, next to Chiba Park)', zh: '从千叶单轨电车千叶公园站步行约10分钟（千叶的自然・历史・紧邻千叶公园）' },
+    names: { ja: ['千葉県立中央博物館'], en: ['Chiba Prefectural Central Museum'], zh: ['千叶县立中央博物馆'] }
+  },
+  boso_no_mura: {
+    station: '成田', walk_min: 30, category: '博物館',
+    note: { ja: '成田駅からバス約30分（房総の昔の町並み再現・体験型）', en: 'About 30 min by bus from Narita Stn (recreated old Boso townscapes; hands-on)', zh: '从成田站乘巴士约30分钟（再现房总古街景・体验型）' },
+    names: { ja: ['千葉県立房総のむら', '房総のむら'], en: ['Boso no Mura', 'Boso-no-Mura'], zh: ['千叶县立房总之村', '房总之村'] }
+  },
+  sakura_castle_park: {
+    station: '佐倉', walk_min: 15, category: '公園',
+    note: { ja: '佐倉駅から徒歩約15分（佐倉城跡・桜の名所）', en: 'About 15 min walk from Sakura Stn (Sakura Castle ruins; famous cherry blossom spot)', zh: '从佐仓站步行约15分钟（佐仓城遗址・赏樱名胜）' },
+    names: { ja: ['佐倉城址公園', '佐倉城跡'], en: ['Sakura Castle Ruins Park', 'Sakura Castle Site'], zh: ['佐仓城遗址公园'] }
+  },
+  shin_yokohama_park: {
+    station: '新横浜', walk_min: 5, category: '公園',
+    note: { ja: '新横浜駅から徒歩約5分（日産スタジアム・サッカー日本代表戦）', en: 'About 5 min walk from Shin-Yokohama Stn (Nissan Stadium, Japan national football team matches)', zh: '从新横滨站步行约5分钟（日产体育场・日本国家队比赛）' },
+    names: { ja: ['新横浜公園', '日産スタジアム'], en: ['Shin-Yokohama Park', 'Nissan Stadium'], zh: ['新横滨公园', '日产体育场'] }
+  },
+  hitsujiyama_park: {
+    station: '西武秩父', walk_min: 15, category: '公園',
+    note: { ja: '西武秩父駅から徒歩約15分（芝桜の丘・4〜5月・約40万株）', en: 'About 15 min walk from Seibu-Chichibu Stn (Shakunage & moss phlox hill in Apr-May, about 400,000 plants)', zh: '从西武秩父站步行约15分钟（芝樱之丘・4～5月・约40万株）' },
+    names: { ja: ['羊山公園', '芝桜の丘'], en: ['Hitsujiyama Park', 'Shakunage Hill'], zh: ['羊山公园', '芝樱之丘'] }
+  },
+  makuhari_seaside_park: {
+    station: '海浜幕張', walk_min: 10, category: '公園',
+    note: { ja: '海浜幕張駅から徒歩約10分（海浜公園・日本庭園）', en: 'About 10 min walk from Kaihin-Makuhari Stn (seaside park with Japanese garden)', zh: '从海滨幕张站步行约10分钟（海滨公园・日本庭园）' },
+    names: { ja: ['幕張海浜公園'], en: ['Makuhari Seaside Park'], zh: ['幕张海滨公园'] }
+  },
+  // === #49: 外国人観光客向けアニメ・ゲーム系アミューズメントパーク ===
+  wb_studio_tour_tokyo: {
+    station: '豊島園', walk_min: 5, category: 'テーマパーク',
+    note: { ja: '豊島園駅から徒歩約5分（ハリー・ポッターの映画制作体験型施設・日時指定チケット制）', en: 'About 5 min walk from Toshimaen Stn (Harry Potter movie-making experience; timed-entry ticket required)', zh: '从丰岛园站步行约5分钟（哈利·波特电影制作体验型设施・需指定日期时间门票）' },
+    names: { ja: ['ワーナー ブラザース スタジオツアー東京', 'スタジオツアー東京', 'ハリー・ポッター スタジオツアー'], en: ['Warner Bros. Studio Tour Tokyo', 'Studio Tour Tokyo', 'Harry Potter Studio Tour'], zh: ['东京华纳兄弟影城之旅', '哈利波特影城之旅'] }
+  },
+  tokyo_joypolis: {
+    station: 'お台場海浜公園', walk_min: 5, category: '屋内型遊園地',
+    note: { ja: 'ゆりかもめ お台場海浜公園駅から徒歩約5分（デックス東京ビーチ内・屋内型アミューズメントパーク）', en: 'About 5 min walk from Odaiba-Kaihinkoen Stn on the Yurikamome (inside DECKS Tokyo Beach, indoor amusement park)', zh: '从百合海鸥号台场海滨公园站步行约5分钟（DECKS东京海滩内・室内游乐场）' },
+    names: { ja: ['東京ジョイポリス', 'ジョイポリス'], en: ['Tokyo Joypolis', 'Joypolis'], zh: ['东京欢乐世界', '欢乐世界'] }
+  },
+  namja_town: {
+    station: '池袋', walk_min: 8, category: '屋内型遊園地',
+    note: { ja: '池袋駅から徒歩約8分（サンシャインシティ内・餃子スタジアム等）', en: 'About 8 min walk from Ikebukuro Stn (inside Sunshine City; Gyoza Stadium etc.)', zh: '从池袋站步行约8分钟（太阳城内・饺子体育场等）' },
+    names: { ja: ['ナンジャタウン'], en: ['NAMJATOWN', 'Namja Town'], zh: ['NAMJATOWN', '南加亚城'] }
+  },
+  immersive_fort_tokyo: {
+    station: '青海', walk_min: 5, category: 'テーマパーク',
+    note: { ja: 'ゆりかもめ 青海駅から徒歩約5分（没入型テーマパーク・お台場）', en: 'About 5 min walk from Aomi Stn on the Yurikamome (immersive theme park in Odaiba)', zh: '从百合海鸥号青海站步行约5分钟（沉浸式主题公园・台场）' },
+    names: { ja: ['イマーシブ・フォート東京', 'イマーシブフォート'], en: ['Immersive Fort Tokyo'], zh: ['沉浸式堡垒东京'] }
+  },
+  small_worlds_tokyo: {
+    station: '有明', walk_min: 5, category: 'テーマパーク',
+    note: { ja: 'ゆりかもめ 有明駅から徒歩約5分（ミニチュアテーマパーク・国際展示場駅からも徒歩約8分）', en: 'About 5 min walk from Ariake Stn on the Yurikamome (miniature theme park; approx. 8 min from Kokusai-Tenjijo Stn)', zh: '从百合海鸥号有明站步行约5分钟（微缩主题公园・从国际展示场站步行约8分钟）' },
+    names: { ja: ['スモールワールズ東京', 'スモールワールズ'], en: ['Small Worlds Tokyo', 'Small Worlds'], zh: ['东京小世界', '小世界'] }
+  },
+  legoland_discovery_tokyo: {
+    station: 'お台場海浜公園', walk_min: 5, category: '屋内型遊園地',
+    note: { ja: 'ゆりかもめ お台場海浜公園駅から徒歩約5分（デックス東京ビーチ内・レゴの屋内型アミューズメントパーク）', en: 'About 5 min walk from Odaiba-Kaihinkoen Stn on the Yurikamome (inside DECKS Tokyo Beach, LEGO indoor amusement park)', zh: '从百合海鸥号台场海滨公园站步行约5分钟（DECKS东京海滩内・乐高室内游乐场）' },
+    names: { ja: ['レゴランド・ディスカバリー・センター東京', 'レゴランドディスカバリー東京'], en: ['LEGOLAND Discovery Center Tokyo', 'LEGOLAND Discovery Center'], zh: ['乐高乐园探索中心东京'] }
+  },
+  gundam_base_tokyo: {
+    station: '台場', walk_min: 5, category: 'テーマパーク',
+    note: { ja: 'ゆりかもめ 台場駅から徒歩約5分（ダイバーシティ東京内・実物大立像あり）', en: 'About 5 min walk from Daiba Stn on the Yurikamome (inside DiverCity Tokyo; life-size Gundam statue)', zh: '从百合海鸥号台场站步行约5分钟（DiverCity东京内・有实物大高达立像）' },
+    names: { ja: ['ガンダムベース東京', 'ガンダムベース', 'ガンダム立像'], en: ['The Gundam Base Tokyo', 'Gundam Base Tokyo'], zh: ['东京高达基地', '高达基地'] }
+  },
+  ghibli_museum: {
+    station: '三鷹', walk_min: 5, category: '美術館',
+    note: { ja: '三鷹駅からバス約5分（スタジオジブリのアニメ美術館・事前予約制）', en: 'About 5 min by bus from Mitaka Stn (Studio Ghibli anime museum; advance reservation required)', zh: '从三鹰站乘巴士约5分钟（吉卜力工作室动画美术馆・需提前预约）' },
+    names: { ja: ['三鷹の森ジブリ美術館', 'ジブリ美術館'], en: ['Ghibli Museum, Mitaka', 'Ghibli Museum'], zh: ['三鹰之森吉卜力美术馆', '吉卜力美术馆'] }
+  },
+  fujiko_f_fujio_museum: {
+    station: '登戸', walk_min: 10, category: '美術館',
+    note: { ja: '登戸駅からバス約10分（ドラえもんの作者のミュージアム・事前予約制・シャトルバスあり）', en: 'About 10 min by bus from Noborito Stn (museum of the creator of Doraemon; advance reservation required; shuttle bus available)', zh: '从登户站乘巴士约10分钟（哆啦A梦作者博物馆・需提前预约・有穿梭巴士）' },
+    names: { ja: ['藤子・F・不二雄ミュージアム', '藤子不二雄ミュージアム', 'ドラえもんミュージアム'], en: ['Fujiko F. Fujio Museum', 'Doraemon Museum'], zh: ['藤子·F·不二雄博物馆', '哆啦A梦博物馆'] }
+  },
+  maxell_aqua_park_shinagawa: {
+    station: '品川', walk_min: 2, category: '水族館',
+    note: { ja: '品川駅高輪口から徒歩約2分（デジタルアート水族館）', en: 'About 2 min walk from Shinagawa Stn Takanawa Exit (digital art aquarium)', zh: '从品川站高轮口步行约2分钟（数字艺术水族馆）' },
+    names: { ja: ['マクセル アクアパーク品川', 'アクアパーク品川'], en: ['Maxell Aqua Park Shinagawa', 'Aqua Park Shinagawa'], zh: ['麦克斯尔水上乐园品川', '水上乐园品川'] }
   }
 };
 
@@ -4807,7 +4944,15 @@ const DESTINATION_CULTURAL_FACILITIES = {
     ['浜離宮恩賜庭園', 'Hama-rikyu Gardens', '滨离宫恩赐庭园', '庭園', 5],
     ['竹芝桟橋（東海汽船ターミナル）', 'Takeshiba Pier (Tokai Kisen Ferry Terminal)', '竹芝码头（东海汽船轮渡码头）', 'フェリーターミナル', 3],
     ['日の出桟橋（水上バス）', 'Hinode Pier (Water Bus)', '日出码头（水上巴士）', '水上バス乗り場', 10]
-  ]
+  ],
+  // #48: 延伸駅の到着時文化施設（自動導出に無いもののみ明示追加。残りは LANDMARK_DEFS から自動導出）
+  '西武秩父': [['秩父神社', 'Chichibu Shrine', '秩父神社', '神社', 10]],
+  '江ノ島': [
+    ['江ノ島展望灯台', 'Enoshima Sea Candle (Observation Lighthouse)', '江之岛展望灯塔', '展望・建築', 10],
+    ['湘南海岸公園', 'Shonan Seaside Park', '湘南海岸公园', '公園', 5]
+  ],
+  '千葉': [['千葉市科学館', 'Chiba City Museum of Science', '千叶市科学馆', '科学館', 10]],
+  '越生': [['越生梅林', 'Ogose Plum Grove', '越生梅林', '公園', 15]]
 };
 
 const CULTURAL_CATEGORY_NAMES = {
@@ -4827,12 +4972,40 @@ const CULTURAL_CATEGORY_NAMES = {
   '歴史建築': { en: 'Historic architecture', zh: '历史建筑' },
   '博物館': { en: 'Museum', zh: '博物馆' },
   '遊園地': { en: 'Amusement park', zh: '游乐园' },
-  '庭園': { en: 'Garden', zh: '庭园' }
+  '庭園': { en: 'Garden', zh: '庭园' },
+  '公園': { en: 'Park', zh: '公园' },
+  '天文台': { en: 'Observatory', zh: '天文台' },
+  'テーマパーク': { en: 'Theme park', zh: '主题公园' },
+  '展示施設': { en: 'Exhibition facility', zh: '展览设施' },
+  'スポーツ施設': { en: 'Sports facility', zh: '体育设施' },
+  '動物園': { en: 'Zoo', zh: '动物园' }
 };
+
+// #48: 到着時文化施設の二重管理を解消するため、LANDMARK_DEFS（駅周辺スポット）から
+// 駅ごとの文化施設一覧を自動導出する。category 未指定の既存ランドマークは「文化施設」扱い。
+// 例: 鉄道博物館（大成）駅のランドマーク「鉄道博物館」が到着表示にも自動反映される。
+const DERIVED_CULTURAL_FACILITIES = {};
+for (const def of Object.values(LANDMARK_DEFS)) {
+  if (!def.station) continue;
+  const ja = (def.names?.ja?.[0]) || '';
+  if (!ja) continue;
+  const en = (def.names?.en?.[0]) || ja;
+  const zh = (def.names?.zh?.[0]) || ja;
+  const category = def.category || '文化施設';
+  (DERIVED_CULTURAL_FACILITIES[def.station] ||= []).push([ja, en, zh, category, def.walk_min || 5]);
+}
 
 function getDestinationCulturalFacilities(station, userLang = 'ja') {
   const langIndex = userLang === 'en' ? 1 : userLang === 'zh' ? 2 : 0;
-  return (DESTINATION_CULTURAL_FACILITIES[station] || []).map(([ja, en, zh, category, walk_min]) => ({
+  // 明示定義 + LANDMARK_DEFS 自動導出 を名前重複なしでマージ
+  const explicit = DESTINATION_CULTURAL_FACILITIES[station] || [];
+  const derived = DERIVED_CULTURAL_FACILITIES[station] || [];
+  const seen = new Set(explicit.map(e => e[0]));
+  const all = [...explicit];
+  for (const d of derived) {
+    if (!seen.has(d[0])) { seen.add(d[0]); all.push(d); }
+  }
+  return all.map(([ja, en, zh, category, walk_min]) => ({
     name: [ja, en, zh][langIndex],
     category: userLang === 'ja' ? category : (CULTURAL_CATEGORY_NAMES[category]?.[userLang] || category),
     walk_min
@@ -5088,7 +5261,19 @@ function detectPrivateExpressOperator(fromInput, toInput) {
 // 特急・新幹線リクエストの検出: from/to に列車種別・列車名が含まれるか
 function detectLimitedExpressRequest(fromInput, toInput) {
   const combined = `${fromInput || ''} ${toInput || ''}`.toLowerCase();
-  return LIMITED_EXPRESS_KEYWORDS.some(kw => combined.includes(kw));
+  // 駅名に含まれるキーワード（例: 「西武秩父」の「秩父」）は特急リクエストと誤判定しない。
+  // 解決済み駅名を入力から除去してから判定する（例: 「池袋 秩父特急」→ 秩父 が残る→特急案内）。
+  let residue = combined;
+  for (const s of [fromInput, toInput]) {
+    const r = resolveStation(s);
+    if (r && r.station) {
+      residue = residue.replace(r.station.toLowerCase(), ' ');
+      for (const cand of (r.candidates || [])) {
+        residue = residue.replace(String(cand).toLowerCase(), ' ');
+      }
+    }
+  }
+  return LIMITED_EXPRESS_KEYWORDS.some(kw => residue.includes(kw));
 }
 
 // 該当駅の特定: キーワードを除去した残り（またはキーワードを含まない入力）を駅名として解決
@@ -7229,6 +7414,112 @@ const BUS_GTFS_SOURCES = [
       ['千葉駅', '津田沼駅'], ['東京駅', '錦糸町駅'], ['柏駅', '船橋駅']
     ]
   },
+  // #45: 千葉・埼玉・神奈川のローカルバス（延伸駅周辺・ODPT未登録のためハードコード）
+  // 出典: 各社公式サイトの主要停留所・系統（代表系統のみ・時刻は未収録）
+  {
+    name: 'ちばフラワーバス（ちばグリーンバス）', operatorId: 'ChibaFlowerBus',
+    label: 'ちばフラワーバス（佐倉）', labelEn: 'Chiba Flower Bus (Sakura)', labelZh: '千叶花巴士（佐仓）',
+    website: 'https://www.chiba-flowerbus.jp/',
+    hardCoded: true,
+    stops: [
+      '佐倉駅', '京成佐倉駅', '佐倉市役所', '国立歴史民俗博物館', 'ユーカリが丘駅', '臼井駅', '志津駅', '佐倉城址公園入口'
+    ],
+    routes: [
+      ['佐倉駅', '京成佐倉駅'], ['佐倉駅', '国立歴史民俗博物館'], ['京成佐倉駅', '国立歴史民俗博物館'],
+      ['ユーカリが丘駅', '佐倉駅'], ['臼井駅', '佐倉駅'], ['志津駅', '佐倉駅']
+    ]
+  },
+  {
+    name: 'さいたま市営バス', operatorId: 'SaitamaCityBus',
+    label: 'さいたま市営バス', labelEn: 'Saitama City Bus', labelZh: '埼玉市营公交',
+    website: 'https://www.city.saitama.lg.jp/003/001/kotsu/',
+    hardCoded: true,
+    stops: [
+      '大宮駅東口', '大宮駅西口', '鉄道博物館', '鉄道博物館南', '大成四丁目', '大宮中央総合病院', '大宮中央総合病院入口', '赤芝'
+    ],
+    routes: [
+      ['大宮駅東口', '鉄道博物館'], ['大宮駅西口', '鉄道博物館'], ['大宮駅東口', '大成四丁目'],
+      ['大宮駅東口', '大宮中央総合病院']
+    ]
+  },
+  {
+    name: '東武バス（埼玉）', operatorId: 'TobuBusSaitama',
+    label: '東武バス（埼玉）', labelEn: 'Tobu Bus (Saitama)', labelZh: '东武巴士（埼玉）',
+    website: 'https://www.tobu-bus.com/',
+    hardCoded: true,
+    stops: [
+      '大宮駅東口', '大宮駅西口', '鉄道博物館', '大成', '上尾駅東口', '宮原駅入口', '指扇駅', '西大宮駅'
+    ],
+    routes: [
+      ['大宮駅東口', '上尾駅東口'], ['大宮駅東口', '鉄道博物館'], ['大宮駅西口', '鉄道博物館'],
+      ['大宮駅東口', '指扇駅'], ['上尾駅東口', '鉄道博物館']
+    ]
+  },
+  {
+    name: '西武観光バス（秩父）', operatorId: 'SeibuKankoBusChichibu',
+    label: '西武観光バス（秩父）', labelEn: 'Seibu Kanko Bus (Chichibu)', labelZh: '西武观光巴士（秩父）',
+    website: 'https://www.seibubus.co.jp/rosen/chichibu/',
+    hardCoded: true,
+    stops: [
+      '西武秩父駅', '秩父駅', '秩父市役所', '羊山公園', '長瀞駅', '長瀞', '皆野駅', '三峰口駅', '三峯神社', '大滝温泉', '正丸駅'
+    ],
+    routes: [
+      ['西武秩父駅', '秩父駅'], ['西武秩父駅', '長瀞'], ['西武秩父駅', '三峰口駅'],
+      ['西武秩父駅', '三峯神社'], ['西武秩父駅', '皆野駅'], ['秩父駅', '長瀞'], ['西武秩父駅', '羊山公園']
+    ]
+  },
+  {
+    name: '江ノ電バス', operatorId: 'EnodenBus',
+    label: '江ノ電バス', labelEn: 'Enoden Bus', labelZh: '江之电巴士',
+    website: 'https://www.enoden.co.jp/bus/',
+    hardCoded: true,
+    stops: [
+      '江ノ島', '江ノ島入口', '湘南海岸公園', '新江ノ島水族館', '湘南港桟橋', '藤沢駅', '鎌倉駅', '大船駅', '長谷駅', '極楽寺駅'
+    ],
+    routes: [
+      ['藤沢駅', '江ノ島'], ['鎌倉駅', '江ノ島'], ['大船駅', '江ノ島'],
+      ['藤沢駅', '湘南港桟橋'], ['鎌倉駅', '湘南港桟橋'], ['藤沢駅', '長谷駅']
+    ]
+  },
+  {
+    name: '千葉中央バス', operatorId: 'ChibaChuoBus',
+    label: '千葉中央バス', labelEn: 'Chiba Chuo Bus', labelZh: '千叶中央巴士',
+    website: 'https://www.chibachuobus.co.jp/',
+    hardCoded: true,
+    stops: [
+      '千葉駅', '千葉中央駅', '千葉市役所前', '千城台駅', '千城台車庫', '千城局', '都賀駅', '稲毛駅'
+    ],
+    routes: [
+      ['千葉駅', '千城台駅'], ['千葉駅', '千城台車庫'], ['千葉駅', '千葉市役所前'],
+      ['千葉駅', '都賀駅'], ['千葉中央駅', '千城台駅']
+    ]
+  },
+  {
+    name: '川越観光自動車（イーグルバス・越生）', operatorId: 'KawagoeKankoOgose',
+    label: '川越観光自動車（越生）', labelEn: 'Kawagoe Kanko Bus (Ogose)', labelZh: '川越观光汽车（越生）',
+    website: 'https://www.kawagoebus.jp/',
+    hardCoded: true,
+    stops: [
+      '越生駅', '越生駅入口', '越生駅東口', '黒山', 'せせらぎバスセンター', '慈光寺', 'ときがわ町役場'
+    ],
+    routes: [
+      ['越生駅', '黒山'], ['越生駅', 'せせらぎバスセンター'], ['越生駅', '慈光寺'],
+      ['越生駅', 'ときがわ町役場']
+    ]
+  },
+  {
+    name: '丸建つばさ交通（けんちゃんバス）', operatorId: 'MarukenTsubasa',
+    label: '丸建つばさ交通（伊奈・けんちゃんバス）', labelEn: 'Maruken Tsubasa Kotsu (Ina)', labelZh: '丸建翼交通（伊奈）',
+    website: 'https://maru-ken.co.jp/route-bus/',
+    hardCoded: true,
+    stops: [
+      '内宿駅', '伊奈学園', 'がんセンター', '戸崎前', '県民活動センター', '伊奈記念公園北', '桂全寺前', 'さくら団地', '小室駅', '伊奈町役場'
+    ],
+    routes: [
+      ['内宿駅', '小室駅'], ['内宿駅', '伊奈学園'], ['内宿駅', 'がんセンター'],
+      ['内宿駅', '県民活動センター'], ['内宿駅', '伊奈町役場']
+    ]
+  },
   // 東京都内コミュニティバス（代表例: 23区＋多摩地域の主要コミュニティバス）
   // communityBuses: tokyobus.or.jp/sp の41自治体ディレクトリ（名称＋公式URL）。検索・一覧表示用。
   {
@@ -8282,6 +8573,26 @@ function buildCommunityBusAccessBlock(stationInput, userLang) {
   };
 }
 
+// #46: バス停名の類似度判定用 編集距離（Levenshtein）。全角・半角はそのまま比較し、
+// 検索キーの近さ（類似候補提示）にのみ使用する。
+function levenshteinDist(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const prev = new Array(b.length + 1);
+  const curr = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return curr[b.length];
+}
+
 async function searchBus(args) {
   const busstopName = (args.busstop_name || '').trim();
   const fromInput = (args.from || '').trim();
@@ -8579,27 +8890,48 @@ async function searchBus(args) {
     let nearbySuggestions = undefined;
     if (matched.length === 0) {
       const q = resolvedBusstop.replace(/(停留所|バス停|駅)$/, '');
-      const seen = new Set();
-      const cands = [];
-      for (const b of buses) {
-        for (const k of (b._searchKeys || [])) {
-          // 生データの系統名・ID付きノイズ（「系統名:数字:停留所」等）は候補から除外
-          if (!k || seen.has(k) || /[：:〜→|]/.test(k)) continue;
-          // 入力の先頭N文字に一致、または入力が停名に含まれる
-          if ((q && k.includes(q)) || (k.length >= 2 && q.length >= 1 && k.includes(q.slice(0, Math.max(1, q.length - 1))))) {
-            seen.add(k);
-            cands.push(k);
+      // #46: 類似候補をスコアリングして上位のみ提示（先頭1文字だけの雑な一致を排除）。
+      // 1) 入力が停名に含まれる 2) 共通接頭辞長 3) 編集距離（Levenshtein）
+      // 4) 「駅前」「駅」サフィックス付き停名を優先 5) 上位5件に制限
+      if (q.length >= 2) {
+        const seen = new Set();
+        const cands = [];
+        for (const b of buses) {
+          for (const k of (b._searchKeys || [])) {
+            // 生データの系統名・ID付きノイズ（「系統名:数字:停留所」等）は候補から除外
+            if (!k || seen.has(k) || /[：:〜→|]/.test(k)) continue;
+            const stripped = k.replace(/(停留所|バス停|駅)$/, '');
+            let prefixLen = 0;
+            const maxP = Math.min(q.length, stripped.length);
+            while (prefixLen < maxP && q[prefixLen] === stripped[prefixLen]) prefixLen++;
+            const dist = levenshteinDist(q, stripped);
+            let score = 0;
+            if (stripped.includes(q)) score += 20;          // 入力が停名の一部（「浅草」→「浅草雷門」）
+            if (prefixLen >= 2) score += prefixLen * 4;     // 共通接頭辞2文字以上は強い一致
+            else if (prefixLen === 1) score += 1;           // 1文字一致は最低限のみ
+            if (dist === 0) score += 15;
+            else if (dist <= 1) score += 10;
+            else if (dist === 2) score += 5;
+            else if (dist === 3) score += 2;
+            if (/駅前$/.test(k)) score += 2;                // 駅直結バス停を優先
+            else if (/駅$/.test(k)) score += 1;
+            // 閾値: 関連が薄い候補（例: 「佐倉」→「阿佐ヶ谷駅前」「越生」→「鶴見駅」の
+            // 1文字一致・編集距離2のみ）は除外。2文字クエリで距離2はほぼ無関係。
+            if (score >= 8) {
+              seen.add(k);
+              cands.push({ k, score });
+            }
           }
         }
-        if (cands.length >= 20) break;
-      }
-      if (cands.length) {
-        const label = userLang === 'en' ? 'Similar nearby bus stops'
-          : userLang === 'zh' ? '相近的公交站名' : '類似する近隣のバス停';
-        const localized = cands.slice(0, 10)
-          .map(s => getDisplayStationName(s, userLang))
-          .filter(s => userLang === 'ja' || !/[\u3040-\u30ff\u3400-\u9fff]/.test(s));
-        nearbySuggestions = localized.length ? { note: label, stops: localized } : undefined;
+        if (cands.length) {
+          cands.sort((a, b) => b.score - a.score);
+          const label = userLang === 'en' ? 'Similar nearby bus stops'
+            : userLang === 'zh' ? '相近的公交站名' : '類似する近隣のバス停';
+          const localized = cands.slice(0, 5)
+            .map(c => getDisplayStationName(c.k, userLang))
+            .filter(s => userLang === 'ja' || !/[\u3040-\u30ff\u3400-\u9fff]/.test(s));
+          nearbySuggestions = localized.length ? { note: label, stops: localized } : undefined;
+        }
       }
     }
     return jsonResponse({
