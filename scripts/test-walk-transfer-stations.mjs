@@ -131,6 +131,39 @@ assert(nambuBranch.includes('JR南武支線'), '南武支線（尻手〜浜川�
 const keihinTsurumi = STATION_TO_LINES['鶴見'].map(e => e.line);
 assert(keihinTsurumi.includes('京浜東北線'), '京浜東北線に鶴見を追加（公式41駅・川崎→横浜が1駅扱いだったバグ是正）');
 
+// 2-2e. v2.25 未収録路線の追加（#20）と連絡駅（#20 徒歩連絡）
+for (const [f, t, line] of [
+  ['五反田', '蒲田', '東急池上線'], ['多摩川', '蒲田', '東急多摩川線'],
+  ['三軒茶屋', '下高井戸', '東急世田谷線'], ['京成高砂', '京成金町', '京成金町線'],
+  ['曳舟', '亀戸', '東武亀戸線'], ['京急川崎', '小島新田', '京急大師線'],
+  ['武蔵境', '是政', '西武多摩川線'], ['国分寺', '東村山', '西武国分寺線'],
+  ['相模大野', '片瀬江ノ島', '小田急江ノ島線'], ['金沢八景', '逗子・葉山', '京急逗子線'],
+  ['堀ノ内', '三崎口', '京急久里浜線'], ['二俣川', '湘南台', '相鉄いずみ野線'],
+  ['大船', '湘南江の島', '湘南モノレール'], ['立川', '奥多摩', 'JR青梅線'],
+  ['拝島', '武蔵五日市', 'JR五日市線'], ['鶴見', '扇町', 'JR鶴見線'],
+  ['茅ケ崎', '橋本', 'JR相模線'], ['八王子', '高麗川', 'JR八高線'],
+  ['大宮', '高麗川', 'JR川越線'], ['大宮', '高崎', 'JR高崎線'],
+  ['大宮', '宇都宮', 'JR宇都宮線'], ['大宮', '船橋', '東武野田線'],
+  ['京成津田沼', '千葉中央', '京成千葉線'], ['千葉中央', 'ちはら台', '京成千原線'],
+]) {
+  const r = route(f, t);
+  assert(r.error === undefined && r.transfers === 0 && r.main_line === line,
+    `${f}→${t}: ${line}直通 (${r.error || r.main_line})`);
+}
+// v2.25 連絡駅の徒歩連絡
+for (const [f, t, expectMin] of [
+  ['柴又', '金町', 5], ['京成金町', '金町', 5], ['川越', '本川越', 6],
+]) {
+  const r = route(f, t);
+  const walkOk = r.error === undefined && r.transfers <= 1 && r.estimated_minutes <= expectMin;
+  assert(walkOk, `${f}⇔${t}: ${r.error || (r.transfers + '乗換 ' + r.estimated_minutes + '分')}`);
+}
+// v2.25 同名別駅の曖昧化（入谷: 日比谷線 vs 相模線）
+const iriya = resolveStation('入谷');
+assert(iriya.candidates && iriya.candidates.length === 2, `入谷: 曖昧化（候補${iriya.candidates?.length}件）→ ${iriya.candidates?.join('/')}`);
+const iriyaSagami = STATION_TO_LINES['入谷（相模線）'].map(e => e.line);
+assert(iriyaSagami.includes('JR相模線'), '入谷（相模線）: JR相模線に分離');
+
 // 2-3. 同名別駅の曖昧化
 for (const [name, cands] of [['小川町', 2], ['両国', 2], ['霞ヶ関', 2]]) {
   const res = resolveStation(name);
