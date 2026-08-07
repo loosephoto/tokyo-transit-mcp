@@ -564,7 +564,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.22.1）
+├── SKILL.md             # プロジェクトスキル定義（v2.23.0）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -1110,7 +1110,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.22.1)
+├── SKILL.md             # Project skill definition (v2.23.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1655,7 +1655,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.22.1）
+├── SKILL.md             # 项目技能定义（v2.23.0）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
