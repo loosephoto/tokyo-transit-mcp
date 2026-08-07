@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.25.3
+version: 2.25.4
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,17 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.25.4（2026-08-07）— 旧駅名エイリアス35件＋ランドマーク旧名称（#26・#27）
+
+- **STATION_NAME_MAP に旧駅名エイリアス35件追加（#26）**: 業平橋→とうきょうスカイツリー・京浜蒲田→京急蒲田・営団赤塚→地下鉄赤塚・西武遊園地→多摩湖・船の科学館→東京国際クルーズターミナル・富士吉田→富士山 等。参考: desktoptetsu.com「駅名改称 1987-2024」。スクリプト: scripts/add-old-station-name-aliases.mjs（再利用可）
+  - **🔴 2段階改称の扱い**: 国鉄千葉駅前（→京成千葉→千葉中央）は現駅名「千葉中央」へ直接マップ。中間名「京成千葉」もエイリアス登録（'京成千葉': '千葉中央'）
+  - **🔴 幻駅統合**: 京成千葉（1991年改称）・遊園地西（2021年改称）はグラフから削除し現駅名に統合（駅数 1,288→1,286）。STATION_NAME_MAP の英字エイリアス（Keisei-Chiba / Yuenchi-Nishi）も現駅名へ変更。**グラフに残存する旧駅名は、エイリアス追加だけでは STATION_TO_LINES 完全一致が優先されて機能しないため、必ずグラフ統合とセットで行う**
+  - **🔴 resolveLandmark exactOnly**: 旧駅名エイリアス（例「成田空港(旧)」→東成田）がランドマーク部分一致（「成田空港」）に奪われる問題を修正。resolveStation の「ランドマーク完全一致を先に評価」箇所は resolveLandmark(key, true) で完全一致のみ評価し、部分一致は駅名正規化の後に回す
+- **LANDMARK_DEFS 旧名称エイリアス（#27）**: カップヌードルミュージアムに「インスタントラーメン発明記念館」（2006年開館時名称）を追加。カップヌードルミュージアムパーク（旧・新港パーク、2017年ネーミングライツ改称）を新規ランドマークとして追加（みなとみらい駅・徒歩約5分・ja/en/zh）
+  - ZOZOマリンスタジアムの en「Chiba Marine Stadium」は v2.25.3 で対応済み（追加不要）
+- **検証**: test-walk に 2-2g（ランドマーク旧名3件＋新規2件）・2-2h2（旧駅名エイリアス35件）を追加。probe-all-lang（26/26）・test-bus-routes-expansion・test-tokyo-to-tdl・test-community-kappabashi 等 全PASS
+  - **既知の既存FAIL**: test-landmark-map / multilingual / spots / parks / cultural-attractions の「金町」アサートは #14 で金町駅がJR常磐線に追加されたため期待値が古い（v2.25.3 時点から FAIL、今回の変更とは無関係）。test-parks の「代々木公園」も同様
 
 ### v2.25.3（2026-08-07）— 全路線の略称・表記揺れエイリアス充実＋横浜・千葉ランドマーク追加
 

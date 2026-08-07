@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.25.3 (Production Ready)
+ * Tokyo Transit MCP Server v2.25.4 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -731,6 +731,44 @@ const STATION_NAME_MAP = {
 
   // 旧駅名・別表記（外部API/テーブルデータや古い入力で残りうるもの）
   'テレコムセンター': '東京ビッグサイト',     // ゆりかもめ旧駅名（現:東京ビッグサイト付近）
+
+  // ===== 2026-08 旧駅名エイリアス（#26）=====
+  '千葉港': '千葉みなと',
+  '営団赤塚': '地下鉄赤塚',
+  '営団成増': '地下鉄成増',
+  '江戸橋': '日本橋',
+  '玉ノ井': '東向島',
+  '業平橋': 'とうきょうスカイツリー',
+  '松原団地': '獨協大学前',
+  '京浜蒲田': '京急蒲田',
+  '京浜川崎': '京急川崎',
+  '京浜鶴見': '京急鶴見',
+  '京浜久里浜': '京急久里浜',
+  '京浜長沢': '京急長沢',
+  '羽田空港国際線ターミナル': '羽田空港第3ターミナル',
+  '花月園前': '花月総持寺',
+  '仲木戸': '京急東神奈川',
+  '産業道路': '大師橋',
+  '新逗子': '逗子・葉山',
+  '葛飾': '京成西船',
+  'センター競馬場前': '船橋競馬場',
+  '国鉄千葉駅前': '千葉中央',
+  '京成千葉': '千葉中央',
+  '荒川': '八広',
+  '成田空港(旧)': '東成田',
+  '多摩川園': '多摩川',
+  '二子玉川園': '二子玉川',
+  '南町田': '南町田グランベリーパーク',
+  '多磨墓地前': '多磨',
+  '北多磨': '白糸台',
+  '西武遊園地': '多摩湖',
+  '遊園地西': '西武園ゆうえんち',
+  '六会': '六会日大前',
+  '新横浜北': '北新横浜',
+  '船の科学館': '東京国際クルーズターミナル',
+  '国際展示場正門': '東京ビッグサイト',
+  '富士吉田': '富士山',
+
   '東京国際展示場正門': '東京ビッグサイト',   // ゆりかもめ旧駅名
   '東京国際展示場': '国際展示場',             // りんかい線 国際展示場駅の別表記
   '西銀座': '銀座',                           // 東京メトロ銀座線 旧・西銀座駅（現:銀座）
@@ -869,7 +907,7 @@ const STATION_NAME_MAP = {
   'Daishimae': '大師前', 'Nishi-Arai': '西新井', 'NishiArai': '西新井',
   'Kokubunji': '国分寺', 'Hitotsubashi-Gakuen': '一橋学園', 'HitotsubashiGakuen': '一橋学園',
   'Ome-Kaido': '青梅街道', 'OmeKaido': '青梅街道', 'Hagiyama': '萩山', 'Tamako': '多摩湖',
-  'Seibuen-Yuenchi': '西武園ゆうえんち', 'SeibuenYuenchi': '西武園ゆうえんち', 'Yuenchi-Nishi': '遊園地西', 'YuenchiNishi': '遊園地西',
+  'Seibuen-Yuenchi': '西武園ゆうえんち', 'SeibuenYuenchi': '西武園ゆうえんち', 'Yuenchi-Nishi': '西武園ゆうえんち', 'YuenchiNishi': '西武園ゆうえんち', // 遊園地西は2021年改称（#26）
   'Seibu-Kyujomae': '西武球場前', 'SeibuKyujomae': '西武球場前', 'Seibuen': '西武園',
   'Higashi-Murayama': '東村山', 'HigashiMurayama': '東村山',
   // 東京メトロ補完駅（#16〜#18）
@@ -1445,8 +1483,8 @@ const STATION_NAME_MAP = {
   'NishiNobuto': '西登戸',
   'Shin-Chiba': '新千葉',
   'ShinChiba': '新千葉',
-  'Keisei-Chiba': '京成千葉',
-  'KeiseiChiba': '京成千葉',
+  'Keisei-Chiba': '千葉中央', // 京成千葉は1991年改称（#26）
+  'KeiseiChiba': '千葉中央',
   'Chiba-Chuo': '千葉中央',
   'ChibaChuo': '千葉中央',
   'Chibadera': '千葉寺',
@@ -3218,7 +3256,7 @@ const RAILWAY_LINES = {
   '西武池袋線': ['池袋','椎名町','東長崎','江古田','桜台','練馬','中村橋','富士見台','練馬高野台','石神井公園','大泉学園','保谷','ひばりヶ丘','東久留米','清瀬','秋津','所沢','西所沢','小手指','狭山ヶ丘','武蔵藤沢','稲荷山公園','入間市','仏子','元加治','飯能','東飯能','高麗','武蔵横手','東吾野','吾野'],
   '西武新宿線': ['西武新宿','高田馬場','下落合','中井','新井薬師前','沼袋','野方','都立家政','鷺ノ宮','下井草','井荻','上井草','上石神井','武蔵関','東伏見','西武柳沢','田無','花小金井','小平','久米川','東村山','所沢','航空公園','新所沢','入曽','狭山市','新狭山','南大塚','本川越'],
   '西武多摩湖線': ['国分寺','一橋学園','青梅街道','萩山','多摩湖'],
-  '西武山口線': ['多摩湖','西武園ゆうえんち','遊園地西','西武球場前'],
+  '西武山口線': ['多摩湖','西武園ゆうえんち','西武球場前'], // 2021-03 遊園地西→西武園ゆうえんち改称（#26 幻駅統合）
   '西武園線': ['東村山','西武園'],
   // ===== JR東日本（山手線・京浜東北線に加え主要路線を追加）=====
   'JR中央線快速': ['東京','神田','御茶ノ水','水道橋','飯田橋','市ヶ谷','四ツ谷','信濃町','千駄ヶ谷','代々木','新宿','大久保','東中野','中野','高円寺','荻窪','西荻窪','吉祥寺','三鷹','武蔵境','東小金井','武蔵小金井','国分寺','西国分寺','国立','立川','日野','豊田','八王子','西八王子','高尾'],
@@ -3306,7 +3344,7 @@ const RAILWAY_LINES = {
   'JR宇都宮線': ['大宮','土呂','東大宮','蓮田','白岡','新白岡','久喜','東鷲宮','栗橋','古河','野木','間々田','小山','小金井','自治医大','石橋','雀宮','宇都宮'],
   '東武野田線': ['大宮','北大宮','大宮公園','大和田','七里','岩槻','東岩槻','豊春','八木崎','春日部','藤の牛島','南桜井','川間','七光台','清水公園','愛宕','野田市','梅郷','運河','江戸川台','初石','流山おおたかの森','豊四季','柏','新柏','増尾','逆井','高柳','六実','新鎌ヶ谷','鎌ヶ谷','馬込沢','塚田','新船橋','船橋'],
   '東武宇都宮線': ['新栃木','野州平川','野州大塚','壬生','国谷','おもちゃのまち','安塚','西川田','江曽島','南宇都宮','東武宇都宮'],
-  '京成千葉線': ['京成津田沼','京成幕張本郷','京成幕張','検見川','京成稲毛','みどり台','西登戸','新千葉','京成千葉','千葉中央'],
+  '京成千葉線': ['京成津田沼','京成幕張本郷','京成幕張','検見川','京成稲毛','みどり台','西登戸','新千葉','千葉中央'], // 1991 京成千葉→千葉中央改称（#26 幻駅統合）
   '京成千原線': ['千葉中央','千葉寺','大森台','学園前','おゆみ野','ちはら台'],
   '富士急行線': ['大月','田野倉','禾生','赤坂','都留市','谷村町','都留文科大学前','十日市場','東桂','三つ峠','寿','葭池温泉前','下吉田','月江寺','富士山','富士急ハイランド','河口湖']
 };
@@ -3480,7 +3518,9 @@ function resolveStation(rawName) {
 
   // ランドマーク完全一致を駅名エイリアス正規化より先に評価する。
   // 例: Yomiuriland は「読売ランド前」ではなく「京王よみうりランド」を優先。
-  const landmarkExact = resolveLandmark(key);
+  // ※ exactOnly: 部分一致まで先に評価すると旧駅名エイリアス（例「成田空港(旧)」→東成田）が
+  //    ランドマーク「成田空港」に奪われるため、ここでは完全一致のみを評価する（#26）。
+  const landmarkExact = resolveLandmark(key, true);
   if (landmarkExact && STATION_TO_LINES[landmarkExact.station]) {
     return { station: landmarkExact.station, candidates: [landmarkExact.station], ambiguous: false, exact: false, landmark: landmarkExact.landmark, landmarkNote: landmarkExact.note, walk_min: landmarkExact.walk_min };
   }
@@ -3865,7 +3905,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.25.3' },
+  { name: 'tokyo-transit-mcp', version: '2.25.4' },
   { capabilities: { tools: {} } }
 );
 
@@ -4367,7 +4407,13 @@ const LANDMARK_DEFS = {
   yokohama_cupnoodles_museum: {
     station: 'みなとみらい', walk_min: 5,
     note: { ja: 'みなとみらい駅から徒歩約5分（旧名: 安藤百福発明記念館）', en: 'About 5 min walk from Minatomirai Stn (formerly Momofuku Ando Instant Ramen Museum)', zh: '从港未来站步行约5分钟（原安藤百福发明纪念馆）' },
-    names: { ja: ['カップヌードルミュージアム', '安藤百福発明記念館', 'インスタントラーメン博物館'], en: ['CupNoodles Museum', 'Momofuku Ando Instant Ramen Museum'], zh: ['杯面博物馆', '安藤百福发明纪念馆'] }
+    names: { ja: ['カップヌードルミュージアム', '安藤百福発明記念館', 'インスタントラーメン発明記念館', 'インスタントラーメン博物館'], en: ['CupNoodles Museum', 'Momofuku Ando Instant Ramen Museum'], zh: ['杯面博物馆', '安藤百福发明纪念馆'] }
+  },
+  // カップヌードルミュージアムパーク（旧・新港パーク）: 2017年ネーミングライツ改称。ミュージアムとは別施設の公園（#27）
+  cupnoodles_museum_park: {
+    station: 'みなとみらい', walk_min: 5,
+    note: { ja: 'みなとみらい駅から徒歩約5分（旧名: 新港パーク。カップヌードルミュージアム隣接の公園）', en: 'About 5 min walk from Minatomirai Stn (formerly Shinko Park; park next to the CupNoodles Museum)', zh: '从港未来站步行约5分钟（原新港公园，杯面博物馆旁的公园）' },
+    names: { ja: ['カップヌードルミュージアムパーク', '新港パーク', 'カップヌードルパーク'], en: ['CupNoodles Museum Park', 'Shinko Park', 'CupNoodles Park'], zh: ['杯面博物馆公园', '新港公园', '杯面公园'] }
   },
   yokohama_redbrick: {
     station: '馬車道', walk_min: 5,
@@ -4498,7 +4544,7 @@ function getDestinationCulturalFacilities(station, userLang = 'ja') {
 
 // ランドマーク名（別名・訳名・略称・多言語）で最寄り駅を解決。
 // 1) 完全一致（全言語・小文字） 2) サフィックス除去 3) 部分一致（入力がいずれかの名称を含む、長い名称を優先）
-function resolveLandmark(rawName) {
+function resolveLandmark(rawName, exactOnly = false) {
   if (!rawName) return null;
   const key = rawName.trim();
   const lower = key.toLowerCase();
@@ -4508,6 +4554,7 @@ function resolveLandmark(rawName) {
     const def = LANDMARK_DEFS[defKey];
     return { station: def.station, note: def.note, walk_min: def.walk_min, landmark: original, landmarkLang: lang };
   }
+  if (exactOnly) return null; // 完全一致のみ要求時は部分一致系を評価しない（旧駅名エイリアスとの衝突防止: 例「成田空港(旧)」）
   // 2. サフィックス除去（日本語の「駅」「公園」等を除去して再一致）
   const stripped = key.replace(/(駅|バス停|停留所|公園|競技場|ドーム|タワー|テーマパーク)$/, '');
   if (stripped !== key) {
