@@ -4256,6 +4256,11 @@ const LANDMARK_DEFS = {
     note: { ja: '水上バス（東京クルーズ）の「浜離宮」発着場が最も近い。陸路なら竹芝駅から徒歩約5分（浜松町駅からもアクセス可）', en: 'The "Hama-rikyu" water bus (Tokyo Cruise) stop is the closest. By land, about 5 min walk from Takeshiba Stn (also Hamamatsucho Stn)', zh: '水上巴士（东京巡航）「滨离宫」码头最近。陆路则从竹芝站步行约5分钟（亦可从滨松町站前往）' },
     names: { ja: ['浜離宮', '浜離宮恩賜庭園', '浜離宮発着場', '水上バス浜離宮'], en: ['Hama-rikyu', 'Hama Rikyu Gardens', 'Hama-rikyu Water Bus'], zh: ['浜离宫', '浜离宫恩赐庭园', '滨离宫水上巴士'] }
   },
+  takeshiba_pier: {
+    station: '竹芝', walk_min: 3,
+    note: { ja: '東海汽船フェリーターミナル（竹芝桟橋）へは竹芝駅から徒歩約3分。伊豆諸島・小笠原航路の乗船口（竹芝客船ターミナル）', en: 'About 3 min walk from Takeshiba Stn to the Tokai Kisen ferry terminal (Takeshiba Pier) for the Izu Islands / Ogasawara routes', zh: '从竹芝站步行约3分钟即可到达东海汽船轮渡码头（竹芝码头），可搭乘伊豆诸岛・小笠原航线（竹芝客船码头）' },
+    names: { ja: ['竹芝桟橋', '竹芝客船ターミナル', '竹芝フェリーターミナル', '竹芝埠頭', '竹芝ピア', '東京・竹芝'], en: ['Takeshiba Pier', 'Takeshiba Passenger Terminal', 'Takeshiba Ferry Terminal', 'Tokyo Takeshiba Pier'], zh: ['竹芝码头', '竹芝客船码头', '竹芝轮渡码头', '东京·竹芝码头'] }
+  },
   tsukiji: {
     station: '築地', walk_min: 3,
     note: { ja: '築地駅から徒歩約3分（築地場外市場・新規飲食店街）', en: 'About 3 min walk from Tsukiji Stn (Outer Market)', zh: '从筑地站步行约3分钟（筑地场外市场）' },
