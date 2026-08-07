@@ -48,36 +48,6 @@
   - **ダイクストラのコスト関数を改善**（Issue #37）— 乗換ペナルティ方式（dist + 乗換×10）に変更し、同コスト時は乗換数の少ない経路を優先。青砥→成田空港 85分→24分・日暮里→成田空港 103分→42分・大宮→船橋 は野田線直通0乗換に改善
   - **検証** — probe-all-lang（26/26）・test:walk・test-issues・test-transfer-pairs・check-railway-integrity 全PASS
 
-**直近の更新内容（v2.27.0）**:
-
-- **東京圏の路線・ランドマークを拡充**（GitHub Issue #29・#32・#38・#40・#41・#43・#44 対応）
-  - **JR東海道線**に各駅停車の駅を追加（辻堂・大磯・二宮・国府津・鴨宮・早川・根府川・真鶴・湯河原）
-  - **JR鶴見線**に支線を追加（海芝浦支線: 浅野〜新芝浦〜海芝浦／大川支線: 安善〜大川）
-  - **西武**の支線を追加（秩父線: 飯能〜西武秩父／狭山線: 西所沢〜西武球場前／有楽町線: 練馬〜小竹向原）
-  - **東急新横浜線**を追加（日吉⇔新横浜・相鉄新横浜線と直通）
-  - **ランドマーク17施設**を追加（鉄道博物館・地下鉄博物館・東武博物館・京王れいんらんど・青梅鉄道公園・電車とバスの博物館・横浜市電保存館・科学技術館・東京都水の科学館・東京都美術館・飛鳥山公園・東京都現代美術館・サントリーホール・みなとみらい21・すみだ水族館・キッザニア東京・アクアシティお台場）
-  - **検証** — probe-all-lang（26/26）・test:walk・test-issues・test-transfer-pairs 全PASS
-
-**直近の更新内容（v2.26.1）**:
-
-- **竹芝駅周辺の観光連携を拡充** — LANDMARK_DEFS に**竹芝桟橋**（東海汽船ターミナル・竹芝駅徒歩3分）・**日の出桟橋**（水上バス・浜松町駅徒歩5分）・**江戸東京博物館**（両国駅徒歩3分）を追加。これまで search_route でフェリーポート名（竹芝桟橋・東京・竹芝・日の出桟橋等）が「駅が見つかりません」になっていた問題を修正（ja/en/zh対応）
-- **浜離宮ランドマークの多言語表記揺れを補強** — en（Hamarikyu）・zh（滨离宫）等の別名を追加
-- **竹芝駅到着時の文化施設表示を追加** — DESTINATION_CULTURAL_FACILITIES に竹芝（浜離宮恩賜庭園・竹芝桟橋・日の出桟橋）を登録
-- **検証** — scripts/test-takeshiba.mjs・test-takeshiba-extended.mjs・test-ferry-port-links.mjs・probe-landmark-all-lang.mjs（91件）を新設。probe-all-lang（26/26）・test:walk・test-issues 全PASS
-
-**直近の更新内容（v2.26.0）**:
-
-- **ディズニーリゾートライン（舞浜リゾートライン）を追加** — リゾートゲートウェイ・東京ディズニーランド・ベイサイド・東京ディズニーシーの4駅を周回するモノレール（1周約13分・均一運賃300円・公式サイト確認）。グラフに初の周回路線（CIRCULAR_LINES）対応を導入し、JR舞浜駅との乗換（徒歩2分）を WALK_TRANSFERS に追加。駅名・路線名の ja/en/zh 表記と表記揺れエイリアス（リゾートゲートウェイ駅・ベイサイド・TDL駅・Resort Gateway Station 等）を整備
-
-**直近の更新内容（v2.25.3〜v2.25.4）**:
-
-- **旧駅名エイリアス35件を追加（#26）** — STATION_NAME_MAP に改称前の駅名で検索可能に（業平橋→とうきょうスカイツリー・京浜蒲田→京急蒲田・営団赤塚→地下鉄赤塚・西武遊園地→多摩湖・船の科学館→東京国際クルーズターミナル・富士吉田→富士山 ほか）
-- **幻駅統合（#26）** — 京成千葉→千葉中央（1991年改称）・遊園地西→西武園ゆうえんち（2021年改称）をグラフ統合。駅数 1,288→1,286。旧駅名エイリアスがランドマーク部分一致に奪われないよう resolveLandmark に完全一致モードを追加
-- **ランドマーク旧名称エイリアス（#27）** — カップヌードルミュージアムに「インスタントラーメン発明記念館」を追加。カップヌードルミュージアムパーク（旧・新港パーク）を新規ランドマークとして追加（みなとみらい駅・徒歩約5分、ja/en/zh）
-- **全路線の略称・表記揺れエイリアスを充実** — RAILWAY_NAME_MAP に207件、STATION_NAME_MAP に227件（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba など英字表記）を追加
-- **横浜・千葉近郊のランドマークを17件追加**（特にテーマパーク・遊園地） — よこはまコスモワールド・横浜ランドマークタワー・カップヌードルミュージアム・横浜赤レンガ倉庫・横浜中華街・八景島シーパラダイス・ズーラシア・三溪園・山下公園・横浜ベイクォーター・成田ゆめ牧場・千葉市動物公園・千葉ポートタワー・ZOZOマリンスタジアム・浦安市総合公園 ほか（ja/en/zh対応）。マザー牧場・東京ドイツ村・市原ぞうの国はJR内房線が未収録のため保留
-- **検証** — test-walk に2-2g（ランドマーク解決）・2-2h（エイリアス）・2-2h2（旧駅名エイリアス35件）を追加して全PASS。test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）も全PASS
-
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
 ### 🤖 AI インテリジェントアドバイス
@@ -642,36 +612,6 @@ The supported network is expanded continuously using public transit data and off
   - **Dijkstra cost function improved** (Issue #37) — transfer-penalty cost (dist + transfers×10) with fewer transfers preferred on equal cost. Aoto→Narita Airport 85→24 min, Nippori→Narita Airport 103→42 min, Omiya→Funabashi now 0-transfer via Noda Line
   - **Verification** — probe-all-lang (26/26) / test:walk / test-issues / test-transfer-pairs / check-railway-integrity all PASS
 
-**Latest updates (v2.27.0)**:
-
-- **Tokyo-area lines & landmarks expanded** (GitHub Issues #29, #32, #38, #40, #41, #43, #44)
-  - **JR Tokaido Line**: added local-stop stations (Tsurudo, Oiso, Ninomiya, Kozu, Kamo, Hayakawa, Nebukawa, Manazuru, Yugawara)
-  - **JR Tsurumi Line**: added branch lines (Umishibaura Branch: Asano–Shin-Shibaura–Umishibaura / Okawa Branch: Anzen–Okawa)
-  - **Seibu branch lines** added (Chichibu Line: Hannō–Seibu-Chichibu / Sayama Line: Nishitokorozawa–Seibu-Kyujo-mae / Yurakucho Line: Nerima–Kotake-mukaihara)
-  - **Tokyu Shin-Yokohama Line** added (Hiyoshi⇔Shin-Yokohama, through service to Sotetsu Shin-Yokohama Line)
-  - **17 landmarks** added (The Railway Museum, Tokyo Metro Museum, Tobu Museum, Keio Rail Land, Ome Railway Park, Train and Bus Museum, Yokohama City Tram Museum, Science Museum, Tokyo Water Science Museum, Tokyo Metropolitan Art Museum, Asukayama Park, Museum of Contemporary Art Tokyo, Suntory Hall, Minato Mirai 21, Sumida Aquarium, KidZania Tokyo, Aqua City Odaiba)
-  - **Verification** — probe-all-lang (26/26) / test:walk / test-issues / test-transfer-pairs all PASS
-
-**Latest updates (v2.26.1)**:
-
-- **Takeshiba area tourist connectivity expanded** — LANDMARK_DEFS gained **Takeshiba Pier** (Tokai Kisen ferry terminal, 3-min walk from Takeshiba Stn), **Hinode Pier** (water bus, 5-min walk from Hamamatsucho Stn), and **Edo-Tokyo Museum** (3-min walk from Ryogoku Stn). Ferry-port names (Takeshiba Pier, Tokyo Takeshiba Pier, Hinode Pier etc.) previously returned "station not found" in search_route; now resolved (ja/en/zh)
-- **Hama-rikyu landmark multilingual aliases reinforced** — en (Hamarikyu) / zh (滨离宫) variants added
-- **Takeshiba destination cultural facilities added** — Hama-rikyu Gardens / Takeshiba Pier / Hinode Pier registered for arrival display
-- **Verification** — new scripts/test-takeshiba.mjs, test-takeshiba-extended.mjs, test-ferry-port-links.mjs, probe-landmark-all-lang.mjs (91 cases). probe-all-lang (26/26) / test:walk / test-issues all PASS
-
-**Latest updates (v2.26.0)**:
-
-- **Disney Resort Line (Maihama Resort Line) added** — a monorail looping the four Resort Gateway / Tokyo Disneyland / Bayside / Tokyo DisneySea stations (~13 min per loop, flat fare ¥300, verified from the official site). This is the first ring/loop route in the graph, implemented via CIRCULAR_LINES, with a transfer to JR Maihama (2-min walk) added to WALK_TRANSFERS. ja/en/zh names and alias variants (Resort Gateway Stn, Bayside, TDL Stn, Resort Gateway Station etc.) are wired up
-
-**Latest updates (v2.25.3–v2.25.4)**:
-
-- **35 former station-name aliases added (#26)** — search by pre-renaming names in STATION_NAME_MAP (Oiribashi→Tokyo Skytree, Keihin-Kamata→Keikyu Kamata, Eidan-Akatsuka→Chikatetsu Akatsuka, Seibu-Yuenchi→Tamako, Fune-no-Kagakukan→Tokyo International Cruise Terminal, Fujiyoshida→Fujisan etc.)
-- **Phantom station consolidation (#26)** — Keisei-Chiba→Chiba-Chuo (renamed 1991) and Yuenchi-Nishi→Seibuen-Yuenchi (renamed 2021) merged in the graph (1,288→1,286 stations). resolveLandmark gained an exact-match-only mode so former station names are not captured by partial landmark matching
-- **Landmark former-name aliases (#27)** — "Instant Ramen Invention Memorial Hall" added to CupNoodles Museum; CupNoodles Museum Park (formerly Shinko Park) added as a new landmark (Minatomirai Stn, ~5 min walk, ja/en/zh)
-- **Line/station alias expansion (abbreviations & spelling variants)** — 207 aliases added to RAILWAY_NAME_MAP and 227 to STATION_NAME_MAP (Shin-Yokohama, Minatomirai, Maihama, Kaihin-Makuhari, Nishi-Funabashi, Matsudo, Kashiwa, Chiba etc.)
-- **17 Yokohama/Chiba landmarks added** (theme parks & amusement parks in particular) — Yokohama Cosmo World, Yokohama Landmark Tower, CupNoodles Museum, Red Brick Warehouse, Chinatown, Hakkeijima Sea Paradise, Zoorasia, Sankeien Garden, Yamashita Park, Bay Quarter, Narita Yume Farm, Chiba City Zoo, Chiba Port Tower, ZOZO Marine Stadium, Urayasu General Park etc. (ja/en/zh). Mother Farm / Tokyo German Village / Ichihara Elephant Kingdom held back (JR Uchibo Line not yet in the graph)
-- **Verification** — test-walk extended with 2-2g (landmark resolution) & 2-2h (aliases) & 2-2h2 (35 former station aliases), all PASS. testers/test-kanamachi/test-bus/community/probe-all-lang (26/26) all PASS
-
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
 ### 🤖 AI Intelligent Advice
@@ -1197,36 +1137,6 @@ MIT License
   - **山手线统一为环线（CIRCULAR_LINES）方式**（消除末尾东京站重复・与官方30站顺序一致）
   - **改进Dijkstra成本函数**（Issue #37）— 改为换乘惩罚成本（距离+换乘×10），同成本时优先换乘少的路线。青砥→成田机场 85→24分钟・日暮里→成田机场 103→42分钟・大宫→船桥改为野田线直达0换乘
   - **验证** — probe-all-lang（26/26）・test:walk・test-issues・test-transfer-pairs・check-railway-integrity 全部通过
-
-**最近更新（v2.27.0）**：
-
-- **扩充东京圈的线路与地标**（对应 GitHub Issue #29・#32・#38・#40・#41・#43・#44）
-  - **JR东海道线**补充各站停车车站（辻堂・大磯・二宫・国府津・鸭宫・早川・根府川・真鹤・汤河原）
-  - **JR鹤见线**新增支线（海芝浦支线：浅野〜新芝浦〜海芝浦／大川支线：安善〜大川）
-  - **西武**新增支线（秩父线：饭能〜西武秩父／狭山线：西所泽〜西武球场前／有乐町线：练马〜小竹向原）
-  - **东急新横滨线**新增（日吉⇔新横滨・与相铁新横滨线直通）
-  - **新增17处地标**（铁道博物馆・地铁博物馆・东武博物馆・京王铁路乐园・青梅铁道公园・电车与巴士博物馆・横滨市电保存馆・科学技术馆・东京都水科学馆・东京都美术馆・飞鸟山公园・东京都现代美术馆・三得利音乐厅・港未来21・墨田水族馆・东京KidZania・台场Aqua City）
-  - **验证** — probe-all-lang（26/26）・test:walk・test-issues・test-transfer-pairs 全部通过
-
-**最近更新（v2.26.1）**：
-
-- **扩充竹芝站周边观光衔接** — LANDMARK_DEFS 新增**竹芝码头**（东海汽船轮渡码头・竹芝站步行3分钟）・**日出码头**（水上巴士・滨松町站步行5分钟）・**江户东京博物馆**（两国站步行3分钟）。此前 search_route 对渡轮港名称（竹芝码头・东京·竹芝码头・日出码头等）会返回「找不到车站」，现已修复（日英中对应）
-- **补强滨离宫地标的多语言表记变体** — 新增 en（Hamarikyu）・zh（滨离宫）等别名
-- **新增竹芝站到达时的文化设施显示** — DESTINATION_CULTURAL_FACILITIES 注册竹芝（滨离宫恩赐庭园・竹芝码头・日出码头）
-- **验证** — 新增 scripts/test-takeshiba.mjs・test-takeshiba-extended.mjs・test-ferry-port-links.mjs・probe-landmark-all-lang.mjs（91项）。probe-all-lang（26/26）・test:walk・test-issues 全部通过
-
-**最近更新（v2.26.0）**：
-
-- **新增迪士尼度假区线（舞浜度假区线）** — 环绕度假区总站・东京迪士尼乐园・海滨・东京迪士尼海洋4站的单轨电车（一周约13分钟・均一票价300日元・官方站点确认）。线路图首次支持环线（CIRCULAR_LINES），并在 WALK_TRANSFERS 中新增与JR舞浜站的换乘（步行2分钟）。已完善车站・线路名称的日英中表记及别名变体（度假区总站・海滨・乐园站・Resort Gateway Station 等）
-
-**最近更新（v2.25.3〜v2.25.4）**：
-
-- **新增旧站名别名35条（#26）** — 通过 STATION_NAME_MAP 支持用改名前的站名搜索（业平桥→东京晴空塔・京滨蒲田→京急蒲田・营团赤塚→地铁赤塚・西武游园地→多摩湖・船的科学馆→东京国际邮轮码头・富士吉田→富士山 等）
-- **幻影车站整合（#26）** — 京成千叶→千叶中央（1991年改名）・游园地西→西武园游乐园（2021年改名）已并入线路图（1,288→1,286站）。为 resolveLandmark 新增完全一致模式，避免旧站名被地标的部分一致误夺
-- **地标旧名称别名（#27）** — 杯面博物馆新增「方便面发明纪念馆」。杯面博物馆公园（原・新港公园）作为新地标追加（港未来站・步行约5分钟・日英中）
-- **扩充全线略称・表记变体别名** — RAILWAY_NAME_MAP 新增207条，STATION_NAME_MAP 新增227条（Shin-Yokohama・Minatomirai・Maihama・Kaihin-Makuhari・Nishi-Funabashi・Matsudo・Kashiwa・Chiba 等英文拼写）
-- **新增横滨・千叶近郊地标17处**（特别是主题公园・游乐园） — 横滨宇宙世界游乐园・横滨地标大厦・杯面博物馆・横滨红砖仓库・横滨中华街・八景岛海岛乐园・Zoorasia动物园・三溪园・山下公园・Bay Quarter・成田梦牧场・千叶市动物公园・千叶港塔・ZOZO海洋球场・浦安市综合公园等（日英中对应）。母亲牧场・东京德国村・市原象之国因JR内房线未收录而暂缓
-- **验证** — test-walk 新增2-2g（地标解析）・2-2h（别名）・2-2h2（旧站名别名35条）全部PASS；test-issues/test-kanamachi/test-bus/community/probe-all-lang（26/26）全部PASS
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 
