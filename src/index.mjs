@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.26.1 (Production Ready)
+ * Tokyo Transit MCP Server v2.27.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -1663,6 +1663,8 @@ const RAILWAY_NAME_MAP = {
   '湘南モノレール江の島線': '湘南モノレール',
   '湘南モノレール線': '湘南モノレール',
   '東急目黒線': '東急目黒線',
+  '東急新横浜線': '東急新横浜線',
+  '新横浜線': '東急新横浜線',
   '目黒線': '東急目黒線',
   '目黒': '東急目黒線',
   '東急大井町線': '東急大井町線',
@@ -1721,6 +1723,11 @@ const RAILWAY_NAME_MAP = {
   '西武新宿': '西武新宿線',
   '西武拝島線': '西武拝島線',
   '拝島線': '西武拝島線',
+  '西武秩父線': '西武秩父線',
+  '秩父線': '西武秩父線',
+  '西武狭山線': '西武狭山線',
+  '狭山線': '西武狭山線',
+  '西武有楽町線': '西武有楽町線',
   '西武多摩湖線': '西武多摩湖線',
   '多摩湖線': '西武多摩湖線',
   '西武山口線': '西武山口線',
@@ -1885,8 +1892,16 @@ const STATION_DISPLAY_NAMES = {
   '京成成田': { en: 'Keisei-Narita', zh: '京成成田' },
   '空港第2ビル': { en: 'Airport Terminal 2', zh: '机场第2航站楼' },
   '成田湯川': { en: 'Narita Yukawa', zh: '成田汤川' },
+  '新芝浦': { en: 'Shin-Shibaura', zh: '新芝浦' },
+  '海芝浦': { en: 'Umishibaura', zh: '海芝浦' },
+  '大川': { en: 'Okawa', zh: '大川' },
   '東大和市': { en: 'Higashi-Yamatoshi', zh: '东大和市' },
   '武蔵大和': { en: 'Musashi-Yamato', zh: '武藏大和' },
+  '正丸': { en: 'Shomaru', zh: '正丸' },
+  '芦ヶ久保': { en: 'Ashigakubo', zh: '芦久保' },
+  '西武秩父': { en: 'Seibu-Chichibu', zh: '西武秩父' },
+  '上山口': { en: 'Kamiyamaguchi', zh: '上山口' },
+  '新桜台': { en: 'Shin-Sakuradai', zh: '新樱台' },
   '東中野': { en: 'Higashi-Nakano', zh: '东中野' },
   '中井': { en: 'Nakai', zh: '中井' },
   '落合南長崎': { en: 'Ochiai-Minami-Nagasaki', zh: '落合南长崎' },
@@ -2688,6 +2703,9 @@ const LINE_DISPLAY_NAMES = {
   '西武池袋線': { en: 'Seibu Ikebukuro Line', zh: '西武池袋线' },
   '西武新宿線': { en: 'Seibu Shinjuku Line', zh: '西武新宿线' },
   '西武拝島線': { en: 'Seibu Haijima Line', zh: '西武拜岛线' },
+  '西武秩父線': { en: 'Seibu Chichibu Line', zh: '西武秩父线' },
+  '西武狭山線': { en: 'Seibu Sayama Line', zh: '西武狭山线' },
+  '西武有楽町線': { en: 'Seibu Yurakucho Line', zh: '西武有乐町线' },
   '西武多摩湖線': { en: 'Seibu Tamako Line', zh: '西武多摩湖线' },
   '西武山口線': { en: 'Seibu Yamaguchi Line', zh: '西武山口线' },
   '西武園線': { en: 'Seibu-en Line', zh: '西武园线' },
@@ -2742,6 +2760,7 @@ const LINE_DISPLAY_NAMES = {
   '京王井の頭線': { en: 'Keio Inokashira Line', zh: '京王井之头线' },
   '小田急多摩線': { en: 'Odakyu Tama Line', zh: '小田急多摩线' },
   '東急目黒線': { en: 'Tokyu Meguro Line', zh: '东急目黑线' },
+  '東急新横浜線': { en: 'Tokyu Shin-Yokohama Line', zh: '东急新横滨线' },
   '東急大井町線': { en: 'Tokyu Oimachi Line', zh: '东急大井町线' },
   '京急空港線': { en: 'Keikyu Airport Line', zh: '京急机场线' },
   'JR横須賀線': { en: 'JR Yokosuka Line', zh: 'JR横须贺线' },
@@ -2768,6 +2787,8 @@ const LINE_DISPLAY_NAMES = {
   'JR青梅線': { en: 'JR Ome Line', zh: 'JR青梅线' },
   'JR五日市線': { en: 'JR Itsukaichi Line', zh: 'JR五日市线' },
   'JR鶴見線': { en: 'JR Tsurumi Line', zh: 'JR鹤见线' },
+  'JR鶴見線（海芝浦支線）': { en: 'JR Tsurumi Line (Umishibaura Branch)', zh: 'JR鹤见线（海芝浦支线）' },
+  'JR鶴見線（大川支線）': { en: 'JR Tsurumi Line (Okawa Branch)', zh: 'JR鹤见线（大川支线）' },
   'JR相模線': { en: 'JR Sagami Line', zh: 'JR相模线' },
   'JR八高線': { en: 'JR Hachiko Line', zh: 'JR八高线' },
   'JR川越線': { en: 'JR Kawagoe Line', zh: 'JR川越线' },
@@ -3302,6 +3323,9 @@ const RAILWAY_LINES = {
   '西武池袋線': ['池袋','椎名町','東長崎','江古田','桜台','練馬','中村橋','富士見台','練馬高野台','石神井公園','大泉学園','保谷','ひばりヶ丘','東久留米','清瀬','秋津','所沢','西所沢','小手指','狭山ヶ丘','武蔵藤沢','稲荷山公園','入間市','仏子','元加治','飯能','東飯能','高麗','武蔵横手','東吾野','吾野'],
   '西武新宿線': ['西武新宿','高田馬場','下落合','中井','新井薬師前','沼袋','野方','都立家政','鷺ノ宮','下井草','井荻','上井草','上石神井','武蔵関','東伏見','西武柳沢','田無','花小金井','小平','久米川','東村山','所沢','航空公園','新所沢','入曽','狭山市','新狭山','南大塚','本川越'],
   '西武拝島線': ['小平','小川','東大和市','玉川上水','武蔵大和','拝島'],
+  '西武秩父線': ['飯能','正丸','芦ヶ久保','西武秩父'],
+  '西武狭山線': ['西所沢','上山口','西武球場前'],
+  '西武有楽町線': ['練馬','新桜台','小竹向原'],
   '西武多摩湖線': ['国分寺','一橋学園','青梅街道','萩山','多摩湖'],
   '西武山口線': ['多摩湖','西武園ゆうえんち','西武球場前'], // 2021-03 遊園地西→西武園ゆうえんち改称（#26 幻駅統合）
   '西武園線': ['東村山','西武園'],
@@ -3316,7 +3340,7 @@ const RAILWAY_LINES = {
   'JR常磐線各停': ['上野','日暮里','三河島','南千住','北千住','綾瀬','亀有','金町','松戸','北松戸','馬橋','新松戸','北小金','南柏','柏','逆井','高柳','我孫子','天王台','取手'],
   'JR南武線': ['川崎','尻手','矢向','鹿島田','平間','向河原','武蔵小杉','武蔵中原','武蔵新城','武蔵溝ノ口','津田山','久地','宿河原','登戸','中野島','稲田堤','矢野口','稲城長沼','南多摩','府中本町','分倍河原','西府','谷保','矢川','西国立','立川'],
   // ===== JR東海（東海道線・熱海方面）=====
-  'JR東海道線': ['東京','新橋','品川','川崎','横浜','戸塚','大船','藤沢','茅ヶ崎','平塚','小田原','熱海'],
+  'JR東海道線': ['東京','新橋','品川','川崎','横浜','戸塚','大船','藤沢','辻堂','茅ヶ崎','平塚','大磯','二宮','国府津','鴨宮','小田原','早川','根府川','真鶴','湯河原','熱海'],
   // ===== 東京メトロ（残り5路線）=====
   '東京メトロ東西線': ['中野','落合','高田馬場','早稲田','神楽坂','飯田橋','九段下','竹橋','大手町','日本橋','茅場町','門前仲町','木場','東陽町','南砂町','西葛西','葛西','浦安','南行徳','行徳','妙典','原木中山','西船橋'],
   '東京メトロ千代田線': ['代々木上原','代々木公園','明治神宮前','表参道','乃木坂','赤坂','国会議事堂前','霞ケ関','日比谷','二重橋前','大手町','新御茶ノ水','湯島','千駄木','根津','西日暮里','町屋','北千住','綾瀬','北綾瀬'],
@@ -3360,6 +3384,7 @@ const RAILWAY_LINES = {
   '京王井の頭線': ['渋谷','神泉','駒場東大前','池ノ上','下北沢','新代田','東松原','明大前','永福町','西永福','浜田山','高井戸','富士見ヶ丘','久我山','三鷹台','井の頭公園','吉祥寺'],
   '小田急多摩線': ['新百合ヶ丘','五月台','栗平','黒川','はるひ野','小田急永山','小田急多摩センター','唐木田'],
   '東急目黒線': ['目黒','不動前','武蔵小山','西小山','洗足','大岡山','奥沢','田園調布','多摩川','新丸子','武蔵小杉','元住吉','日吉'],
+  '東急新横浜線': ['日吉','新横浜'],
   '東急大井町線': ['大井町','下神明','戸越公園','中延','荏原町','旗の台','北千束','大岡山','緑が丘','自由が丘','九品仏','尾山台','等々力','上野毛','二子玉川'],
   '京急空港線': ['京急蒲田','糀谷','大鳥居','穴守稲荷','天空橋','羽田空港第3ターミナル','羽田空港第1ターミナル','羽田空港第2ターミナル'],
   'JR横須賀線': ['東京','品川','西大井','武蔵小杉','新川崎','横浜','保土ケ谷','東戸塚','戸塚','大船','北鎌倉','鎌倉','逗子','久里浜'],
@@ -3385,6 +3410,8 @@ const RAILWAY_LINES = {
   'JR青梅線': ['立川','西立川','東中神','中神','昭島','拝島','牛浜','福生','羽村','小作','河辺','東青梅','青梅','宮ノ平','日向和田','石神前','二俣尾','軍畑','沢井','御嶽','川井','古里','鳩ノ巣','白丸','奥多摩'],
   'JR五日市線': ['拝島','熊川','東秋留','秋川','武蔵引田','武蔵増戸','武蔵五日市'],
   'JR鶴見線': ['鶴見','国道','鶴見小野','弁天橋','浅野','安善','武蔵白石','浜川崎','昭和','扇町'],
+  'JR鶴見線（海芝浦支線）': ['浅野','新芝浦','海芝浦'],
+  'JR鶴見線（大川支線）': ['安善','大川'],
   'JR相模線': ['茅ケ崎','北茅ケ崎','香川','寒川','宮山','倉見','門沢橋','社家','厚木','海老名','入谷（相模線）','相武台下','下溝','原当麻','番田','上溝','南橋本','橋本'],
   'JR八高線': ['八王子','北八王子','小宮','拝島','東福生','箱根ケ崎','金子','東飯能','高麗川'],
   'JR川越線': ['大宮','日進','西大宮','指扇','南古谷','川越','西川越','的場','笠幡','武蔵高萩','高麗川'],
@@ -3971,7 +3998,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.26.1' },
+  { name: 'tokyo-transit-mcp', version: '2.27.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -4563,6 +4590,94 @@ const LANDMARK_DEFS = {
     station: '武蔵引田', walk_min: 5,
     note: { ja: 'JR五日市線 武蔵引田駅から徒歩約5分（プール・温泉・遊園地の複合レジャー施設）', en: 'About 5 min walk from Musashi-Hikida Stn on the JR Itsukaichi Line (pool, hot spring & amusement park complex)', zh: '从JR五日市线武藏引田站步行约5分钟（泳池・温泉・游乐园综合休闲设施）' },
     names: { ja: ['東京サマーランド', 'サマーランド'], en: ['Tokyo Summerland', 'Summerland'], zh: ['东京夏日乐园', '夏日乐园'] }
+  },
+  // ===== Issue #40: 鉄道博物館系（7施設） =====
+  railway_museum: {
+    station: '大宮', walk_min: 20,
+    note: { ja: '大宮駅から徒歩約20分（埼玉新都市交通 大成駅から徒歩1分・ニューシャトルは未定義のため大宮を最寄りに設定）', en: 'About 20 min walk from Omiya Stn (1 min from Taisho Stn on the New Shuttle, which is not mapped yet)', zh: '从大宫站步行约20分钟（埼玉新都市交通大成站步行1分钟・新交通系统尚未收录，以大宫为最近车站）' },
+    names: { ja: ['鉄道博物館', '大宮鉄道博物館'], en: ['The Railway Museum', 'Railway Museum'], zh: ['铁道博物馆'] }
+  },
+  metro_museum: {
+    station: '葛西', walk_min: 1,
+    note: { ja: '東京メトロ東西線 葛西駅から徒歩約1分（駅高架下）', en: 'About 1 min walk from Kasai Stn on the Tozai Line (under the elevated track)', zh: '从东京地铁东西线葛西站步行约1分钟（高架桥下）' },
+    names: { ja: ['地下鉄博物館'], en: ['Tokyo Metro Museum', 'Metro Museum'], zh: ['地铁博物馆'] }
+  },
+  tobu_museum: {
+    station: '東向島', walk_min: 1,
+    note: { ja: '東武伊勢崎線 東向島駅から徒歩約1分', en: 'About 1 min walk from Higashi-Mukojima Stn on the Tobu Isesaki Line', zh: '从东武伊势崎线东向岛站步行约1分钟' },
+    names: { ja: ['東武博物館'], en: ['Tobu Museum'], zh: ['东武博物馆'] }
+  },
+  keio_rail_land: {
+    station: '多摩動物公園', walk_min: 2,
+    note: { ja: '京王動物園線 多摩動物公園駅から徒歩約2分', en: 'About 2 min walk from Tama-Dobutsu-Koen Stn on the Keio Dobutsuen Line', zh: '从京王动物园线多摩动物园站步行约2分钟' },
+    names: { ja: ['京王れいんらんど', '京王レールランド'], en: ['Keio Rail Land'], zh: ['京王铁路乐园'] }
+  },
+  ome_railway_park: {
+    station: '青梅', walk_min: 5,
+    note: { ja: 'JR青梅線 青梅駅から徒歩約5分', en: 'About 5 min walk from Ome Stn on the JR Ome Line', zh: '从JR青梅线青梅站步行约5分钟' },
+    names: { ja: ['青梅鉄道公園'], en: ['Ome Railway Park'], zh: ['青梅铁道公园'] }
+  },
+  train_bus_museum: {
+    station: '向ヶ丘遊園', walk_min: 3,
+    note: { ja: '小田急小田原線 向ヶ丘遊園駅から徒歩約3分', en: 'About 3 min walk from Mukogaoka-Yuen Stn on the Odakyu Odawara Line', zh: '从小田急小田原线向丘游园站步行约3分钟' },
+    names: { ja: ['電車とバスの博物館'], en: ['Electric Car and Bus Museum', 'Train and Bus Museum'], zh: ['电车与巴士博物馆'] }
+  },
+  yokohama_tram_museum: {
+    station: '山手', walk_min: 3,
+    note: { ja: 'JR根岸線 山手駅から徒歩約3分', en: 'About 3 min walk from Yamate Stn on the JR Negishi Line', zh: '从JR根岸线山手站步行约3分钟' },
+    names: { ja: ['横浜市電保存館'], en: ['Yokohama City Tram Museum'], zh: ['横滨市电保存馆'] }
+  },
+  // ===== Issue #41: 科学館（2施設） =====
+  science_museum: {
+    station: '竹橋', walk_min: 1,
+    note: { ja: '東京メトロ東西線 竹橋駅から徒歩約1分（北の丸公園内）', en: 'About 1 min walk from Takebashi Stn on the Tozai Line (Kitanomaru Park)', zh: '从东京地铁东西线竹桥站步行约1分钟（北之丸公园内）' },
+    names: { ja: ['科学技術館'], en: ['Science Museum'], zh: ['科学技术馆'] }
+  },
+  tokyo_water_science_museum: {
+    station: '豊洲', walk_min: 3,
+    note: { ja: '豊洲駅から徒歩約3分', en: 'About 3 min walk from Toyosu Stn', zh: '从丰洲站步行约3分钟' },
+    names: { ja: ['東京都水の科学館'], en: ['Tokyo Water Science Museum'], zh: ['东京都水科学馆'] }
+  },
+  // ===== Issue #44: 公園・文化施設（上野公園・上野動物園は ueno_park でカバー済みのため個別追加分のみ） =====
+  tokyo_metro_art_museum: {
+    station: '上野', walk_min: 3,
+    note: { ja: '上野駅から徒歩約3分（上野恩賜公園内）', en: 'About 3 min walk from Ueno Stn (Ueno Park)', zh: '从上野站步行约3分钟（上野恩赐公园内）' },
+    names: { ja: ['東京都美術館', '都美術館'], en: ['Tokyo Metropolitan Art Museum'], zh: ['东京都美术馆'] }
+  },
+  asukayama_park: {
+    station: '王子', walk_min: 3,
+    note: { ja: '王子駅から徒歩約3分（桜の名所・飛鳥山公園）', en: 'About 3 min walk from Oji Stn (famous cherry blossom spot)', zh: '从王子站步行约3分钟（樱花名胜・飞鸟山公园）' },
+    names: { ja: ['飛鳥山公園'], en: ['Asukayama Park'], zh: ['飞鸟山公园'] }
+  },
+  mot_museum: {
+    station: '清澄白河', walk_min: 5,
+    note: { ja: '清澄白河駅から徒歩約5分（木場公園内）', en: 'About 5 min walk from Kiyosumi-Shirakawa Stn (Kiba Park)', zh: '从清澄白河站步行约5分钟（木场公园内）' },
+    names: { ja: ['東京都現代美術館', 'MOT'], en: ['Museum of Contemporary Art Tokyo', 'MOT'], zh: ['东京都现代美术馆'] }
+  },
+  sntory_hall: {
+    station: '溜池山王', walk_min: 3,
+    note: { ja: '溜池山王駅から徒歩約3分（六本木一丁目・アークヒルズ内）', en: 'About 3 min walk from Tameike-Sanno Stn (Ark Hills, Roppongi 1-chome)', zh: '从溜池山王站步行约3分钟（六本木一丁目・ARK Hills内）' },
+    names: { ja: ['サントリーホール'], en: ['Suntory Hall'], zh: ['三得利音乐厅'] }
+  },
+  minato_mirai_21: {
+    station: 'みなとみらい', walk_min: 1,
+    note: { ja: 'みなとみらい駅直結（みなとみらい21エリア）', en: 'Directly connected to Minatomirai Stn (Minato Mirai 21 area)', zh: '与港未来站直接连通（港未来21区域）' },
+    names: { ja: ['みなとみらい21', 'みなとみらい'], en: ['Minato Mirai 21', 'Minatomirai 21'], zh: ['港未来21'] }
+  },
+  sumida_aquarium: {
+    station: 'とうきょうスカイツリー', walk_min: 1,
+    note: { ja: 'とうきょうスカイツリー駅直結（東京スカイツリータウン内）', en: 'Directly connected to Tokyo Skytree Stn (Tokyo Skytree Town)', zh: '与东京晴空塔站直接连通（东京晴空塔城内）' },
+    names: { ja: ['すみだ水族館'], en: ['Sumida Aquarium'], zh: ['墨田水族馆'] }
+  },
+  kidzania_tokyo: {
+    station: '豊洲', walk_min: 3,
+    note: { ja: '豊洲駅から徒歩約3分（ららぽーと豊洲内・子供向け体験型施設）', en: 'About 3 min walk from Toyosu Stn (LaLaport Toyosu, kids experience facility)', zh: '从丰洲站步行约3分钟（LaLaport丰洲内・儿童职业体验设施）' },
+    names: { ja: ['キッザニア東京'], en: ['KidZania Tokyo'], zh: ['东京KidZania'] }
+  },
+  aqua_city_odaiba: {
+    station: '台場', walk_min: 1,
+    note: { ja: 'ゆりかもめ 台場駅から徒歩約1分（お台場の商業施設）', en: 'About 1 min walk from Daiba Stn on the Yurikamome (shopping complex)', zh: '从百合海鸥号台场站步行约1分钟（台场商业设施）' },
+    names: { ja: ['アクアシティお台場'], en: ['Aqua City Odaiba'], zh: ['台场Aqua City'] }
   }
 };
 
