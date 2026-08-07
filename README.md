@@ -42,10 +42,10 @@
 - **AGT・モノレール**: ゆりかもめ、日暮里・舎人ライナー、東京モノレール、多摩モノレール
 - **横浜市営地下鉄**: ブルーライン、グリーンライン
 
-**直近の更新内容（v2.25.1）**:
+**直近の更新内容（v2.25.2）**:
 
-- **天気表示のテスト障害を修正** — 気象庁テキストの翻訳辞書（WEATHER_TERM_MAP）の漏れを補強。「まで」（→ until/为止）・「雷を伴う」（→ with thunder/伴有雷电）等のJMA常用語を追加し、en/zh応答に日本語が残らないことを保証（probe-all-lang 全26件PASS）。辞書漏れ時は未翻訳断片を除去するフォールバック付き
-- **コミュニティバス名・バス停名の多言語化** — 41自治体のバス事業者名とバス停名（西口/東口/駅前等の接尾辞含む）を en/zh 対応（例: 新宿WEバス→Shinjuku WE Bus、新宿駅西口→Shinjuku Sta.West Exit）
+- **路線バスの主要系統を拡充（イシュー#21-A）** — ハードコード収録の7事業者に実在の主要系統を追加し、系統数を87→**152系統**に増強。京王バス（渋64: 中野〜渋谷・吉04: 吉祥寺〜武蔵小金井・宿31系など）、東急バス（黒07: 目黒〜五反田・井01: 大井町〜五反田・渋41など）、小田急バス（吉06: 三鷹〜武蔵境・成02: 成城学園前〜二子玉川など）、京成バス（船橋〜西船橋・松戸〜市川・舞浜〜新浦安など）、JRバス関東（新宿〜横浜・東京〜柏など）、コミュニティバス（めぐりん・Bーぐる・すみまるくんなど主要停留所・系統を追加）
+- **検証** — 新規20ケースのバス系統回帰テスト（scripts/test-bus-routes-expansion.mjs）を追加し全PASS。test:walk/test-issues/test-kanamachi/community/probe-all-lang（26/26）も全PASS
 
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
@@ -543,7 +543,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.25.1）
+├── SKILL.md             # プロジェクトスキル定義（v2.25.2）
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -605,10 +605,10 @@ The supported network is expanded continuously using public transit data and off
 - **AGT / Monorail**: Yurikamome, Nippori-Toneri Liner, Tokyo Monorail, Tama Monorail
 - **Yokohama Municipal Subway**: Blue Line, Green Line
 
-**Latest updates (v2.25.1)**:
+**Latest updates (v2.25.2)**:
 
-- **Weather display test failures fixed** — JMA weather-term translation dictionary (WEATHER_TERM_MAP) gaps filled. Added "まで" (→ until), "雷を伴う" (→ with thunder / 伴有雷电) and other common JMA terms; en/zh responses are now guaranteed free of leftover Japanese (probe-all-lang: all 26 cases PASS). Fallback strips untranslated fragments when the dictionary misses a word
-- **Community bus names & stops localized** — Bus operator names for all 41 municipalities and stop suffixes (West/East/North/South Exit, Station Front etc.) are now en/zh localized (e.g. 新宿WEバス→Shinjuku WE Bus, 新宿駅西口→Shinjuku Sta.West Exit)
+- **Bus route expansion (issue #21-A)** — Real-world major bus routes added to all 7 hardcoded operators (87 → **152 routes**): Keio Bus (Shibuya–Nakano, Kichijoji–Musashi-Koganei), Tokyu Bus (Meguro–Gotanda, Oimachi–Gotanda), Odakyu Bus (Mitaka–Musakusakai, Seijo-Gakuen-mae–Futako-Tamagawa), Keisei Bus (Funabashi–Nishi-Funabashi, Matsudo–Ichikawa), JR Bus Kanto (Shinjuku–Yokohama, Tokyo–Kashiwa), community buses (Megurin, B-guru, Sumimaru-kun etc.)
+- **Verification** — New 20-case bus route regression test (scripts/test-bus-routes-expansion.mjs) added and all PASS; test-walk/test-issues/test-kanamachi/community/probe-all-lang (26/26) all PASS
 
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
@@ -1068,7 +1068,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # Project skill definition (v2.25.1)
+├── SKILL.md             # Project skill definition (v2.25.2)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1130,10 +1130,10 @@ MIT License
 - **AGT・单轨**：百合海鸥号、日暮里-舍人线、东京单轨电车、多摩单轨电车
 - **横滨市营地铁**：蓝线、绿线
 
-**最近更新（v2.25.1）**：
+**最近更新（v2.25.2）**：
 
-- **修复天气显示测试故障** — 补齐气象厅文本翻译词典（WEATHER_TERM_MAP）的缺失词条，新增「まで」（→ 为止）、「雷を伴う」（→ 伴有雷电）等JMA常用语，确保 en/zh 响应不再残留日语（probe-all-lang 全部26项PASS）。词典未命中时自动剔除未翻译片段
-- **社区公交名称与站名多语化** — 41个自治体的巴士运营商名称及站名后缀（西口/东口/站前等）实现 en/zh 本地化（例：新宿WE巴士、新宿站西口）
+- **扩充路线巴士主要线路（议题#21-A）** — 为7家内置数据运营商追加实有主要线路，线路数由87条增至**152条**：京王巴士（涩谷-中野、吉祥寺-武藏小金井）、东急巴士（目黑-五反田、大井町-五反田）、小田急巴士（三鹰-武藏境、成城学园前-二子玉川）、京成巴士（船桥-西船桥、松户-市川）、JR巴士关东（新宿-横滨、东京-柏）、社区公交（惠巡、B-guru、隅丸君等）
+- **验证** — 新增20例巴士线路回归测试（scripts/test-bus-routes-expansion.mjs）全部PASS；test-walk/test-issues/test-kanamachi/community/probe-all-lang（26/26）全部PASS
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 
@@ -1592,7 +1592,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.25.1）
+├── SKILL.md             # 项目技能定义（v2.25.2）
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
