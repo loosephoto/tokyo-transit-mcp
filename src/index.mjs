@@ -8012,16 +8012,35 @@ async function searchBus(args) {
       return trimmed;
     };
     const resolvedBusstop = resolveBusStopLang(busstopName);
-    const matched = buses.filter(b => {
-      const norm = normalizeStationName(resolvedBusstop);
-      // 入力（および正規化後）の両方で部分一致。suffix（停留所/バス停）も除去。
-      // 検索対象は note + BusstopPole ID 由来の駅名相当（横浜市営等 note=null 事業者対応）
-      const variants = [resolvedBusstop, norm].filter((v, i, a) => a.indexOf(v) === i);
-      return variants.some(v => {
+    const busstopVariants = (input) => {
+      const norm = normalizeStationName(input);
+      return [input, norm].filter((v, i, a) => a.indexOf(v) === i);
+    };
+    // 🔴 前方一致（入力で始まるバス停）を最優先。部分一致のみの同名ノイズ
+    // （例: 「大門」検索で埼玉の「野火止大門」「高松大門通り」が混ざる問題）を除外する。
+    // 前方一致にヒットが無い場合のみ、従来の部分一致にフォールバックする。
+    const matchedAll = buses.filter(b => {
+      return busstopVariants(resolvedBusstop).some(v => {
         const stripped = v.replace(/(停留所|バス停|駅)$/, '');
         return b._searchKeys.some(k => k.includes(v) || (stripped !== v && k.includes(stripped)));
       });
     });
+    const matchedPrefix = buses.filter(b => {
+      return busstopVariants(resolvedBusstop).some(v => {
+        const stripped = v.replace(/(停留所|バス停|駅)$/, '');
+        return b._searchKeys.some(k => k.startsWith(v) || (stripped !== v && k.startsWith(stripped)));
+      });
+    });
+    // 「駅前」サフィックスのバス停（例: 大門駅前）を先頭に並べ替え。
+    // 同名バス停が複数地域にある場合、駅に直結するバス停が最上位に来るようにする。
+    const matchedPrefixSorted = [...matchedPrefix].sort((a, b) => {
+      const aKey = String((a._searchKeys || [])[0] || '');
+      const bKey = String((b._searchKeys || [])[0] || '');
+      const aStation = /駅前$/.test(aKey) ? 0 : 1;
+      const bStation = /駅前$/.test(bKey) ? 0 : 1;
+      return aStation - bStation;
+    });
+    const matched = matchedPrefixSorted.length > 0 ? matchedPrefixSorted : matchedAll;
     // 🔴 0件時の案内改善: 入力に部分一致する実在バス停を類似候補として提示
     // （例: 「合羽橋」→「合羽坂下」「浅草」→「浅草雷門」等）。
     // ODPT に同名バス停が無い場合でも、最寄りの実在バス停名を教えることで
