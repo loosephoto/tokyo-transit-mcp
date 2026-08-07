@@ -4261,6 +4261,11 @@ const LANDMARK_DEFS = {
     note: { ja: '東海汽船フェリーターミナル（竹芝桟橋）へは竹芝駅から徒歩約3分。伊豆諸島・小笠原航路の乗船口（竹芝客船ターミナル）', en: 'About 3 min walk from Takeshiba Stn to the Tokai Kisen ferry terminal (Takeshiba Pier) for the Izu Islands / Ogasawara routes', zh: '从竹芝站步行约3分钟即可到达东海汽船轮渡码头（竹芝码头），可搭乘伊豆诸岛・小笠原航线（竹芝客船码头）' },
     names: { ja: ['竹芝桟橋', '竹芝客船ターミナル', '竹芝フェリーターミナル', '竹芝埠頭', '竹芝ピア', '東京・竹芝'], en: ['Takeshiba Pier', 'Takeshiba Passenger Terminal', 'Takeshiba Ferry Terminal', 'Tokyo Takeshiba Pier'], zh: ['竹芝码头', '竹芝客船码头', '竹芝轮渡码头', '东京·竹芝码头'] }
   },
+  hinode_pier: {
+    station: '浜松町', walk_min: 5,
+    note: { ja: '水上バス（東京クルーズ）の「日の出桟橋」乗り場へは浜松町駅から徒歩約5分（竹芝駅からも徒歩圏・お台場ライン/レインボーブリッジ遊覧）', en: 'About 5 min walk from Hamamatsucho Stn to Hinode Pier (Tokyo Cruise water bus; also within walking distance of Takeshiba Stn. Odaiba Line / Rainbow Bridge cruise)', zh: '从滨松町站步行约5分钟即可到达日出码头（东京巡航水上巴士，从竹芝站亦可步行前往。台场航线/彩虹桥游览）' },
+    names: { ja: ['日の出桟橋', '日の出埠頭', '水上バス日の出', '日の出桟橋発着場'], en: ['Hinode Pier', 'Hinode Water Bus', 'Hinode Pier Terminal'], zh: ['日出码头', '日出水上巴士码头'] }
+  },
   tsukiji: {
     station: '築地', walk_min: 3,
     note: { ja: '築地駅から徒歩約3分（築地場外市場・新規飲食店街）', en: 'About 3 min walk from Tsukiji Stn (Outer Market)', zh: '从筑地站步行约3分钟（筑地场外市场）' },
@@ -4561,7 +4566,12 @@ const DESTINATION_CULTURAL_FACILITIES = {
   '浅草': [['浅草寺', 'Sensoji Temple', '浅草寺', '寺院', 5], ['浅草花やしき', 'Hanayashiki Amusement Park', '浅草花屋敷', '遊園地', 5]],
   '清澄白河': [['東京都現代美術館', 'Museum of Contemporary Art Tokyo', '东京都现代美术馆', '美術館', 10], ['清澄庭園', 'Kiyosumi Gardens', '清澄庭园', '庭園', 3]],
   '両国': [['江戸東京博物館', 'Edo-Tokyo Museum', '江户东京博物馆', '博物館', 3], ['すみだ北斎美術館', 'The Sumida Hokusai Museum', '墨田北斋美术馆', '美術館', 8]],
-  '竹橋': [['東京国立近代美術館', 'The National Museum of Modern Art, Tokyo', '东京国立近代美术馆', '美術館', 3]]
+  '竹橋': [['東京国立近代美術館', 'The National Museum of Modern Art, Tokyo', '东京国立近代美术馆', '美術館', 3]],
+  '竹芝': [
+    ['浜離宮恩賜庭園', 'Hama-rikyu Gardens', '滨离宫恩赐庭园', '庭園', 5],
+    ['竹芝桟橋（東海汽船ターミナル）', 'Takeshiba Pier (Tokai Kisen Ferry Terminal)', '竹芝码头（东海汽船轮渡码头）', 'フェリーターミナル', 3],
+    ['日の出桟橋（水上バス）', 'Hinode Pier (Water Bus)', '日出码头（水上巴士）', '水上バス乗り場', 10]
+  ]
 };
 
 const CULTURAL_CATEGORY_NAMES = {
