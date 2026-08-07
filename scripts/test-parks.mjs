@@ -9,7 +9,8 @@ function assert(cond, msg) {
 const { resolveStation, computeRoutes } = mod;
 const cases = [
   ['舎人公園', '舎人公園'], ['Toneri Park', '舎人公園'], ['舍人公园', '舎人公園'],
-  ['代々木公園', '原宿'], ['Yoyogi Park', '原宿'], ['代代木公园', '原宿'],
+  // 代々木公園は実在駅（千代田線）としてグラフに存在するため駅解決される。ランドマーク変換は英中表記で検証
+  ['代々木公園', '代々木公園'], ['Yoyogi Park', '原宿'], ['代代木公园', '原宿'],
   ['小石川後楽園', '後楽園'], ['Koishikawa Korakuen Gardens', '後楽園'], ['小石川后乐园', '後楽園'],
   ['清澄庭園', '清澄白河'], ['Kiyosumi Gardens', '清澄白河'], ['清澄庭园', '清澄白河'],
   ['水元公園', '松戸'], ['Mizumoto Park', '松戸'], ['水元公园', '松戸'],
@@ -36,6 +37,8 @@ const route = computeRoutes('舎人公園', '六本木ヒルズ');
 assert(!route.error, '舎人公園→六本木ヒルズ 経路エラーなし');
 assert(route.from === '舎人公園' && route.to === '六本木', '公園から観光地への駅変換');
 
-assert(computeRoutes('金町', '新宿').error === 'STATION_NOT_FOUND', '金町の誤認防止を維持');
+// 金町→黄金町 誤認は依然防がれている（#14で金町駅がJR常磐線に追加済み: 実在駅として解決され、黄金町に誤認されない）
+const knRoute = computeRoutes('金町', '新宿');
+assert(!knRoute.error && knRoute.from === '金町', '金町の誤認防止を維持（実在駅として解決）');
 console.log(`検証件数: ${cases.length + 3}`);
 console.log('done');

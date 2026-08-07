@@ -45,7 +45,8 @@ const route = computeRoutes('明治神宮', '成田山新勝寺');
 assert(!route.error, '明治神宮→成田山新勝寺 経路エラーなし');
 assert(route.from === '原宿' && route.to === '成田空港', 'from=原宿, to=成田空港 に変換されている');
 
-// 金町→黄金町 誤認は依然防がれている
-assert(computeRoutes('金町', '新宿').error === 'STATION_NOT_FOUND', '金町 は誤認せず STATION_NOT_FOUND');
+// 金町→黄金町 誤認は依然防がれている（#14で金町駅がJR常磐線に追加済み: 実在駅として解決され、黄金町に誤認されない）
+const knRoute = computeRoutes('金町', '新宿');
+assert(!knRoute.error && knRoute.from === '金町', '金町 は実在駅として解決（黄金町に誤認されない）');
 
 console.log('done');

@@ -30,6 +30,8 @@ const route = computeRoutes('国立新美術館', '神田明神');
 assert(!route.error, '国立新美術館→神田明神 経路エラーなし');
 assert(route.from === '乃木坂' && route.to === '御茶ノ水', '文化施設同士の駅変換');
 
-assert(computeRoutes('金町', '新宿').error === 'STATION_NOT_FOUND', '金町の誤認防止を維持');
+// 金町→黄金町 誤認は依然防がれている（#14で金町駅がJR常磐線に追加済み: 実在駅として解決され、黄金町に誤認されない）
+const knRoute = computeRoutes('金町', '新宿');
+assert(!knRoute.error && knRoute.from === '金町', '金町の誤認防止を維持（実在駅として解決）');
 console.log(`検証件数: ${cases.length + 3}`);
 console.log('done');

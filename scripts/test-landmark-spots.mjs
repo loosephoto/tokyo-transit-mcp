@@ -45,7 +45,8 @@ const route = computeRoutes('後楽園', '六本木ヒルズ');
 assert(!route.error, '後楽園→六本木ヒルズ 経路エラーなし');
 assert(route.from === '後楽園' && route.to === '六本木', 'from=後楽園, to=六本木 に変換');
 
-// 金町→黄金町 誤認は依然防がれている
-assert(computeRoutes('金町', '新宿').error === 'STATION_NOT_FOUND', '金町 は誤認せず STATION_NOT_FOUND');
+// 金町→黄金町 誤認は依然防がれている（#14で金町駅がJR常磐線に追加済み: 実在駅として解決され、黄金町に誤認されない）
+const knRoute = computeRoutes('金町', '新宿');
+assert(!knRoute.error && knRoute.from === '金町', '金町 は実在駅として解決（黄金町に誤認されない）');
 
 console.log('done');

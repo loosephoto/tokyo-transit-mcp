@@ -40,9 +40,10 @@ console.log('landmark_info:', JSON.stringify(li));
 assert(li && li.to && li.to.landmark === '東京ディズニーランド', 'full 応答に landmark_info.to が含まれる');
 assert(data?.routes && data.routes.length > 0, 'routes あり');
 
-// 5. 金町→黄金町 の誤認は依然として防がれている
+// 5. 金町→黄金町 の誤認は依然として防がれている（#14で金町駅がJR常磐線に追加されたため、
+//    STATION_NOT_FOUND ではなく「実在駅として解決され、黄金町に誤認されない」ことを検証）
 const kn = computeRoutes('金町', '新宿');
-assert(kn.error === 'STATION_NOT_FOUND', '金町 は誤認せず STATION_NOT_FOUND');
+assert(!kn.error && kn.from === '金町', '金町 は実在駅として解決（黄金町に誤認されない）');
 const og = resolveStation('黄金町');
 assert(og.station === '黄金町' && og.landmark === null, '黄金町 は通常駅として解決（landmarkではない）');
 
