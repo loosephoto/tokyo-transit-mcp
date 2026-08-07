@@ -3947,12 +3947,44 @@ async function searchFerry(args) {
     const routeStops = [fromStop.stop_id, toStop.stop_id];
     const matchingTrips = data.stopTimes.filter(st => routeStops.includes(st.stop_id));
     const tripIds = new Set(matchingTrips.map(st => st.trip_id));
+    // trip_id → そのtripの全stop_times（発着時刻・深夜0時越えは正規化）
+    const stopTimesByTrip = new Map();
+    for (const st of data.stopTimes) {
+      if (!stopTimesByTrip.has(st.trip_id)) stopTimesByTrip.set(st.trip_id, []);
+      stopTimesByTrip.get(st.trip_id).push({
+        stop_id: st.stop_id,
+        stop_sequence: st.stop_sequence,
+        arrival_time: normalizeOvernightTime(st.arrival_time),
+        departure_time: normalizeOvernightTime(st.departure_time)
+      });
+    }
     const relevantRoutes = [];
     for (const route of data.routes) {
       const routeTrips = data.trips.filter(t => t.route_id === route.route_id);
       if (data.stopTimes.some(st => routeTrips.some(t => t.trip_id === st.trip_id) && st.stop_id === fromStop.stop_id) &&
           data.stopTimes.some(st => routeTrips.some(t => t.trip_id === st.trip_id) && st.stop_id === toStop.stop_id)) {
-        relevantRoutes.push({ route, trips: routeTrips.filter(t => tripIds.has(t.trip_id)).slice(0, 5) });
+        relevantRoutes.push({
+          route,
+          trips: routeTrips
+            .filter(t => tripIds.has(t.trip_id))
+            .slice(0, 5)
+            // #23/#9: 各tripに stop_times（発着時刻）を結合する。
+            // 実GTFS由来なら時刻が入り、ハードコード由来なら空（時刻表なし）を明示する。
+            .map(t => ({
+              ...t,
+              stop_times: (stopTimesByTrip.get(t.trip_id) || []).map(st => {
+                const stopName = (data.stops.find(s => s.stop_id === st.stop_id) || {}).stop_name || st.stop_id;
+                const portTrans = FERRY_PORT_NAMES[stopName] || {};
+                return {
+                  stop_sequence: st.stop_sequence,
+                  stop_name: userLang === 'en' ? (portTrans.en || stopName) : userLang === 'zh' ? (portTrans.zh || stopName) : stopName,
+                  arrival_time: st.arrival_time || null,
+                  departure_time: st.departure_time || null
+                };
+              }),
+              has_timetable: (stopTimesByTrip.get(t.trip_id) || []).some(st => st.arrival_time || st.departure_time)
+            }))
+        });
       }
     }
 
@@ -3978,6 +4010,17 @@ async function searchFerry(args) {
       trips: (entry.trips || []).map(t => ({ ...t, _source: sourceLabel(t._source || '') }))
     }));
 
+    // #23: 航路全体の時刻表有無を集計（すべてのtripが時刻なしなら「時刻表なし」を明示）
+    const anyTimetable = relevantRoutes.some(entry => (entry.trips || []).some(t => t.has_timetable));
+    const timetableStatus = anyTimetable
+      ? (userLang === 'en' ? 'available' : userLang === 'zh' ? 'available' : 'あり')
+      : (userLang === 'en' ? 'no_timetable' : userLang === 'zh' ? 'no_timetable' : 'なし');
+    const noTimetableMsg = userLang === 'en'
+      ? 'No departure times are available in the data (ODPT static GTFS is discontinued). Please check the official website for current schedules.'
+      : userLang === 'zh'
+        ? '数据中没有发船时刻（ODPT静态GTFS已停止提供）。请通过官方网站确认最新时刻表。'
+        : '発着時刻のデータがありません（ODPT静的GTFSは廃止済み）。最新の時刻表は公式サイトでご確認ください。';
+
     const isWaterBus = ['浅草','お台場海浜公園','お台場','豊洲','日の出桟橋','日の出','浜離宮'].some(p => fromStop.stop_name.includes(p));
     const operatorName = userLang === 'en' ? (isWaterBus ? "Tokyo Cruise (Water Bus)" : "Tokai Kisen") :
                          userLang === 'zh' ? (isWaterBus ? "东京游览船（水上巴士）" : "东海汽船") :
@@ -3995,6 +4038,8 @@ async function searchFerry(args) {
         message: msg,
         operator: operatorName,
         official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/',
+        timetable_status: timetableStatus,
+        timetable_message: anyTimetable ? undefined : noTimetableMsg,
         all_ports: data.stops.map(s => s.stop_name),
         maritime_safety_status: {
           tsunami_warning_active: false,
@@ -4018,6 +4063,8 @@ async function searchFerry(args) {
       total_routes: relevantRoutes.length,
       operator: operatorName,
       official_website: isWaterBus ? 'https://www.suijobus.co.jp/' : 'https://www.tokaikisen.co.jp/',
+      timetable_status: timetableStatus,
+      timetable_message: anyTimetable ? undefined : noTimetableMsg,
       maritime_safety_status: {
         tsunami_warning_active: false,
         source: tsunamiSafety.source,
@@ -4247,6 +4294,50 @@ async function searchFare(args) {
 // ==========================================
 // 🕐 時刻表検索
 // ==========================================
+// TrainTimetable 発着時刻の深夜0時越え正規化（GTFS 24:xx / 25:xx → 翌日表記）
+function normalizeOvernightTime(timeStr) {
+  if (!timeStr) return null;
+  const m = String(timeStr).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return String(timeStr);
+  let h = parseInt(m[1], 10);
+  const min = m[2];
+  if (h >= 24) {
+    h -= 24;
+    return `${String(h).padStart(2, '0')}:${min}`;
+  }
+  return String(timeStr);
+}
+
+// 駅ID（odpt.Station:TokyoMetro.Namboku.Ichigaya）の末尾ローマ字を取り出す
+function stationIdTail(stationId) {
+  if (!stationId) return '';
+  return String(stationId).split('.').pop() || '';
+}
+
+// #22: TrainTimetable は路線単位で取得（無フィルタ/事業者単位だと ODPT の1000件上限で
+// 一部路線が欠落し、駅フィルタが機能しなかった。例: TokyoMetro 事業者単位では銀座線が欠落）
+const TIMETABLE_OPERATORS = ['TokyoMetro', 'Toei', 'YokohamaMunicipal', 'TWR', 'MIR', 'TamaMonorail'];
+
+// 対象事業者の路線ID一覧（odpt:Railway から取得・キャッシュ）
+let _timetableRailways = null;
+async function getTimetableRailways() {
+  if (_timetableRailways) return _timetableRailways;
+  try {
+    const res = await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: getParams(), timeout: 20000 });
+    const lines = (res.data || [])
+      .filter(r => {
+        const op = r['odpt:operator'] || '';
+        return TIMETABLE_OPERATORS.some(o => op.endsWith(`.${o}`) || op.endsWith(`:${o}`));
+      })
+      .map(r => r['owl:sameAs'] || r['@id'])
+      .filter(Boolean);
+    _timetableRailways = lines;
+  } catch (_) {
+    _timetableRailways = [];
+  }
+  return _timetableRailways;
+}
+
 async function getTimetable(args) {
   const rawStation = args.station_name || '';
   const stationName = normalizeStationName(rawStation);
@@ -4258,23 +4349,91 @@ async function getTimetable(args) {
   }
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
+    // 路線単位で取得してマージ（キャッシュはマージ結果で保持）
     const cached = cache.get(cache.trainTimetable.key);
     let allTimetables;
     if (cached) { allTimetables = cached; odptBreaker.onSuccess(); }
     else {
-      const res = await axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(), timeout: 15000 });
-      allTimetables = res.data;
+      const railways = await getTimetableRailways();
+      const responses = await Promise.allSettled(railways.map(rw =>
+        axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(null, { 'odpt:railway': rw }), timeout: 20000 })
+      ));
+      allTimetables = responses
+        .filter(r => r.status === 'fulfilled' && Array.isArray(r.value.data))
+        .flatMap(r => r.value.data);
+      odptBreaker.onSuccess();
       cache.set(cache.trainTimetable.key, allTimetables, cache.trainTimetable.ttl);
     }
-    odptBreaker.onSuccess();
+
+    // ローマ字駅ID → 日本語駅名 の逆引き（駅フィルタ用）
+    const romanToJa = await getStationRomanToJa();
+    const stationLower = stationName.toLowerCase();
+
+    // レコードが指定駅を通るか判定:
+    //  - odpt:originStation / odpt:destinationStation（ID末尾ローマ字）
+    //  - odpt:trainTimetableObject[].odpt:departureStation / odpt:arrivalStation（ID末尾ローマ字）
+    // 日本語駅名とローマ字IDの両対応（例: 新宿 ⇔ ...Shinjuku）
+    const recordMatchesStation = (t) => {
+      const ids = [];
+      for (const key of ['odpt:originStation', 'odpt:destinationStation']) {
+        const v = t[key];
+        if (Array.isArray(v)) ids.push(...v);
+        else if (v) ids.push(v);
+      }
+      for (const obj of (t['odpt:trainTimetableObject'] || [])) {
+        if (obj['odpt:departureStation']) ids.push(obj['odpt:departureStation']);
+        if (obj['odpt:arrivalStation']) ids.push(obj['odpt:arrivalStation']);
+      }
+      for (const id of ids) {
+        const tail = stationIdTail(id).toLowerCase();
+        if (!tail) continue;
+        // ID末尾ローマ字との一致（完全一致または前方一致）
+        if (tail === stationLower || tail.startsWith(stationLower) || stationLower.startsWith(tail)) return true;
+        // ローマ字 → 日本語名 との一致
+        const jaName = romanToJa[tail];
+        if (jaName && (jaName === stationName || jaName.includes(stationName) || stationName.includes(jaName))) return true;
+      }
+      return false;
+    };
+
+    const matched = allTimetables.filter(recordMatchesStation);
+
+    // 指定駅での発着時刻を trainTimetableObject から抽出
+    const extractTimes = (t) => {
+      const times = [];
+      for (const obj of (t['odpt:trainTimetableObject'] || [])) {
+        const depId = obj['odpt:departureStation'] || '';
+        const arrId = obj['odpt:arrivalStation'] || '';
+        const depTail = stationIdTail(depId).toLowerCase();
+        const arrTail = stationIdTail(arrId).toLowerCase();
+        const depJa = depTail ? romanToJa[depTail] : '';
+        const arrJa = arrTail ? romanToJa[arrTail] : '';
+        const atDep = (depTail && (depTail === stationLower || depTail.startsWith(stationLower) || (depJa && (depJa === stationName || depJa.includes(stationName) || stationName.includes(depJa)))));
+        const atArr = (arrTail && (arrTail === stationLower || arrTail.startsWith(stationLower) || (arrJa && (arrJa === stationName || arrJa.includes(stationName) || stationName.includes(arrJa)))));
+        if (atDep && obj['odpt:departureTime']) times.push({ kind: 'departure', time: normalizeOvernightTime(obj['odpt:departureTime']) });
+        if (atArr && obj['odpt:arrivalTime']) times.push({ kind: 'arrival', time: normalizeOvernightTime(obj['odpt:arrivalTime']) });
+      }
+      return times;
+    };
+
+    const buildRow = (t) => {
+      const times = extractTimes(t);
+      const departures = times.filter(x => x.kind === 'departure').map(x => x.time);
+      const arrivals = times.filter(x => x.kind === 'arrival').map(x => x.time);
+      const destId = Array.isArray(t['odpt:destinationStation']) ? (t['odpt:destinationStation'][0] || '') : (t['odpt:destinationStation'] || '');
+      const destTail = stationIdTail(destId);
+      return {
+        railway: t['odpt:railway'],
+        train: t['odpt:train'],
+        destination: destTail ? (romanToJa[destTail.toLowerCase()] || destTail) : destId,
+        type: t['odpt:trainType'],
+        direction: t['odpt:railDirection'],
+        departure_time: departures.length ? departures.join(', ') : null,
+        arrival_time: arrivals.length ? arrivals.join(', ') : null
+      };
+    };
 
     const displayStation = getDisplayStationName(stationName, userLang);
-
-    const matched = allTimetables.filter(t => {
-      const station = t['odpt:station'] || '';
-      return station.toLowerCase().includes(stationName.toLowerCase()) ||
-             stationName.toLowerCase().includes(station.split('.').pop()?.toLowerCase());
-    });
 
     if (railwayFilter) {
       // 日本語路線名を ODPT ローマ字IDに変換（例: 山手線 → yamanote）
@@ -4282,11 +4441,10 @@ async function getTimetable(args) {
       const railwayKey = RAILWAY_NAME_MAP[railwayFilter] || RAILWAY_NAME_MAP[railwayFilter.replace(/線$/, '')] || rfLower;
       const filtered = matched.filter(t => {
         const r = (t['odpt:railway'] || '').toLowerCase();
-        // odpt:railway の末尾セグメント（ローマ字）または全体でマッシュ
         const rKey = r.split('.').pop() || r;
         return r.includes(railwayKey) || rKey.includes(railwayKey) || railwayKey.includes(rKey);
       });
-      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: railwayFilter, total: filtered.length, timetable: filtered.slice(0, 20).map(t => ({ railway: t['odpt:railway'], train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: railwayFilter, total: filtered.length, timetable: filtered.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
       // フィルタ結果が 0 件なら「該当路線のデータなし」を明確に返す（誤って全件を返さない）
       const noRailwayMsg = userLang === 'en'
         ? `No timetable found for railway "${railwayFilter}" at ${displayStation}.`
@@ -4295,7 +4453,15 @@ async function getTimetable(args) {
           : `${displayStation}の「${railwayFilter}」の時刻表は見つかりませんでした。`;
       return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, railway: railwayFilter, total: 0, message: noRailwayMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
     }
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, total: matched.length, timetable: matched.slice(0, 20).map(t => ({ railway: t['odpt:railway'], train: t['odpt:train'], destination: t['odpt:destinationStation'], type: t['odpt:trainType'], direction: t['odpt:railDirection'] })), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+    if (matched.length === 0) {
+      const noDataMsg = userLang === 'en'
+        ? `No timetable data found for ${displayStation} in ODPT (JR East and most private railways are not covered).`
+        : userLang === 'zh'
+          ? `ODPT中未找到 ${displayStation} 的时程表数据（JR东日本及大部分私铁不在覆盖范围内）。`
+          : `${displayStation} の時刻表データはODPTにありません（JR東日本・大部分の私鉄は対象外）。`;
+      return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, total: 0, message: noDataMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+    }
+    return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, total: matched.length, timetable: matched.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
   } catch (error) {
     odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });
