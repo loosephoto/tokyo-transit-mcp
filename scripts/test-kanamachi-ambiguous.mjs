@@ -32,9 +32,9 @@ const amb = computeRoutes('京', '新宿');
 console.log('   computeRoutes(京,新宿):', JSON.stringify(amb).slice(0, 200));
 assert(amb.error === 'AMBIGUOUS_STATION' && amb.side === 'from', '曖昧時は検索中断し AMBIGUOUS_STATION(from) を返す');
 
-// 5. 金町→新宿 は STATION_NOT_FOUND になる（黄金町誤認ではない）
+// 5. 金町→新宿 は経路が引ける（#14で常磐線に金町追加。黄金町誤認ではない）
 const kn = computeRoutes('金町', '新宿');
 console.log('   computeRoutes(金町,新宿):', JSON.stringify(kn).slice(0, 200));
-assert(kn.error === 'STATION_NOT_FOUND', '金町はデータ無し→STATION_NOT_FOUND（誤認していない）');
+assert(kn.routes && kn.routes.length > 0, '金町は常磐線で検索可能（#14追加・黄金町誤認なし）');
 
 console.log('done');

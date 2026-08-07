@@ -117,7 +117,7 @@ assert(kasiwa.station === '霞ケ関' && !kasiwa.ambiguous, '霞ケ関（ケ表�
 const ichigayaRoute = computeRoutes('市ヶ谷', '駒込');
 assert(ichigayaRoute.routes && ichigayaRoute.routes[0].summary.transfers === 0, '市ヶ谷→駒込: 南北線直通0乗換（表記ゆれ統合）');
 const kitaRoute = computeRoutes('北千住', '綾瀬');
-assert(kitaRoute.routes && kitaRoute.routes[0].segments.some(s => s.line === '東京メトロ千代田線'), '北千住→綾瀬: 千代田線直通');
+assert(kitaRoute.routes && kitaRoute.routes[0].segments.some(s => s.line === '東京メトロ千代田線' || s.line === 'JR常磐線快速'), '北千住→綾瀬: 千代田線または常磐線で直通（#14で常磐線各停・快速に綾瀬追加）');
 const shinbashiRoute = computeRoutes('有楽町', '品川');
 assert(shinbashiRoute.routes && shinbashiRoute.routes[0].segments.some(s => s.line === '京浜東北線' && s.stops === 4), '有楽町→品川: 京浜東北線で新橋経由（4駅）');
 const asakusaBridge = computeRoutes('浅草橋', '森下');
