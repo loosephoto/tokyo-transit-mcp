@@ -33,14 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
-- **西武拝島線の欠落駅を補完し、西武立川駅の検索不能を解消**（GitHub Issue #50）
-  - 西武拝島線を公式8駅に修正（小平→萩山→小川→東大和市→玉川上水→武蔵砂川→西武立川→拝島）
-    — 萩山・武蔵砂川・西武立川が欠落、武蔵大和が誤登録されていた
-  - 西武多摩湖線も公式7駅に修正（八坂・武蔵大和を追加）。萩山・武蔵大和が拝島線⇔多摩湖線の乗換駅に
-  - 新駅3駅（西武立川・武蔵砂川・八坂）の日英中表示名・ローマ字エイリアスを整備
-  - 南船橋→西武立川（3乗換90分）・立川→西武立川（1乗換22分）が検索可能に
-  - **検証** — probe-all-lang・test:walk・test-transfer-pairs・新規回帰テスト（test-issue-50）・
-    全駅接続性スイープ（東京駅到達不可0駅）全PASS
+- **search_flight がターミナル名（羽田空港第3ターミナル等）で INVALID_INPUT になる問題を修正**（GitHub Issue #52）
+  - `normalizeAirportQuery` でターミナル接尾辞（第Nターミナル/Terminal/航站楼）も除去するよう拡張
+  - 羽田空港第1/2/3ターミナル・成田空港第1/2/3ターミナルが IATA 解決できるようになり、
+    `search_flight` で空港アクセス経路付きの検索が可能に（`search_route` と同じ駅名が使える）
+  - **検証** — probe-all-lang 26/26・npm run build 全PASS
 
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
@@ -591,18 +588,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Seibu Haijima Line missing stations restored; Seibu-Tachikawa now searchable** (GitHub Issue #50)
-  - Fixed the Seibu Haijima Line to the official 8 stations (Kodaira→Hagiyama→Ogawa→Higashi-Yamatoshi→
-    Tamagawajosui→Musashi-Sunagawa→Seibu-Tachikawa→Haijima) — Hagiyama, Musashi-Sunagawa and
-    Seibu-Tachikawa were missing, and Musashi-Yamato was wrongly listed
-  - Fixed the Seibu Tamako Line to the official 7 stations (added Yasaka and Musashi-Yamato);
-    Hagiyama and Musashi-Yamato are now proper interchanges between the Haijima and Tamako lines
-  - Added ja/en/zh display names and romaji aliases for 3 new stations (Seibu-Tachikawa,
-    Musashi-Sunagawa, Yasaka)
-  - Minami-Funabashi → Seibu-Tachikawa (3 transfers / 90 min) and Tachikawa → Seibu-Tachikawa
-    (1 transfer / 22 min) are now routable
-  - **Verification** — probe-all-lang / test:walk / test-transfer-pairs / new regression test (test-issue-50) /
-    full connectivity sweep (0 stations unreachable from Tokyo) all PASS
+- **Fixed search_flight returning INVALID_INPUT for terminal names (e.g. Haneda Airport Terminal 3)** (GitHub Issue #52)
+  - `normalizeAirportQuery` now also strips terminal suffixes (第Nターミナル / Terminal / 航站楼)
+  - Haneda Terminals 1/2/3 and Narita Terminals 1/2/3 now resolve to their IATA codes, so
+    `search_flight` accepts the same names as `search_route` and suggests access routes
+  - **Verification** — probe-all-lang 26/26 / npm run build all PASS
 
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
@@ -1115,14 +1105,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **补齐西武拜岛线缺失车站，西武立川站恢复可搜索**（对应 GitHub Issue #50）
-  - 西武拜岛线修正为官方8站（小平→萩山→小川→东大和市→玉川上水→武藏砂川→西武立川→拜岛）
-    — 此前萩山・武藏砂川・西武立川缺失，且武藏大和系误登记
-  - 西武多摩湖线同步修正为官方7站（新增八坂・武藏大和）。萩山・武藏大和成为拜岛线⇔多摩湖线换乘站
-  - 为3座新站（西武立川・武藏砂川・八坂）补充日英中显示名・罗马字别名
-  - 南船桥→西武立川（3次换乘・90分钟）、立川→西武立川（1次换乘・22分钟）现已可搜索
-  - **验证** — probe-all-lang・test:walk・test-transfer-pairs・新增回归测试（test-issue-50）・
-    全站连通性扫描（东京站不可达0站）全部通过
+- **修复 search_flight 对航站楼名称（如羽田机场第3航站楼）返回 INVALID_INPUT 的问题**（对应 GitHub Issue #52）
+  - `normalizeAirportQuery` 现在也会去除航站楼后缀（第Nターミナル / Terminal / 航站楼）
+  - 羽田第1/2/3航站楼・成田第1/2/3航站楼现已可解析为 IATA 代码，
+    `search_flight` 支持与 `search_route` 相同的站名并建议到达接驳路线
+  - **验证** — probe-all-lang 26/26・npm run build 全部通过
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 

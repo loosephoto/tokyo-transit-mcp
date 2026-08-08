@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.31.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.32.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -4174,7 +4174,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.31.0' },
+  { name: 'tokyo-transit-mcp', version: '2.32.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -9049,9 +9049,11 @@ const AIRPORT_WEATHER_AREA = {
   IBR: '080000'  // 茨城
 };
 // 空港名の正規化: 末尾の 空港/Airport/机场 サフィックスを除去（3か国語対応）
+// 2026-08 検査プログラムで検出（#経路検査）: 「羽田空港第3ターミナル」等のターミナル名が
+// 解決できず INVALID_INPUT になっていた。ターミナル接尾辞も除去して IATA 解決できるようにする。
 function normalizeAirportQuery(name) {
   if (!name) return name;
-  return name.replace(/(空港|Airport|机场)\s*$/i, '').trim();
+  return name.replace(/(第[1-3一二三]ターミナル|ターミナル|Terminal|航站楼|空港|Airport|机场)\s*$/i, '').trim();
 }
 // IATA → 日本語表示名（到着連携用の駅名マップ）
 const IATA_TO_TERMINAL_STATION = {
