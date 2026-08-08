@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.29.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.30.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -1473,6 +1473,30 @@ const STATION_NAME_MAP = {
   'Esojima': '江曽島',
   'Minami-Utsunomiya': '南宇都宮',
   'MinamiUtsunomiya': '南宇都宮',
+  // 東武日光線（v2.30.0・Issue #51）
+  'Sugito-Takanodai': '杉戸高野台', 'SugitoTakanodai': '杉戸高野台',
+  'Satte': '幸手',
+  'Minami-Kurihashi': '南栗橋', 'MinamiKurihashi': '南栗橋',
+  'Shinkoga': '新古河', 'Shin-Koga': '新古河',
+  'Yanagi': '柳生',
+  'Itakura-Toyodai-mae': '板倉東洋大前', 'ItakuraToyodaimae': '板倉東洋大前',
+  'Fujioka': '藤岡',
+  'Shizuwa': '静和',
+  'Shin-Ohirashita': '新大平下', 'ShinOhirashita': '新大平下',
+  'Tochigi': '栃木',
+  'Kassenba': '合戦場',
+  'Yanaka': '家中',
+  'Tobu-Kanasaki': '東武金崎', 'TobuKanasaki': '東武金崎',
+  'Niregi': '楡木',
+  'Momiyama': '樅山',
+  'Shin-Kanuma': '新鹿沼', 'ShinKanuma': '新鹿沼',
+  'Kita-Kanuma': '北鹿沼', 'KitaKanuma': '北鹿沼',
+  'Itaga': '板荷',
+  'Shimo-Koshiro': '下小代', 'ShimoKoshiro': '下小代',
+  'Myojin': '明神',
+  'Shimo-Imaichi': '下今市', 'ShimoImaichi': '下今市',
+  'Kami-Imaichi': '上今市', 'KamiImaichi': '上今市',
+  'Tobu-Nikko': '東武日光', 'TobuNikko': '東武日光',
   'Tobu-Utsunomiya': '東武宇都宮',
   'TobuUtsunomiya': '東武宇都宮',
   'Keisei-Makuhari-Hongo': '京成幕張本郷',
@@ -1772,6 +1796,11 @@ const RAILWAY_NAME_MAP = {
   '東武宇都宮線': '東武宇都宮線',
   '東武宇都宮': '東武宇都宮線',
   '宇都宮線（東武）': '東武宇都宮線',
+  '東武日光線': '東武日光線',
+  // 注: 「日光線」は JR日光線（宇都宮⇔日光）がグラフ未定義のため東武を指す。
+  //      JR日光線を追加する際は 宇都宮線（→JR宇都宮線）と同様に JR側へ付け替えること。
+  '日光線': '東武日光線',
+  '日光線（東武）': '東武日光線',
   '相鉄本線': '相鉄本線',
   '相鉄いずみ野線': '相鉄いずみ野線',
   'いずみ野線': '相鉄いずみ野線',
@@ -2642,6 +2671,30 @@ const STATION_DISPLAY_NAMES = {
   '江曽島': { en: 'Esojima', zh: '江曾岛' },
   '南宇都宮': { en: 'Minami-Utsunomiya', zh: '南宇都宫' },
   '東武宇都宮': { en: 'Tobu-Utsunomiya', zh: '东武宇都宫' },
+  // 東武日光線（v2.30.0・Issue #51 で追加。栗橋は JR宇都宮線側に既存）
+  '杉戸高野台': { en: 'Sugito-Takanodai', zh: '杉户高野台' },
+  '幸手': { en: 'Satte', zh: '幸手' },
+  '南栗橋': { en: 'Minami-Kurihashi', zh: '南栗桥' },
+  '新古河': { en: 'Shinkoga', zh: '新古河' },
+  '柳生': { en: 'Yanagi', zh: '柳生' },
+  '板倉東洋大前': { en: 'Itakura-Toyodai-mae', zh: '板仓东洋大前' },
+  '藤岡': { en: 'Fujioka', zh: '藤冈' },
+  '静和': { en: 'Shizuwa', zh: '静和' },
+  '新大平下': { en: 'Shin-Ohirashita', zh: '新大平下' },
+  '栃木': { en: 'Tochigi', zh: '栃木' },
+  '合戦場': { en: 'Kassenba', zh: '合战场' },
+  '家中': { en: 'Yanaka', zh: '家中' },
+  '東武金崎': { en: 'Tobu-Kanasaki', zh: '东武金崎' },
+  '楡木': { en: 'Niregi', zh: '榆木' },
+  '樅山': { en: 'Momiyama', zh: '枞山' },
+  '新鹿沼': { en: 'Shin-Kanuma', zh: '新鹿沼' },
+  '北鹿沼': { en: 'Kita-Kanuma', zh: '北鹿沼' },
+  '板荷': { en: 'Itaga', zh: '板荷' },
+  '下小代': { en: 'Shimo-Koshiro', zh: '下小代' },
+  '明神': { en: 'Myojin', zh: '明神' },
+  '下今市': { en: 'Shimo-Imaichi', zh: '下今市' },
+  '上今市': { en: 'Kami-Imaichi', zh: '上今市' },
+  '東武日光': { en: 'Tobu-Nikko', zh: '东武日光' },
   '京成幕張本郷': { en: 'Keisei-Makuhari-Hongo', zh: '京成幕张本乡' },
   '京成幕張': { en: 'Keisei-Makuhari', zh: '京成幕张' },
   '検見川': { en: 'Kemigawa', zh: '检见川' },
@@ -2808,6 +2861,7 @@ const LINE_DISPLAY_NAMES = {
   '東武東上線': { en: 'Tobu Tojo Line', zh: '东武东上线' },
   '東武越生線': { en: 'Tobu Ogose Line', zh: '东武越生线' },
   '東武伊勢崎線': { en: 'Tobu Isesaki Line', zh: '东武伊势崎线' },
+  '東武日光線': { en: 'Tobu Nikko Line', zh: '东武日光线' },
   '東武大師線': { en: 'Tobu Daishi Line', zh: '东武大师线' },
   '京急本線': { en: 'Keikyu Main Line', zh: '京急本线' },
   '京成押上線': { en: 'Keisei Oshiage Line', zh: '京成押上线' },
@@ -3514,7 +3568,11 @@ const RAILWAY_LINES = {
   'JR高崎線': ['上野','尾久','赤羽','浦和','さいたま新都心','大宮','宮原','上尾','北上尾','桶川','北本','鴻巣','北鴻巣','吹上','行田','熊谷','籠原','深谷','岡部','本庄','神保原','新町','倉賀野','高崎'],
   'JR宇都宮線': ['上野','尾久','赤羽','浦和','さいたま新都心','大宮','土呂','東大宮','蓮田','白岡','新白岡','久喜','東鷲宮','栗橋','古河','野木','間々田','小山','小金井','自治医大','石橋','雀宮','宇都宮'],
   '東武野田線': ['大宮','北大宮','大宮公園','大和田','七里','岩槻','東岩槻','豊春','八木崎','春日部','藤の牛島','南桜井','川間','七光台','清水公園','愛宕','野田市','梅郷','運河','江戸川台','初石','流山おおたかの森','豊四季','柏','新柏','増尾','逆井','高柳','六実','新鎌ヶ谷','鎌ヶ谷','馬込沢','塚田','新船橋','船橋'],
-  '東武宇都宮線': ['新栃木','野州平川','野州大塚','壬生','国谷','おもちゃのまち','安塚','西川田','江曽島','南宇都宮','東武宇都宮'],
+  '東武宇都宮線': ['新栃木','野州平川','野州大塚','栃木','壬生','国谷','おもちゃのまち','安塚','西川田','江曽島','南宇都宮','東武宇都宮'],
+  // 2026-08 追加（v2.30.0・Issue #51）: 東武日光線。東武動物公園（伊勢崎線）⇔新栃木（宇都宮線）⇔東武日光。
+  // 未定義のため新栃木〜東武宇都宮の11駅がグラフから孤立していた（同線内すら NO_ROUTE）。
+  // 駅順は東武鉄道公式（TNナンバリング TN-01〜TN-25 東武動物公園含め26駅）で突合済み。
+  '東武日光線': ['東武動物公園','杉戸高野台','幸手','南栗橋','栗橋','新古河','柳生','板倉東洋大前','藤岡','静和','新大平下','栃木','新栃木','合戦場','家中','東武金崎','楡木','樅山','新鹿沼','北鹿沼','板荷','下小代','明神','下今市','上今市','東武日光'],
   '京成千葉線': ['京成津田沼','京成幕張本郷','京成幕張','検見川','京成稲毛','みどり台','西登戸','新千葉','千葉中央'], // 1991 京成千葉→千葉中央改称（#26 幻駅統合）
   '京成千原線': ['千葉中央','千葉寺','大森台','学園前','おゆみ野','ちはら台'],
   '富士急行線': ['大月','田野倉','禾生','赤坂','都留市','谷村町','都留文科大学前','十日市場','東桂','三つ峠','寿','葭池温泉前','下吉田','月江寺','富士山','富士急ハイランド','河口湖'],
@@ -4104,7 +4162,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.29.0' },
+  { name: 'tokyo-transit-mcp', version: '2.30.0' },
   { capabilities: { tools: {} } }
 );
 
