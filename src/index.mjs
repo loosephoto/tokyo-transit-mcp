@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.34.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.35.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -3753,6 +3753,9 @@ const WALK_TRANSFERS = [
   { from: '佐貫', to: '龍ケ崎市', minutes: 2 },             // 関東鉄道竜ヶ崎線 ⇔ JR常磐線（同一駅扱い）
   // 2026-08 v2.26.0 ディズニーリゾートライン追加の連絡駅
   { from: '舞浜', to: 'リゾートゲートウェイ・ステーション', minutes: 2 }, // JR京葉線 ⇔ ディズニーリゾートライン（JR舞浜駅南口から徒歩2分・公式）
+  // 2026-08 追加: 跨路線乗換の効率化（公式連絡駅）
+  { from: '茅場町', to: '八丁堀', minutes: 4 },             // 東京メトロ日比谷線・東西線 ⇔ 日比谷線・JR京葉線（地下通路・改札外連絡）
+  { from: '溜池山王', to: '赤坂見附', minutes: 3 },         // 東京メトロ銀座線・南北線 ⇔ 銀座線・丸ノ内線（地下通路で直結）
 ];
 // 双方向ルックアップ（buildRouteSegments での徒歩連絡検出と徒歩時間取得に使用）
 const WALK_TRANSFER_LOOKUP = new Map();
@@ -4221,7 +4224,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.34.0' },
+  { name: 'tokyo-transit-mcp', version: '2.35.0' },
   { capabilities: { tools: {} } }
 );
 
