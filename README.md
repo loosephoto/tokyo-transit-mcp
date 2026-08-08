@@ -17,7 +17,7 @@
 
 ### 🚉 全交通機関を統合
 
-**計117路線・1,384駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
+**計117路線・1,387駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
 
 | 種別 | 対応事業者（対応路線） |
 |:---|:---|
@@ -33,12 +33,13 @@
 
 ### 🛤️ 直近の更新内容
 
-- **東武日光線を追加し、東武宇都宮線の孤立を解消**（GitHub Issue #51）
-  - 東武日光線（東武動物公園⇔東武日光・26駅）をグラフに追加。日光線未定義のため新栃木で接続する
-    東武宇都宮線の全11駅が孤立し、同線内（新栃木→東武宇都宮）すら NO_ROUTE だった問題を解消
-  - 栃木駅（日光線・宇都宮線の実在駅）を追加（駅順は東武鉄道公式 TN ナンバリングで突合）
-  - 新駅23駅の日英中表示名・ローマ字エイリアス・路線エイリアス（日光線 / 日光線（東武））を整備
-  - **検証** — probe-all-lang・test:walk・test-transfer-pairs・新規回帰テスト（test-issue-51）・
+- **西武拝島線の欠落駅を補完し、西武立川駅の検索不能を解消**（GitHub Issue #50）
+  - 西武拝島線を公式8駅に修正（小平→萩山→小川→東大和市→玉川上水→武蔵砂川→西武立川→拝島）
+    — 萩山・武蔵砂川・西武立川が欠落、武蔵大和が誤登録されていた
+  - 西武多摩湖線も公式7駅に修正（八坂・武蔵大和を追加）。萩山・武蔵大和が拝島線⇔多摩湖線の乗換駅に
+  - 新駅3駅（西武立川・武蔵砂川・八坂）の日英中表示名・ローマ字エイリアスを整備
+  - 南船橋→西武立川（3乗換90分）・立川→西武立川（1乗換22分）が検索可能に
+  - **検証** — probe-all-lang・test:walk・test-transfer-pairs・新規回帰テスト（test-issue-50）・
     全駅接続性スイープ（東京駅到達不可0駅）全PASS
 
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
@@ -574,7 +575,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🚉 Integrated Transit Agencies
 
-**Covers 117 lines / 1,384 stations** (route search runs on the built-in graph without an API key):
+**Covers 117 lines / 1,387 stations** (route search runs on the built-in graph without an API key):
 
 | Type | Supported Operators (Lines) |
 |:---|:---|
@@ -590,14 +591,17 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Tobu Nikko Line added; Tobu Utsunomiya Line isolation resolved** (GitHub Issue #51)
-  - Added the Tobu Nikko Line (Tobu-Dobutsu-Koen ⇔ Tobu-Nikko, 26 stations). The 11 stations of the Tobu
-    Utsunomiya Line (connecting at Shin-Tochigi) were completely isolated because the Nikko Line was missing,
-    making even same-line trips (Shin-Tochigi → Tobu-Utsunomiya) return NO_ROUTE
-  - Added Tochigi Station (served by both the Nikko and Utsunomiya lines); station order verified against
-    official Tobu TN numbering
-  - Added ja/en/zh display names, romaji aliases and line aliases (日光線 / 日光線（東武）) for 23 new stations
-  - **Verification** — probe-all-lang / test:walk / test-transfer-pairs / new regression test (test-issue-51) /
+- **Seibu Haijima Line missing stations restored; Seibu-Tachikawa now searchable** (GitHub Issue #50)
+  - Fixed the Seibu Haijima Line to the official 8 stations (Kodaira→Hagiyama→Ogawa→Higashi-Yamatoshi→
+    Tamagawajosui→Musashi-Sunagawa→Seibu-Tachikawa→Haijima) — Hagiyama, Musashi-Sunagawa and
+    Seibu-Tachikawa were missing, and Musashi-Yamato was wrongly listed
+  - Fixed the Seibu Tamako Line to the official 7 stations (added Yasaka and Musashi-Yamato);
+    Hagiyama and Musashi-Yamato are now proper interchanges between the Haijima and Tamako lines
+  - Added ja/en/zh display names and romaji aliases for 3 new stations (Seibu-Tachikawa,
+    Musashi-Sunagawa, Yasaka)
+  - Minami-Funabashi → Seibu-Tachikawa (3 transfers / 90 min) and Tachikawa → Seibu-Tachikawa
+    (1 transfer / 22 min) are now routable
+  - **Verification** — probe-all-lang / test:walk / test-transfer-pairs / new regression test (test-issue-50) /
     full connectivity sweep (0 stations unreachable from Tokyo) all PASS
 
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
@@ -1095,7 +1099,7 @@ MIT License
 
 ### 🚉 整合所有公共交通工具
 
-**共覆盖117条线路/1,384站**（路线搜索由无需 API 密钥的内置图执行）：
+**共覆盖117条线路/1,387站**（路线搜索由无需 API 密钥的内置图执行）：
 
 | 类别 | 支持的运营商（线路） |
 |:---|:---|
@@ -1111,12 +1115,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **新增东武日光线，解决东武宇都宫线孤立问题**（对应 GitHub Issue #51）
-  - 新增东武日光线（东武动物公园⇔东武日光・26站）。此前因日光线未定义，在新栃木衔接的东武宇都宫线
-    全线11站完全孤立，同线内（新栃木→东武宇都宫）也返回 NO_ROUTE
-  - 新增栃木站（日光线・宇都宫线的实有车站）；站序已按东武官方 TN 编号核对
-  - 为23座新站补充日英中显示名・罗马字别名・线路别名（日光线 / 日光线（东武））
-  - **验证** — probe-all-lang・test:walk・test-transfer-pairs・新增回归测试（test-issue-51）・
+- **补齐西武拜岛线缺失车站，西武立川站恢复可搜索**（对应 GitHub Issue #50）
+  - 西武拜岛线修正为官方8站（小平→萩山→小川→东大和市→玉川上水→武藏砂川→西武立川→拜岛）
+    — 此前萩山・武藏砂川・西武立川缺失，且武藏大和系误登记
+  - 西武多摩湖线同步修正为官方7站（新增八坂・武藏大和）。萩山・武藏大和成为拜岛线⇔多摩湖线换乘站
+  - 为3座新站（西武立川・武藏砂川・八坂）补充日英中显示名・罗马字别名
+  - 南船桥→西武立川（3次换乘・90分钟）、立川→西武立川（1次换乘・22分钟）现已可搜索
+  - **验证** — probe-all-lang・test:walk・test-transfer-pairs・新增回归测试（test-issue-50）・
     全站连通性扫描（东京站不可达0站）全部通过
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
