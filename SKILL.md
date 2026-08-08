@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.33.0
+version: 2.34.0
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,13 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.34.0（2026-08-08）— 山手線全駅の接続調査に基づく徒歩連絡追加（高輪ゲートウェイ⇔泉岳寺）
+
+- **山手線30駅の接続網を検証**し、JR⇔地下鉄・私鉄の乗換が `search_route` で成立するか確認。主要ターミナル（東京・新宿・渋谷・池袋・品川・上野等）の接続は既に網羅済みであることを確認。
+- **不足を発見・追加**: 高輪ゲートウェイ駅（JR山手線・京浜東北線）⇔ 泉岳寺駅（都営浅草線・京急本線）の徒歩連絡が未登録だった。`WALK_TRANSFERS` に `{ from:'高輪ゲートウェイ', to:'泉岳寺', minutes:8 }` を追加（徒歩約0.6km・約8分・両駅に乗換案内掲示）。
+- これにより「高輪ゲートウェイ→西馬込（浅草線）」が山手線経由の遠回りから**徒歩連絡→浅草線の直接乗換**に改善。
+- **検証**: probe-all-lang 26/26・check-railway-integrity OK・npm run build 全PASS。高輪ゲートウェイ⇔泉岳寺の乗換成立を確認。
 
 ### v2.33.0（2026-08-08）— 関東鉄道（常総線・竜ヶ崎線）を路線グラフに追加（#55）
 

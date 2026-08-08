@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.33.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.34.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -3701,6 +3701,7 @@ const WALK_TRANSFERS = [
   // 東京都心・下町
   { from: '牛田', to: '京成関屋', minutes: 4 },        // 東武伊勢崎線 ⇔ 京成本線（荒川・綾瀬川を挟み徒歩連絡）
   { from: '田町', to: '三田', minutes: 5 },            // JR ⇔ 都営浅草線・三田線（連絡通路）
+  { from: '高輪ゲートウェイ', to: '泉岳寺', minutes: 8 }, // JR山手線・京浜東北線 ⇔ 都営浅草線・京急本線（徒歩約0.6km・約8分・乗換案内掲示あり）
   { from: '浜松町', to: '大門', minutes: 5 },          // JR・モノレール ⇔ 都営浅草線・大江戸線（連絡通路）
   { from: '浜松町', to: 'モノレール浜松町', minutes: 2 }, // JR山手線・京浜東北線 ⇔ 東京モノレール（同一駅舎・改札内連絡通路）
   { from: '馬喰横山', to: '東日本橋', minutes: 4 },    // 都営新宿線 ⇔ 都営浅草線（地下通路）
@@ -4220,7 +4221,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.33.0' },
+  { name: 'tokyo-transit-mcp', version: '2.34.0' },
   { capabilities: { tools: {} } }
 );
 
