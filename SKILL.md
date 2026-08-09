@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.37.0
+version: 2.37.1
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,13 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.37.1（2026-08-09）— JR常磐線を水戸まで延伸（快速・各停）
+
+- 龍ケ崎市以遠（茨城県内）を延伸: 牛久・ひたち野うしく・荒川沖・土浦・神立・高浜・石岡・羽鳥・岩間・友部・内原・赤塚・**水戸**（快速・各停とも13駅追加）。
+- STATION_DISPLAY_NAMES（ja/en/zh）・英字エイリアス（Ushiku/Tsuchiura/Mito 等）・JMA_AREA_MAP（茨城 080000）を追加。
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26・`check-railway-integrity` PASS・`probe-landmark-all-lang` 171件全解決・ルート回帰（上野→水戸 65分乗換0回 / 土浦→水戸 23分 / 松戸→水戸 45分）全PASS。
+- 方針: 無尽蔵な拡大を避け、JRのみ大宮・土浦・水戸あたりまで（私鉄・第三セクターは追加しない）。
 
 ### v2.37.0（2026-08-09）— 東北本線の直通系統を追加（上野東京ライン・湘南新宿ライン北側直通）
 

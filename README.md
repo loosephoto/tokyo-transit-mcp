@@ -33,6 +33,10 @@
 
 ### 🛤️ 直近の更新内容
 
+- **JR常磐線を水戸まで延伸（快速・各停）**
+  - 龍ケ崎市 → 牛久 → ひたち野うしく → 荒川沖 → 土浦 → 神立 → 高浜 → 石岡 → 羽鳥 → 岩間 → 友部 → 内原 → 赤塚 → **水戸** を追加（快速・各停とも13駅）
+  - 多言語表示名（ja/en/zh）・英字エイリアス（Ushiku・Tsuchiura・Mito 等）・気象庁エリアコード（茨城 080000）を追加
+  - **検証** — 上野→水戸 65分・乗換0回 / 土浦→水戸 23分 / probe-all-lang 26/26 / integrity PASS / probe-landmark 171件全解決
 - **東北本線の直通系統を追加（上野東京ライン・湘南新宿ライン北側直通）**
   - 上野東京ライン（宇都宮線直通・高崎線直通）と湘南新宿ライン北側直通（宇都宮線直通・高崎線直通）の計**4路線を追加**
   - 品川→宇都宮・品川→高崎・新宿→高崎・宇都宮→小田原・高崎→横浜などが**乗換なし**に（従来は乗換1回と誤案内）
@@ -608,6 +612,10 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Extended JR Joban Line to Mito (Rapid & Local)**
+  - Added Ryugasaki (JR) → Ushiku → Hitachino-Ushiku → Arakawaoki → Tsuchiura → Kandatsu → Takahama → Ishioka → Hatori → Iwama → Tomobe → Uchihara → Akatsuka → **Mito** (13 stations each for Rapid & Local)
+  - Added multilingual display names (ja/en/zh), romanized aliases (Ushiku / Tsuchiura / Mito etc.) and JMA area code (Ibaraki 080000)
+  - **Verification** — Ueno→Mito 65 min, 0 transfers / Tsuchiura→Mito 23 min / probe-all-lang 26/26 / integrity PASS / probe-landmark 171 all resolved
 - **Added Tohoku Main Line through-service systems (Ueno-Tokyo Line & Shonan-Shinjuku Line northward through trains)**
   - Added 4 lines: Ueno-Tokyo Line (Utsunomiya / Takasaki) and Shonan-Shinjuku Line northward (Utsunomiya / Takasaki)
   - Shinagawa→Utsunomiya / Shinagawa→Takasaki / Shinjuku→Takasaki / Utsunomiya→Odawara / Takasaki→Yokohama are now shown as **no-transfer direct trains** (previously mis-shown as 1 transfer)
@@ -1145,6 +1153,10 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **JR常磐线延伸至水户（快速・各站停车）**
+  - 追加 龙崎市 → 牛久 → 常陆野牛久 → 荒川冲 → 土浦 → 神立 → 高滨 → 石冈 → 羽鸟 → 岩间 → 友部 → 内原 → 赤冢 → **水户**（快速・各站停车均为 13 站）
+  - 追加多语言显示名（日英中）・罗马字别名（Ushiku・Tsuchiura・Mito 等）・气象厅地区代码（茨城 080000）
+  - **验证** — 上野→水户 65 分钟・0 次换乘 / 土浦→水户 23 分钟 / probe-all-lang 26/26 / integrity PASS / probe-landmark 171 项全部解决
 - **新增东北本线直通系统（上野东京线・湘南新宿线北向直通）**
   - 新增 4 条线路：上野东京线（直通宇都宫线・直通高崎线）与湘南新宿线北向直通（直通宇都宫线・直通高崎线）
   - 品川→宇都宫・品川→高崎・新宿→高崎・宇都宫→小田原・高崎→横滨等现为**无需换乘**（此前误报为换乘 1 次）
