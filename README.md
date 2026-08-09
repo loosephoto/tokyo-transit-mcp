@@ -33,6 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
+- **軽量乗換を拡張（新百合ヶ丘・二俣川）— 小田急・相鉄の直通が正しく選択される**
+  - **新百合ヶ丘**（小田急小田原線⇔多摩線・同一ホーム対面乗換）: 新宿→唐木田 が 京王相模原線経由（乗換3回・79分）→ **小田急直通（乗換1回・79分）** に改善
+  - **二俣川**（相鉄本線⇔いずみ野線・改札内同一ホーム乗換）: 海老名→湘南台 が 相鉄二俣川乗換で直通
+  - 横浜→湘南台 の JR 経由選択は JR東海道線の快速定義（横浜⇔戸塚直接）による**正しい挙動**（コスト16 vs 相鉄18）
+  - **検証** — probe-all-lang 26/26・check-railway-integrity PASS・同種ケース17件回帰確認
 - **軽量乗換（同一ホーム乗換）を導入 — 新宿→多摩センターが約20分短縮**
   - 調布駅の 京王線⇔京王相模原線（同一ホーム乗換・相模原線は調布始発）を「乗換1回」としてカウントせず軽いコストのみに変更（`LIGHT_TRANSFER_EDGES`）
   - 新宿→多摩センター: **92分・乗換1回（高幡不動経由モノレール遠回り）→ 73分・乗換2回（京王相模原線経由）** に改善
@@ -621,6 +626,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Light transfers extended (Shin-Yurigaoka & Futamatagawa) — Odakyu / Sotetsu through routes now selected correctly**
+  - **Shin-Yurigaoka** (Odakyu Odawara ⇔ Tama Lines; same-platform facing transfer): Shinjuku→Karakida improved from Keio Sagamihara detour (3 transfers / 79 min) to **Odakyu direct (1 transfer / 79 min)**
+  - **Futamatagawa** (Sotetsu Main ⇔ Izumino Lines; in-gate same-platform transfer): Ebina→Shonandai now uses the Sotetsu Futamatagawa transfer
+  - Yokohama→Shonandai choosing JR is **correct behavior** (JR Tokaido Line rapid definition connects Yokohama⇔Totsuka directly; cost 16 vs Sotetsu 18)
+  - **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / 17 same-class route regression checks
 - **Introduced light transfers (same-platform) — Shinjuku→Tama-Center now ~20 min faster**
   - Chofu (Keio Line ⇔ Keio Sagamihara Line; same-platform, Sagamihara starts at Chofu) is no longer counted as a full transfer — only a small cost is added (`LIGHT_TRANSFER_EDGES`)
   - Shinjuku→Tama-Center: **92 min / 1 transfer (monorail detour via Takahatafudo) → 73 min / 2 transfers (via Keio Sagamihara Line)**
@@ -1171,6 +1181,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **扩展轻量换乘（新百合丘・二俣川）— 小田急・相铁直通路线被正确选择**
+  - **新百合丘**（小田急小田原线⇔多摩线・同站台对向换乘）: 新宿→唐木田 从京王相模原线绕行（换乘 3 次・79 分钟）→ **小田急直通（换乘 1 次・79 分钟）**
+  - **二俣川**（相铁本线⇔泉野线・闸内同站台换乘）: 海老名→湘南台 经相铁二俣川换乘直通
+  - 横滨→湘南台 选择 JR 是**正确行为**（JR 东海道线快速定义直接连接横滨⇔户冢・成本 16 vs 相铁 18）
+  - **验证** — probe-all-lang 26/26・check-railway-integrity 通过・17 条同类路线回归确认
 - **引入轻量换乘（同站台换乘）— 新宿→多摩中心缩短约 20 分钟**
   - 调布站的京王线⇔京王相模原线（同站台换乘・相模原线从调布始发）不再计为「换乘 1 次」，仅加轻微成本（`LIGHT_TRANSFER_EDGES`）
   - 新宿→多摩中心: **92 分钟・换乘 1 次（经高幡不动的单轨绕行）→ 73 分钟・换乘 2 次（经京王相模原线）**

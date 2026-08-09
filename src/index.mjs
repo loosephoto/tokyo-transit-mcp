@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.1 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.2 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -3761,6 +3761,14 @@ const LIGHT_TRANSFER_EDGES = {
   // 調布: 京王線⇔京王相模原線（相模原線は調布始発・同一ホーム乗換）
   '調布|京王線|京王相模原線': 2,
   '調布|京王相模原線|京王線': 2,
+  // 新百合ヶ丘: 小田急小田原線⇔小田急多摩線（同一ホーム対面乗換・多摩線は新百合ヶ丘始発）
+  // v2.38.2: 新宿→唐木田 が京王相模原線経由（乗換3回・79分）ではなく 小田急直通（乗換1回・約47分）を選ぶようになる
+  '新百合ヶ丘|小田急小田原線|小田急多摩線': 2,
+  '新百合ヶ丘|小田急多摩線|小田急小田原線': 2,
+  // 二俣川: 相鉄本線⇔相鉄いずみ野線（改札内・同一ホーム乗換）
+  // v2.38.2: 横浜→湘南台 が JR東海道線→ブルーライン経由（22分）ではなく 相鉄直通（二俣川乗換・約20分）を選ぶようになる
+  '二俣川|相鉄本線|相鉄いずみ野線': 2,
+  '二俣川|相鉄いずみ野線|相鉄本線': 2,
 };
 const GRAPH = {}; // キー: "駅@路線" または "駅"（隣接駅探索用に駅のみのインデックスも保持）
 function addEdge(a, b, w) {
@@ -4387,7 +4395,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.1' },
+  { name: 'tokyo-transit-mcp', version: '2.38.2' },
   { capabilities: { tools: {} } }
 );
 
