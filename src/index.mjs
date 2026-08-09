@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.36.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.36.1 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -3261,7 +3261,13 @@ const NON_RAIL_OPERATORS = {
   maruken_tsubasa: { id: 'MarukenTsubasa', type: 'bus', label: '丸建つばさ交通（けんちゃんバス）', labelEn: 'Maruken Tsubasa Kotsu (Ina)', labelZh: '丸建翼交通（伊奈）', description: 'コミュニティバス - 伊奈町・上尾市', descEn: 'Community bus - Ina / Ageo', descZh: '社区巴士 - 伊奈町、上尾市', website: 'https://maru-ken.co.jp/route-bus/' },
   kawagoe_kanko_ogose: { id: 'KawagoeKankoOgose', type: 'bus', label: '川越観光自動車（越生）', labelEn: 'Kawagoe Kanko Bus (Ogose)', labelZh: '川越观光汽车（越生）', description: '路線バス - 越生・ときがわ町', descEn: 'City bus - Ogose / Tokigawa', descZh: '路线巴士 - 越生、都几川町', website: 'https://www.kawagoebus.jp/' },
   tokaikisen: { id: 'TokaiKisen', type: 'ferry', label: '東海汽船', labelEn: 'Tokai Kisen', labelZh: '东海汽船', description: 'フェリー - 伊豆諸島・小笠原航路', descEn: 'Ferry - Izu Islands / Ogasawara routes', descZh: '渡轮 - 伊豆诸岛、小笠原航线', website: 'https://www.tokaikisen.co.jp/' },
-  tokyocruise: { id: 'TokyoCruise', type: 'ferry', label: '東京クルーズ（水上バス）', labelEn: 'Tokyo Cruise (Water Bus)', labelZh: '东京游船（水上巴士）', description: '水上バス - 隅田川・お台場', descEn: 'Water bus - Sumida River / Odaiba', descZh: '水上巴士 - 隅田川、御台场', website: 'https://www.tokyo-park.or.jp/cruise/' }
+  tokyocruise: { id: 'TokyoCruise', type: 'ferry', label: '東京クルーズ（水上バス）', labelEn: 'Tokyo Cruise (Water Bus)', labelZh: '东京游船（水上巴士）', description: '水上バス - 隅田川・お台場', descEn: 'Water bus - Sumida River / Odaiba', descZh: '水上巴士 - 隅田川、御台场', website: 'https://www.tokyo-park.or.jp/cruise/' },
+  // 2026-08 v2.36.1: 鉄道カテゴリから除外した非鉄道系を正しい種別で登録（README の分類表と整合）
+  shonanmonorail: { id: 'ShonanMonorail', type: 'monorail', label: '湘南モノレール', labelEn: 'Shonan Monorail', labelZh: '湘南单轨电车', description: 'モノレール（懸垂式）- 大船～湘南江の島', descEn: 'Monorail (suspended) - Ofuna to Shonan-Enoshima', descZh: '单轨电车（悬挂式）- 大船至湘南江之岛', website: 'https://www.shonan-monorail.co.jp/' },
+  chibamonorail: { id: 'ChibaUrbanMonorail', type: 'monorail', label: '千葉都市モノレール', labelEn: 'Chiba Urban Monorail', labelZh: '千叶都市单轨电车', description: 'モノレール（跨座式・世界最長）- 1号線・2号線', descEn: 'Monorail (straddle-type, world longest) - Lines 1 & 2', descZh: '单轨电车（跨座式、世界最长）- 1号线、2号线', website: 'https://chiba-monorail.co.jp/' },
+  newshuttle: { id: 'SaitamaNewUrbanTransit', type: 'agt', label: '埼玉新都市交通（ニューシャトル）', labelEn: 'Saitama New Urban Transit (New Shuttle)', labelZh: '埼玉新都市交通（新交通系统）', description: '新交通システム（AGT）- 大宮～内宿', descEn: 'New transit system (AGT) - Omiya to Uchijuku', descZh: '新交通系统（AGT）- 大宫至内宿', website: 'https://www.new-shuttle.jp/' },
+  seibuyamaguchiline: { id: 'Seibu', type: 'agt', railwayId: 'Seibu.Yamaguchi', label: '西武山口線（おとぎ線）', labelEn: 'Seibu Yamaguchi Line (Otogi Line)', labelZh: '西武山口线（御伽线）', description: '案内軌条式鉄道（AGT）- 多摩湖～西武球場前', descEn: 'Guideway transit (AGT) - Tamako to Seibu-Kyujomae', descZh: '导引轨条式铁道（AGT）- 多摩湖至西武球场前', website: 'https://www.seiburailway.jp/railway/otogi/' },
+  tokyusetagayaline: { id: 'Tokyu', type: 'tram', railwayId: 'Tokyu.Setagaya', label: '東急世田谷線', labelEn: 'Tokyu Setagaya Line', labelZh: '东急世田谷线', description: '路面電車（軌道法）- 三軒茶屋～下高井戸', descEn: 'Tram (Tram Act) - Sangenjaya to Shimotakaido', descZh: '路面电车（轨道法）- 三轩茶屋至下高井户', website: 'https://www.tokyu.co.jp/railway/railway/top/setagaya/' }
 };
 
 const JMA_AREA_MAP = {
@@ -4293,7 +4299,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.36.0' },
+  { name: 'tokyo-transit-mcp', version: '2.36.1' },
   { capabilities: { tools: {} } }
 );
 

@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.36.0
+version: 2.36.1
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,15 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.36.1（2026-08-09）— 全交通機関の分類表を修正（鉄道から非鉄道を分離）
+
+- 🚃 鉄道カテゴリから非鉄道を除外し、正しい種別へ再分類（README 日英中3言語の表とコードを同期）。
+  - 🚋 路面電車: 都電荒川線・**東急世田谷線**（軌道法）
+  - 🚝 モノレール: 東京モノレール・多摩モノレール・**湘南モノレール**・**千葉都市モノレール**・ディズニーリゾートライン
+  - 🚡 AGT: ゆりかもめ・日暮里舎人ライナー・**埼玉新都市交通（ニューシャトル）**・**西武山口線（おとぎ線・案内軌条式）**
+- `NON_RAIL_OPERATORS` に上記5事業者を追加し、`list_transit_operators` の `type_filter` 分類を正しく反映（AGT 4・モノレール 4・路面電車 2）。
+- **検証**: `npm run build` 成功・`list_transit_operators` で全種別の分類を確認。
 
 ### v2.36.0（2026-08-09）— オープンイシュー4件を一括解決（#53・#64・#65・#66）
 
