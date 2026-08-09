@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.35.0
+version: 2.36.0
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,15 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.36.0（2026-08-09）— オープンイシュー4件を一括解決（#53・#64・#65・#66）
+
+- **#65（駅データ検証）**: 横浜市営地下鉄グリーンラインに**日吉本町**（G09）を追加（高田⇔日吉間に挿入・欠落解消）。東京メトロ有楽町線の**麴町**を正式表記に修正（旧「麹町」は `STATION_NAME_MAP` の旧名エイリアスとして引き続き解決可能。Kojimachi 英名も追加）。
+- **#66（駅名不備）**: 京急空港線を正式7駅構成に修正し、終点を**「羽田空港第1・第2ターミナル」**に変更。東京モノレールの第1・第2ターミナル駅とは `WALK_TRANSFERS`（徒歩3分）で接続し、京急⇔モノレール乗換を維持。`STATION_DISPLAY_NAMES`・`STATION_NAME_MAP`・天気エリアマップに正式駅名を追加。
+- **#64（曖昧駅改善）**: `AMBIGUOUS_STATION_LINES` を新設し、**「駅名＋路線名」スペース区切り指定**（例: `入谷 相模線`・`入谷 日比谷`）で曖昧駅を一意解決できるようにした（`resolveStation` 拡張・部分一致は正規化 `normalizeLineHint` で表記差吸収）。AMBIGUOUS レスポンスの `candidates` に路線名（ja/en/zh・括弧は言語別）を併記し、再入力可能な正式キー `candidates_raw` を追加。`getLineDisplayName` ヘルパー新設。
+- **#53（鶴見線）**: 路線グラフ自体は登録済みだったが、**ODPT に駅データが無い JR 系の表示を内蔵グラフから補完**。`get_operator_routes`（jreast）に鶴見線3路線（本線10駅・海芝浦支線3駅・大川支線2駅）を追加（jreast 24→36路線）。`get_station_info` は ODPT に無い駅（海芝浦・大川・鶴見等）を `internal_graph_fallback` で返すようにした。`LOCAL_LINE_PREFIX` で事業者→内蔵路線プレフィックス対応。
+- **get_station_info の文化施設表示**: search_route と同じ `getDestinationCulturalFacilities` をレスポンスに追加（六本木・上野等で自動選出表示）。
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26・`check-railway-integrity` OK（重複・NG 0）・ルート回帰11件全PASS（日吉本町/麴町/羽田/海芝浦/大川/曖昧駅解決含む）。
 
 ### v2.35.0（2026-08-08）— 近接異名駅ルーチンの検証に基づく連絡駅追加
 

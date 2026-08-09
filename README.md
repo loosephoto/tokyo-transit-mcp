@@ -17,7 +17,7 @@
 
 ### 🚉 全交通機関を統合
 
-**計119路線・1,415駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
+**計119路線・1,417駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
 
 | 種別 | 対応事業者（対応路線） |
 |:---|:---|
@@ -33,12 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **近接異名駅（連絡駅）ルーチンを検証し、実在の連絡駅2組を追加**
-  - `WALK_TRANSFERS`（異名だが実質1駅の連絡駅データ）に **茅場町⇔八丁堀・溜池山王⇔赤坂見附** を追加
-  - 茅場町（日比谷・東西線）⇔ 八丁堀（日比谷・JR京葉線）＝地下通路・改札外連絡
-  - 溜池山王（銀座・南北線）⇔ 赤坂見附（銀座・丸ノ内線）＝地下通路で直結
-  - 既存 `WALK_TRANSFERS`（48組）が実在の連絡駅を網羅していることを確認（他に明確な欠落なし）
-  - **検証** — test-walk-transfer-stations ALL PASS・probe-all-lang 26/26・npm run build 全PASS
+- **オープンイシュー4件を一括解決（#53・#64・#65・#66）**
+  - **#65** — 横浜市営地下鉄グリーンラインに**日吉本町駅**を追加（欠落解消）。東京メトロ有楽町線の**麴町**を正式表記に修正（旧「麹町」は旧名エイリアスとして引き続き検索可）
+  - **#66** — 京急空港線の終点を正式駅名**「羽田空港第1・第2ターミナル」**（7駅構成）に修正。東京モノレールの第1・第2ターミナル駅とは徒歩連絡で接続し、京急⇔モノレール乗換を維持
+  - **#64** — 曖昧駅（入谷・両国・小川町・霞ヶ関）の解決を改善。**「駅名＋路線名」のスペース区切り指定**（例: 入谷 相模線）で一意に解決可能に。候補表示に路線名（日英中）と再入力可能な正式キー `candidates_raw` を併記
+  - **#53** — ODPT に駅データが無い JR 系（鶴見線など）を内蔵グラフから補完。`get_operator_routes`（jreast）に鶴見線3路線を追加、`get_station_info` も内蔵フォールバックで検索可能に
+  - **検証** — probe-all-lang 26/26・check-railway-integrity OK・ルート回帰11件全PASS・npm run build 全PASS
 
 駅順・支線・接続駅を確認し、駅名・路線名の日本語/英語/中国語表示もあわせて整備しています。経路探索はAPIキー不要の内蔵グラフで動作します。
 
@@ -573,7 +573,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🚉 Integrated Transit Agencies
 
-**Covers 119 lines / 1,415 stations** (route search runs on the built-in graph without an API key):
+**Covers 119 lines / 1,417 stations** (route search runs on the built-in graph without an API key):
 
 | Type | Supported Operators (Lines) |
 |:---|:---|
@@ -589,11 +589,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Fixed search_flight returning INVALID_INPUT for terminal names (e.g. Haneda Airport Terminal 3)** (GitHub Issue #52)
-  - `normalizeAirportQuery` now also strips terminal suffixes (第Nターミナル / Terminal / 航站楼)
-  - Haneda Terminals 1/2/3 and Narita Terminals 1/2/3 now resolve to their IATA codes, so
-    `search_flight` accepts the same names as `search_route` and suggests access routes
-  - **Verification** — probe-all-lang 26/26 / npm run build all PASS
+- **Resolved 4 open GitHub issues in one release (#53 / #64 / #65 / #66)**
+  - **#65** — Added **Hiyoshi-Honcho station** to the Yokohama Municipal Subway Green Line (missing station). Corrected Yurakucho Line station name to the official **Kojimachi (麴町)**; the old spelling 麹町 remains searchable as an alias
+  - **#66** — Fixed the Keikyu Airport Line terminus to the official station name **Haneda Airport Terminal 1&2** (7 stations). Connected to Tokyo Monorail Terminal 1/2 stations via walk transfer, preserving the Keikyu⇔Monorail interchange
+  - **#64** — Improved ambiguous station resolution (Iriya / Ryogoku / Ogawamachi / Kasumigaseki). **"Station name + line name" space-separated input** (e.g. 入谷 相模線) now resolves unambiguously. Candidates now include line names (ja/en/zh) and re-enterable `candidates_raw` keys
+  - **#53** — JR lines missing from the ODPT dataset (e.g. Tsurumi Line) are now complemented from the built-in graph. `get_operator_routes` (jreast) now lists all 3 Tsurumi lines; `get_station_info` falls back to the internal graph
+  - **Verification** — probe-all-lang 26/26 / check-railway-integrity OK / 11 route regression cases all PASS / npm run build all PASS
 
 Station order, branches, interchange points, and Japanese/English/Chinese names are maintained together. Route search runs on the built-in graph without an API key.
 
@@ -1090,7 +1091,7 @@ MIT License
 
 ### 🚉 整合所有公共交通工具
 
-**共覆盖119条线路/1,415站**（路线搜索由无需 API 密钥的内置图执行）：
+**共覆盖119条线路/1,417站**（路线搜索由无需 API 密钥的内置图执行）：
 
 | 类别 | 支持的运营商（线路） |
 |:---|:---|
@@ -1106,12 +1107,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **验证近接异名站（联络站）例程，追加 2 组实存联络站**
-  - 在 `WALK_TRANSFERS`（异名但实为一站的联络站数据）中追加 **茅场町⇔八丁堀・溜池山王⇔赤坂见附**
-  - 茅场町（日比谷・东西线）⇔ 八丁堀（日比谷・JR京叶线）＝地下通道・闸外联络
-  - 溜池山王（银座・南北线）⇔ 赤坂见附（银座・丸之内线）＝地下通道直连
-  - 已确认既有 `WALK_TRANSFERS`（48 组）涵盖实存联络站（无其他明显遗漏）
-  - **验证** — test-walk-transfer-stations ALL PASS・probe-all-lang 26/26・npm run build 全部通过
+- **一次解决 4 个待处理 GitHub Issue（#53 / #64 / #65 / #66）**
+  - **#65** — 在横滨市营地铁绿线中追加**日吉本町站**（补全缺失车站）。将东京地铁有乐町线站名修正为正式表记**麴町**（旧表记「麹町」作为别名仍可搜索）
+  - **#66** — 将京急机场线终点修正为正式站名**「羽田机场第1・第2航站楼」**（7站结构）。与东京单轨电车第1・第2航站楼站通过步行换乘连接，维持京急⇔单轨电车换乘
+  - **#64** — 改善模糊车站（入谷・两国・小川町・霞关）的解决方式。**「站名＋线路名」以空格分隔指定**（例: 入谷 相模线）即可唯一解决。候补显示中附注线路名（日英中）与可重新输入的正式键 `candidates_raw`
+  - **#53** — ODPT 数据集中缺失的 JR 线路（如鹤见线）现由内置图补充。`get_operator_routes`（jreast）现列出鹤见线 3 条线路，`get_station_info` 也可通过内置图回退搜索
+  - **验证** — probe-all-lang 26/26・check-railway-integrity OK・11 条路线回归全部通过・npm run build 全部通过
 
 车站顺序、支线、换乘站以及日英中名称会一并维护。路线搜索由无需 API 密钥的内置图执行。
 
