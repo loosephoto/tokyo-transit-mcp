@@ -2,7 +2,7 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.37.1
+version: 2.38.0
 ---
 
 # Tokyo Transit MCP Server
@@ -132,6 +132,15 @@ odpt:Railway:TokyoMetro.{路線名}
 - AviationStack: https://aviationstack.com/
 
 ## 更新履歴
+
+### v2.38.0（2026-08-09）— 相鉄・JR直通線（SJ線）を追加
+
+- 2019年開業の相鉄・JR直通線（通称SJ線）を `RAILWAY_LINES` に追加: 新宿〜渋谷〜恵比寿〜大崎〜西大井〜武蔵小杉〜羽沢横浜国大〜西谷〜鶴ヶ峰〜二俣川〜希望ヶ丘〜三ツ境〜瀬谷〜大和〜相模大塚〜さがみ野〜かしわ台〜海老名（18駅・Wikipedia 駅一覧に基づく）。
+  - 大崎で JR埼京線（大崎〜大宮方面）と接続し、相鉄⇔新宿⇔大宮の直通を表現。
+  - 羽沢横浜国大→武蔵小杉: 従来 東急経由 乗換2回・23分 → **相鉄・JR直通線 乗換0回・3分**。
+  - 海老名→新宿: **乗換0回・43分**。二俣川→渋谷: 乗換0回・20分。
+- `LINE_DISPLAY_NAMES`（ja: 相鉄・JR直通線 / en: Sotetsu-JR Direct Line / zh: 相铁・JR直通线）と `RAILWAY_NAME_MAP` エイリアス（相鉄JR直通線・SJ線・相鉄直通）を追加。
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26・`check-railway-integrity` PASS・直通ルート7件全PASS（ja/en/zh 表示確認済み）。
 
 ### v2.37.1（2026-08-09）— JR常磐線を水戸まで延伸（快速・各停）
 
