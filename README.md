@@ -33,6 +33,10 @@
 
 ### 🛤️ 直近の更新内容
 
+- **軽量乗換（同一ホーム乗換）を導入 — 新宿→多摩センターが約20分短縮**
+  - 調布駅の 京王線⇔京王相模原線（同一ホーム乗換・相模原線は調布始発）を「乗換1回」としてカウントせず軽いコストのみに変更（`LIGHT_TRANSFER_EDGES`）
+  - 新宿→多摩センター: **92分・乗換1回（高幡不動経由モノレール遠回り）→ 73分・乗換2回（京王相模原線経由）** に改善
+  - 影響は調布のみに限定（他路線・他乗換駅への影響なし）。**検証** — probe-all-lang 26/26・check-railway-integrity PASS・主要経路13件回帰全PASS
 - **相鉄・JR直通線（SJ線）を追加 — 相鉄⇔新宿が乗換なし直通に**
   - 2019年開業の相鉄・JR直通線（新宿〜渋谷〜恵比寿〜大崎〜西大井〜武蔵小杉〜羽沢横浜国大〜西谷〜…〜海老名・18駅）を `RAILWAY_LINES` に追加
   - 羽沢横浜国大→武蔵小杉 が**乗換2回・23分 → 乗換0回・3分**に、海老名→新宿も**乗換0回・43分**に改善（従来は東急経由の大回り）
@@ -617,6 +621,10 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Introduced light transfers (same-platform) — Shinjuku→Tama-Center now ~20 min faster**
+  - Chofu (Keio Line ⇔ Keio Sagamihara Line; same-platform, Sagamihara starts at Chofu) is no longer counted as a full transfer — only a small cost is added (`LIGHT_TRANSFER_EDGES`)
+  - Shinjuku→Tama-Center: **92 min / 1 transfer (monorail detour via Takahatafudo) → 73 min / 2 transfers (via Keio Sagamihara Line)**
+  - Impact limited to Chofu only. **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / 13 major-route regression cases all PASS
 - **Added the Sotetsu-JR Direct Line (SJ Line) — direct no-transfer routes from Sotetsu to Shinjuku**
   - Added the 2019-opened Sotetsu-JR Direct Line (Shinjuku–Shibuya–Ebisu–Osaki–Nishi-Oi–Musashi-Kosugi–Hazawa-Yokohama-Kokudai–Nishiya–…–Ebina, 18 stations) to `RAILWAY_LINES`
   - Hazawa-Yokohama-Kokudai→Musashi-Kosugi improved from 2 transfers / 23 min to **0 transfers / 3 min**; Ebina→Shinjuku now **0 transfers / 43 min**
@@ -1163,6 +1171,10 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **引入轻量换乘（同站台换乘）— 新宿→多摩中心缩短约 20 分钟**
+  - 调布站的京王线⇔京王相模原线（同站台换乘・相模原线从调布始发）不再计为「换乘 1 次」，仅加轻微成本（`LIGHT_TRANSFER_EDGES`）
+  - 新宿→多摩中心: **92 分钟・换乘 1 次（经高幡不动的单轨绕行）→ 73 分钟・换乘 2 次（经京王相模原线）**
+  - 影响仅限于调布。**验证** — probe-all-lang 26/26・check-railway-integrity 通过・13 条主要路线回归全部通过
 - **新增相铁・JR直通线（SJ线）— 相铁⇔新宿无需换乘直通**
   - 将 2019 年开通的相铁・JR直通线（新宿〜涩谷〜惠比寿〜大崎〜西大井〜武藏小杉〜羽泽横滨国大〜西谷〜…〜海老名・18站）加入 `RAILWAY_LINES`
   - 羽泽横滨国大→武藏小杉 从换乘 2 次・23 分钟改善为**无需换乘・3 分钟**，海老名→新宿**无需换乘・43 分钟**

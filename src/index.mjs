@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.1 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -3750,6 +3750,18 @@ for (const [lineName, stations] of Object.entries(RAILWAY_LINES)) {
 // 同一駅での路線間を重み TRANSFER_PENALTY の「乗換エッジ」で結ぶ。
 // これによりダイクストラは「乗換を避ける・最短時間」の経路を選べる。
 const TRANSFER_PENALTY = 10; // 乗換1回 ≈ 駅数10個分（所要時間ペナルティ：実乗換5〜10分相当。v2.28.0で3→10に増強、乗換多数の遠回りを抑制しつつ「1乗換で大幅短縮」を正しく評価する）
+
+// 軽量乗換（同一ホーム・改札内直結等で乗換負担が極めて軽い駅の路線ペア）。
+// 通常の乗換エッジ（TRANSFER_PENALTY・乗換1回カウント）の代わりに、軽いコストのみ加算し
+// 「乗換回数」にはカウントしない。これにより同コスト帯で乗換回数が少ない遠回りに
+// 負ける問題を解消する（例: 新宿→多摩センター が 京王線→高幡不動→多摩モノレール の
+// 乗換1回・92分 ではなく 京王線→調布→京王相模原線→京王多摩センター→徒歩連絡 の
+// 約70分 を選べるようになる。v2.38.1 新規導入）
+const LIGHT_TRANSFER_EDGES = {
+  // 調布: 京王線⇔京王相模原線（相模原線は調布始発・同一ホーム乗換）
+  '調布|京王線|京王相模原線': 2,
+  '調布|京王相模原線|京王線': 2,
+};
 const GRAPH = {}; // キー: "駅@路線" または "駅"（隣接駅探索用に駅のみのインデックスも保持）
 function addEdge(a, b, w) {
   if (!GRAPH[a]) GRAPH[a] = {};
@@ -3783,7 +3795,13 @@ for (const [st, entries] of Object.entries(STATION_TO_LINES)) {
   const nodes = entries.map(e => `${st}@${e.line}`);
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      addEdge(nodes[i], nodes[j], TRANSFER_PENALTY);
+      // 軽量乗換（同一ホーム等）: 乗換1回としてカウントせず軽いコストのみ（v2.38.1）
+      // 例: 調布 京王線⇔京王相模原線（相模原線は調布始発・同一ホーム乗換）で
+      //     新宿→多摩センターが高幡不動経由のモノレール遠回りを選ばず、
+      //     京王相模原線経由（約70分）を選べるようにする。
+      const lightKey = `${st}|${entries[i].line}|${entries[j].line}`;
+      const lightCost = LIGHT_TRANSFER_EDGES[lightKey];
+      addEdge(nodes[i], nodes[j], lightCost !== undefined ? lightCost : TRANSFER_PENALTY);
     }
   }
 }
@@ -4369,7 +4387,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.0' },
+  { name: 'tokyo-transit-mcp', version: '2.38.1' },
   { capabilities: { tools: {} } }
 );
 
