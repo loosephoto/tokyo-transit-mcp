@@ -33,6 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
+- **東北本線の直通系統を追加（上野東京ライン・湘南新宿ライン北側直通）**
+  - 上野東京ライン（宇都宮線直通・高崎線直通）と湘南新宿ライン北側直通（宇都宮線直通・高崎線直通）の計**4路線を追加**
+  - 品川→宇都宮・品川→高崎・新宿→高崎・宇都宮→小田原・高崎→横浜などが**乗換なし**に（従来は乗換1回と誤案内）
+  - 東北本線は物理線路の総称として**総称化せず**、運転系統ごとに独立路線で表現。「東北本線」「東北線」は検索時に宇都宮線として解決するエイリアスを追加
+  - **検証** — check-railway-integrity PASS・probe-all-lang 26/26・直通10ケース全乗換0回・既存ルート回帰10件全PASS
 - **公的機関の案内を駅名・バス停名検索でも表示（GPS共有なしでも対応）**
   - `search_route` の到着駅名・`search_bus` のバス停名を基準に、周辺の役所・出張所・公民館・市民センターを Google マップで検索するリンクを表示
   - 優先順位: GPS共有（現在地）→ 駅名 → バス停名。駅名・バス停名は「現在地」と推測せず「検索地名」として案内（`based_on: place_name`）
@@ -603,6 +608,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Added Tohoku Main Line through-service systems (Ueno-Tokyo Line & Shonan-Shinjuku Line northward through trains)**
+  - Added 4 lines: Ueno-Tokyo Line (Utsunomiya / Takasaki) and Shonan-Shinjuku Line northward (Utsunomiya / Takasaki)
+  - Shinagawa→Utsunomiya / Shinagawa→Takasaki / Shinjuku→Takasaki / Utsunomiya→Odawara / Takasaki→Yokohama are now shown as **no-transfer direct trains** (previously mis-shown as 1 transfer)
+  - The Tohoku Main Line is NOT treated as one umbrella line; through-services are expressed per operating system. "東北本線" / "東北線" resolve to the Utsunomiya Line as search aliases
+  - **Verification** — check-railway-integrity PASS / probe-all-lang 26/26 / 10 direct cases all 0 transfers / 10 existing-route regression cases all PASS
 - **Public-facility guidance now also shown for station-name / bus-stop searches (no GPS share needed)**
   - `search_route` (destination station) and `search_bus` (bus stop) now link to Google Maps for nearby city hall / branch office / civic center / public hall searches
   - Priority: shared GPS (current location) → station name → bus stop name. Station/bus-stop names are treated as "search place", not assumed as current location (`based_on: place_name`)
@@ -1135,6 +1145,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **新增东北本线直通系统（上野东京线・湘南新宿线北向直通）**
+  - 新增 4 条线路：上野东京线（直通宇都宫线・直通高崎线）与湘南新宿线北向直通（直通宇都宫线・直通高崎线）
+  - 品川→宇都宫・品川→高崎・新宿→高崎・宇都宫→小田原・高崎→横滨等现为**无需换乘**（此前误报为换乘 1 次）
+  - 东北本线不作总称化，而是按运行系统以独立线路表现。「东北本线」「东北线」作为搜索别名解析为宇都宫线
+  - **验证** — check-railway-integrity 通过・probe-all-lang 26/26・10 条直通全部 0 换乘・10 条既有路线回归全部通过
 - **公家机关指引现也在车站名・公交站名搜索时显示（无需共享 GPS）**
   - `search_route`（到达站）与 `search_bus`（公交站）现可显示周边政府机关（市政府・办事处・公民馆・市民中心）的 Google 地图搜索链接
   - 优先级: 共享 GPS（当前位置）→ 车站名 → 公交站名。车站名・公交站名作为「搜索地点」而非「当前位置」提示（`based_on: place_name`）
