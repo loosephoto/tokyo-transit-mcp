@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.36.2 (Production Ready)
+ * Tokyo Transit MCP Server v2.36.3 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -3278,25 +3278,49 @@ const JMA_AREA_MAP = {
 const GOV_FACILITY_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=%E5%BD%B9%E6%89%80+%E5%87%BA%E5%BC%B5%E6%89%80+%E5%85%AC%E6%B0%91%E9%A4%A8+%E5%B8%82%E6%B0%91%E3%82%BB%E3%83%B3%E3%82%BF%E3%83%BC";
 const EMERGENCY_EVACUATION_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=%E6%8C%87%E5%AE%9A%E7%B7%8A%E6%80%A5%E9%81%BF%E9%9B%A3%E5%A0%B4%E6%89%80+%E9%81%BF%E9%9B%A3%E6%89%80";
 
-// 現在地が明示されたときだけ地点を伴う公的機関検索を返す。
-// 駅名や任意の自治体名を「現在地」と推測しない。
-function buildGovFacilitySearchSupport(userLocation, userLang = 'ja') {
-  if (!userLocation || !Number.isFinite(userLocation.lat) || !Number.isFinite(userLocation.lon)) return undefined;
-  const query = `役所 出張所 公民館 市民センター @${userLocation.lat},${userLocation.lon}`;
-  return {
-    note: userLang === 'en' ? "🏛️ [Public Facilities Near Your Shared Location]" :
-          userLang === 'zh' ? "🏛️ 【您共享位置周边的公共设施】" :
-          "🏛️ 【共有いただいた現在地周辺の公的機関】",
-    based_on: 'user_location',
-    location: { lat: userLocation.lat, lon: userLocation.lon },
-    link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
-    link_label: userLang === 'en' ? "📍 Show public facilities near your shared location on Google Maps" :
-                userLang === 'zh' ? "📍 在地图上查看您共享位置周边的公共设施" :
-                "📍 共有いただいた現在地周辺の公的機関を地図で確認",
-    disclaimer: userLang === 'en' ? "Location-based map search only; verify opening hours and services with each authority." :
-                userLang === 'zh' ? "仅为基于位置的地图搜索；请向各机构确认开放时间和服务内容。" :
-                "位置情報に基づく地図検索です。開庁時間・取扱業務は各機関にご確認ください。"
-  };
+// 現在地が明示されたときは地点（緯度経度）を、共有がない場合は駅名・バス停名を基準に
+// 公的機関（役所・出張所・公民館・市民センター）の地図検索リンクを返す。
+// 駅名や任意の自治体名を「現在地」と推測せず、あくまで「検索地名」として案内する。
+// 優先順位: 1) GPS共有（user_location） 2) 駅名 3) バス停名
+function buildGovFacilitySearchSupport(userLocation, userLang = 'ja', placeName = '') {
+  const disclaimer = userLang === 'en' ? "Location-based map search only; verify opening hours and services with each authority."
+    : userLang === 'zh' ? "仅为基于位置的地图搜索；请向各机构确认开放时间和服务内容。"
+    : "位置情報に基づく地図検索です。開庁時間・取扱業務は各機関にご確認ください。";
+  // 1) GPS共有がある場合は現在地を基準にする（従来動作）
+  if (userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lon)) {
+    const query = `役所 出張所 公民館 市民センター @${userLocation.lat},${userLocation.lon}`;
+    return {
+      note: userLang === 'en' ? "🏛️ [Public Facilities Near Your Shared Location]"
+            : userLang === 'zh' ? "🏛️ 【您共享位置周边的公共设施】"
+            : "🏛️ 【共有いただいた現在地周辺の公的機関】",
+      based_on: 'user_location',
+      location: { lat: userLocation.lat, lon: userLocation.lon },
+      link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+      link_label: userLang === 'en' ? "📍 Show public facilities near your shared location on Google Maps"
+                  : userLang === 'zh' ? "📍 在地图上查看您共享位置周边的公共设施"
+                  : "📍 共有いただいた現在地周辺の公的機関を地図で確認",
+      disclaimer
+    };
+  }
+  // 2) 駅名・バス停名が指定されている場合は、その場所を基準に案内する
+  //   （ご老人等が「駅名・バス停名」で公的機関を探すケースに対応。v2.36.3）
+  if (placeName && String(placeName).trim()) {
+    const name = String(placeName).trim();
+    const query = `役所 出張所 公民館 市民センター ${name} 周辺`;
+    return {
+      note: userLang === 'en' ? `🏛️ [Public Facilities Near ${name}]`
+            : userLang === 'zh' ? `🏛️ 【${name} 周边的公共设施】`
+            : `🏛️ 【${name} 周辺の公的機関】`,
+      based_on: 'place_name',
+      place_name: name,
+      link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+      link_label: userLang === 'en' ? `📍 Show public facilities near ${name} on Google Maps`
+                  : userLang === 'zh' ? `📍 在地图上查看 ${name} 周边的公共设施`
+                  : `📍 ${name} 周辺の公的機関を地図で確認`,
+      disclaimer
+    };
+  }
+  return undefined;
 }
 
 // ==========================================
@@ -4299,7 +4323,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.36.2' },
+  { name: 'tokyo-transit-mcp', version: '2.36.3' },
   { capabilities: { tools: {} } }
 );
 
@@ -6003,8 +6027,9 @@ async function searchRoute(args) {
     fare_note: userLang === 'en' ? "Use search_fare tool to find station-to-station fares." :
                userLang === 'zh' ? "使用 search_fare 工具查询车站间票价。" :
                "search_fareツールで駅間運賃を検索できます。",
-    // 現在地が共有された場合だけ、公的機関を現在地基準で検索する。
-    gov_facility_search_support: buildGovFacilitySearchSupport(userLocation, userLang),
+    // 公的機関の検索案内: GPS共有があれば現在地、なければ到着駅名・バス停名を基準に表示する。
+    // （ご老人等が「駅名」で公的機関を探すケースに対応。v2.36.3）
+    gov_facility_search_support: buildGovFacilitySearchSupport(userLocation, userLang, displayTo),
     // 🚌 駅⇔コミュニティバス接続（足の悪いユーザーの駅までの足・駅からの足）
     community_bus_access: communityBusAccessOut
   };
@@ -9363,6 +9388,9 @@ async function searchBus(args) {
       resolved_busstop: resolvedBusstop !== busstopName ? resolvedBusstop : undefined,
       total: matched.length,
       nearby_suggestions: nearbySuggestions,
+      // 公的機関の検索案内: バス停名を基準に表示する（ご老人等が「バス停名」で公的機関を探すケースに対応。v2.36.3）
+      // 多言語チェック（probe-all-lang）が英語・中国語応答に日本語名が残るのを弾くため、言語別表示名で渡す。
+      gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, getDisplayStationName(resolvedBusstop || busstopName, userLang)),
       operators: operatorSumm,
       bus_routes: matched.slice(0, 20).map(b => ({
         note: getDisplayStationName(b['odpt:note'] || b._displayNote, userLang), route: b['odpt:busroute'], number: b['odpt:busNumber'],

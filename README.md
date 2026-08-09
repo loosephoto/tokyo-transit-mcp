@@ -33,6 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
+- **公的機関の案内を駅名・バス停名検索でも表示（GPS共有なしでも対応）**
+  - `search_route` の到着駅名・`search_bus` のバス停名を基準に、周辺の役所・出張所・公民館・市民センターを Google マップで検索するリンクを表示
+  - 優先順位: GPS共有（現在地）→ 駅名 → バス停名。駅名・バス停名は「現在地」と推測せず「検索地名」として案内（`based_on: place_name`）
+  - ご老人等が「駅名・バス停名」で公的機関を探すケースに対応。日英中3言語対応
+  - **検証** — probe-all-lang 26/26・npm run build 全PASS
 - **科学館・博物館・美術館・公園・歴史館・動物園・ミュージアムを27施設追加（ランドマーク登録）**
   - 美術館: 国立西洋美術館・根津美術館・サントリー美術館・21_21 DESIGN SIGHT・東京国立近代美術館・東京都写真美術館・東京都庭園美術館
   - 博物館: 国立映画アーカイブ・江戸東京たてもの園・昭和館・国立公文書館・印刷博物館・貨幣博物館・郵政博物館・警察博物館・消防博物館・東京おもちゃ美術館・目黒寄生虫館
@@ -598,6 +603,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Public-facility guidance now also shown for station-name / bus-stop searches (no GPS share needed)**
+  - `search_route` (destination station) and `search_bus` (bus stop) now link to Google Maps for nearby city hall / branch office / civic center / public hall searches
+  - Priority: shared GPS (current location) → station name → bus stop name. Station/bus-stop names are treated as "search place", not assumed as current location (`based_on: place_name`)
+  - Supports elderly users searching public offices by station/bus-stop name. Localized in ja/en/zh
+  - **Verification** — probe-all-lang 26/26 / npm run build all PASS
 - **Added 27 museums / science centers / art museums / parks / zoos / theaters as landmarks**
   - Art museums: National Museum of Western Art, Nezu Museum, Suntory Museum of Art, 21_21 DESIGN SIGHT, MOMAT (National Museum of Modern Art, Tokyo), Tokyo Photographic Art Museum, Tokyo Metropolitan Teien Art Museum
   - Museums: National Film Archive of Japan, Edo-Tokyo Open Air Architectural Museum, Showa-kan, National Archives of Japan, Printing Museum, Currency Museum, Postal Museum Japan, Police Museum, Fire Museum, Tokyo Toy Museum, Meguro Parasitological Museum
@@ -1125,6 +1135,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **公家机关指引现也在车站名・公交站名搜索时显示（无需共享 GPS）**
+  - `search_route`（到达站）与 `search_bus`（公交站）现可显示周边政府机关（市政府・办事处・公民馆・市民中心）的 Google 地图搜索链接
+  - 优先级: 共享 GPS（当前位置）→ 车站名 → 公交站名。车站名・公交站名作为「搜索地点」而非「当前位置」提示（`based_on: place_name`）
+  - 支持老年用户以车站名・公交站名查找公家机关。日英中三语对应
+  - **验证** — probe-all-lang 26/26・npm run build 全部通过
 - **新增 27 个科学馆・博物馆・美术馆・公园・历史馆・动物园・剧场等地标**
   - 美术馆: 国立西洋美术馆・根津美术馆・三得利美术馆・21_21设计视野・东京国立近代美术馆・东京都写真美术馆・东京都庭园美术馆
   - 博物馆: 国立电影资料馆・江户东京建筑园・昭和馆・国立公文书馆・印刷博物馆・货币博物馆・邮政博物馆・警察博物馆・消防博物馆・东京玩具美术馆・目黑寄生虫馆
