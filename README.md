@@ -33,6 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
+- **科学館・博物館・美術館・公園・歴史館・動物園・ミュージアムを27施設追加（ランドマーク登録）**
+  - 美術館: 国立西洋美術館・根津美術館・サントリー美術館・21_21 DESIGN SIGHT・東京国立近代美術館・東京都写真美術館・東京都庭園美術館
+  - 博物館: 国立映画アーカイブ・江戸東京たてもの園・昭和館・国立公文書館・印刷博物館・貨幣博物館・郵政博物館・警察博物館・消防博物館・東京おもちゃ美術館・目黒寄生虫館
+  - 劇場: 国立劇場・新国立劇場・東京芸術劇場 ／ 水族園: 葛西臨海水族園 ／ 公園: お台場海浜公園・高尾山 ／ 神社: 靖国神社 ／ 寺院: 泉岳寺・深大寺
+  - 全て最寄り駅（徒歩目安付き）・ja/en/zh別名付きで `LANDMARK_DEFS` に登録し、`search_route` の出発地・到着地・`get_station_info` の周辺文化施設に自動反映
+  - **検証** — probe-landmark-all-lang **171件全解決**・probe-all-lang 26/26・ルート回帰10件全PASS・npm run build 全PASS
 - **🚉 全交通機関の分類表を修正（鉄道カテゴリから非鉄道を分離）**
   - 🚃 鉄道から除外: 都電荒川線・東急世田谷線（路面電車へ）、湘南モノレール・千葉都市モノレール（モノレールへ）、埼玉新都市交通（ニューシャトル）・西武山口線（AGTへ）
   - `list_transit_operators` の種別分類もコード側で同期（AGT 4件・モノレール 4件・路面電車 2件）
@@ -592,6 +598,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Added 27 museums / science centers / art museums / parks / zoos / theaters as landmarks**
+  - Art museums: National Museum of Western Art, Nezu Museum, Suntory Museum of Art, 21_21 DESIGN SIGHT, MOMAT (National Museum of Modern Art, Tokyo), Tokyo Photographic Art Museum, Tokyo Metropolitan Teien Art Museum
+  - Museums: National Film Archive of Japan, Edo-Tokyo Open Air Architectural Museum, Showa-kan, National Archives of Japan, Printing Museum, Currency Museum, Postal Museum Japan, Police Museum, Fire Museum, Tokyo Toy Museum, Meguro Parasitological Museum
+  - Theatres: National Theatre of Japan, New National Theatre Tokyo, Tokyo Metropolitan Theatre / Aquarium: Tokyo Sea Life Park / Parks: Odaiba Seaside Park, Mount Takao / Shrine: Yasukuni / Temples: Sengaku-ji, Jindaiji
+  - All registered in `LANDMARK_DEFS` with nearest station (walk minutes) and ja/en/zh aliases; auto-reflected in `search_route` origin/destination and `get_station_info` nearby facilities
+  - **Verification** — probe-landmark-all-lang 171 all resolved / probe-all-lang 26/26 / 10 route regression cases all PASS / npm run build all PASS
 - **Fixed the integrated transit classification table (separated non-rail modes from the Railways category)**
   - Removed from 🚃 Railways: Toden Arakawa / Tokyu Setagaya (→ Trams), Shonan Monorail / Chiba Urban Monorail (→ Monorails), Saitama New Urban Transit (New Shuttle) / Seibu Yamaguchi Line (→ AGT)
   - `list_transit_operators` type classification synced in code (AGT 4 / Monorails 4 / Trams 2)
@@ -1113,6 +1125,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **新增 27 个科学馆・博物馆・美术馆・公园・历史馆・动物园・剧场等地标**
+  - 美术馆: 国立西洋美术馆・根津美术馆・三得利美术馆・21_21设计视野・东京国立近代美术馆・东京都写真美术馆・东京都庭园美术馆
+  - 博物馆: 国立电影资料馆・江户东京建筑园・昭和馆・国立公文书馆・印刷博物馆・货币博物馆・邮政博物馆・警察博物馆・消防博物馆・东京玩具美术馆・目黑寄生虫馆
+  - 剧场: 国立剧场・新国立剧场・东京艺术剧场 ／ 水族园: 葛西临海水族园 ／ 公园: 台场海滨公园・高尾山 ／ 神社: 靖国神社 ／ 寺院: 泉岳寺・深大寺
+  - 均以最近车站（附步行参考）及日英中别名注册至 `LANDMARK_DEFS`，自动反映至 `search_route` 的出发地・目的地及 `get_station_info` 的周边文化设施
+  - **验证** — probe-landmark-all-lang 171 项全部解决・probe-all-lang 26/26・10 条路线回归全部通过・npm run build 全部通过
 - **修正综合交通分类表（从铁路类别中分离非铁路方式）**
   - 从 🚃 铁路中移除：都电荒川线・东急世田谷线（移至有轨电车）、湘南单轨电车・千叶都市单轨电车（移至单轨铁路）、埼玉新都市交通（新交通系统）・西武山口线（移至 AGT）
   - `list_transit_operators` 的类型分类已在代码中同步（AGT 4 项・单轨铁路 4 项・有轨电车 2 项）

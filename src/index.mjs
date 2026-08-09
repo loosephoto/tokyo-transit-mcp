@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.36.1 (Production Ready)
+ * Tokyo Transit MCP Server v2.36.2 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -4299,7 +4299,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.36.1' },
+  { name: 'tokyo-transit-mcp', version: '2.36.2' },
   { capabilities: { tools: {} } }
 );
 
@@ -5101,6 +5101,142 @@ const LANDMARK_DEFS = {
     station: '品川', walk_min: 2, category: '水族館',
     note: { ja: '品川駅高輪口から徒歩約2分（デジタルアート水族館）', en: 'About 2 min walk from Shinagawa Stn Takanawa Exit (digital art aquarium)', zh: '从品川站高轮口步行约2分钟（数字艺术水族馆）' },
     names: { ja: ['マクセル アクアパーク品川', 'アクアパーク品川'], en: ['Maxell Aqua Park Shinagawa', 'Aqua Park Shinagawa'], zh: ['麦克斯尔水上乐园品川', '水上乐园品川'] }
+  },
+  // ===== 2026-08-09 v2.36.2: 科学館・博物館・美術館・公園・歴史館・動物園・ミュージアム（訪日客向け・延伸駅対応） =====
+  national_museum_western_art: {
+    station: '上野', walk_min: 7, category: '美術館',
+    note: { ja: '上野駅公園口から徒歩約7分（世界遺産・松方コレクション）', en: 'About 7 min walk from Ueno Stn Park Exit (UNESCO World Heritage, Matsukata Collection)', zh: '从上野站公园口步行约7分钟（世界遗产・松方收藏）' },
+    names: { ja: ['国立西洋美術館', '西洋美術館'], en: ['The National Museum of Western Art', 'National Museum of Western Art', 'NMWA'], zh: ['国立西洋美术馆', '西洋美术馆'] }
+  },
+  nezu_museum: {
+    station: '表参道', walk_min: 10, category: '美術館',
+    note: { ja: '表参道駅A5出口から徒歩約10分（東洋古美術・根津美術館）', en: 'About 10 min walk from Omotesando Stn A5 Exit (oriental art museum)', zh: '从表参道站A5出口步行约10分钟（东方古美术）' },
+    names: { ja: ['根津美術館', '根津美術館 庭園'], en: ['Nezu Museum', 'Nezu Museum Garden'], zh: ['根津美术馆'] }
+  },
+  suntory_museum_of_art: {
+    station: '六本木', walk_min: 5, category: '美術館',
+    note: { ja: '六本木駅から徒歩約5分（東京ミッドタウン内）', en: 'About 5 min walk from Roppongi Stn (inside Tokyo Midtown)', zh: '从六本木站步行约5分钟（位于东京中城）' },
+    names: { ja: ['サントリー美術館'], en: ['Suntory Museum of Art'], zh: ['三得利美术馆'] },
+  },
+  design_sight_2121: {
+    station: '六本木', walk_min: 5, category: '美術館',
+    note: { ja: '六本木駅から徒歩約5分（東京ミッドタウン内・デザイン美術館）', en: 'About 5 min walk from Roppongi Stn (design museum in Tokyo Midtown)', zh: '从六本木站步行约5分钟（东京中城内的设计美术馆）' },
+    names: { ja: ['21_21 DESIGN SIGHT', '21-21デザインサイト'], en: ['21_21 DESIGN SIGHT'], zh: ['21_21设计视野'] }
+  },
+  momat: {
+    station: '竹橋', walk_min: 3, category: '美術館',
+    note: { ja: '竹橋駅1b出口から徒歩約3分（近代美術館・皇居外苑隣）', en: 'About 3 min walk from Takebashi Stn 1b Exit (modern art museum)', zh: '从竹桥站1b出口步行约3分钟（近代美术馆）' },
+    names: { ja: ['東京国立近代美術館', 'MOMAT', '近代美術館'], en: ['The National Museum of Modern Art, Tokyo', 'MOMAT'], zh: ['东京国立近代美术馆', 'MOMAT'] }
+  },
+  tokyo_photographic_art_museum: {
+    station: '恵比寿', walk_min: 5, category: '美術館',
+    note: { ja: '恵比寿駅東口から徒歩約5分（恵比寿ガーデンプレイス内）', en: 'About 5 min walk from Ebisu Stn East Exit (in Yebisu Garden Place)', zh: '从惠比寿站东口步行约5分钟（位于惠比寿花园广场）' },
+    names: { ja: ['東京都写真美術館', '写美', 'TOP美術館'], en: ['Tokyo Photographic Art Museum', 'TOP Museum'], zh: ['东京都写真美术馆', '写美'] }
+  },
+  tokyo_metropolitan_teien_museum: {
+    station: '目黒', walk_min: 7, category: '美術館',
+    note: { ja: '目黒駅東口から徒歩約7分（アール・デコ様式の旧朝香宮邸）', en: 'About 7 min walk from Meguro Stn East Exit (Art Deco former Asaka residence)', zh: '从目黑站东口步行约7分钟（装饰艺术风格的旧朝香宫邸）' },
+    names: { ja: ['東京都庭園美術館', '庭園美術館'], en: ['Tokyo Metropolitan Teien Art Museum', 'Teien Art Museum'], zh: ['东京都庭园美术馆'] }
+  },
+  national_film_archive: {
+    station: '京橋', walk_min: 3, category: '博物館',
+    note: { ja: '京橋駅から徒歩約3分（国立映画アーカイブ・旧フィルムセンター）', en: 'About 3 min walk from Kyobashi Stn (national film archive)', zh: '从京桥站步行约3分钟（国立电影资料馆）' },
+    names: { ja: ['国立映画アーカイブ', 'NFC', 'フィルムセンター'], en: ['National Film Archive of Japan', 'NFAJ'], zh: ['国立电影资料馆'] }
+  },
+  edo_tokyo_open_air_architectural_museum: {
+    station: '花小金井', walk_min: 20, category: '博物館',
+    note: { ja: '花小金井駅から徒歩約20分（小金井公園内・歴史的建造物の野外博物館）', en: 'About 20 min walk from Hanakoganei Stn (open-air museum of historic buildings in Koganei Park)', zh: '从花小金井站步行约20分钟（小金井公园内的历史建筑露天博物馆）' },
+    names: { ja: ['江戸東京たてもの園', 'たてもの園'], en: ['Edo-Tokyo Open Air Architectural Museum'], zh: ['江户东京建筑园'] }
+  },
+  showakan: {
+    station: '九段下', walk_min: 5, category: '博物館',
+    note: { ja: '九段下駅から徒歩約5分（戦中・戦後の暮らしを伝える歴史館）', en: 'About 5 min walk from Kudanshita Stn (museum of wartime & postwar daily life)', zh: '从九段下站步行约5分钟（战争时期及战后生活史馆）' },
+    names: { ja: ['昭和館'], en: ['Showa-kan', 'Showa Hall'], zh: ['昭和馆'] }
+  },
+  national_archives_japan: {
+    station: '竹橋', walk_min: 5, category: '博物館',
+    note: { ja: '竹橋駅から徒歩約5分（国の公文書を保存・公開）', en: 'About 5 min walk from Takebashi Stn (national archives of Japan)', zh: '从竹桥站步行约5分钟（日本国家档案馆）' },
+    names: { ja: ['国立公文書館'], en: ['National Archives of Japan'], zh: ['国立公文书馆'] }
+  },
+  printing_museum: {
+    station: '飯田橋', walk_min: 7, category: '博物館',
+    note: { ja: '飯田橋駅から徒歩約7分（印刷の歴史・凸版印刷）', en: 'About 7 min walk from Iidabashi Stn (history of printing)', zh: '从饭田桥站步行约7分钟（印刷历史）' },
+    names: { ja: ['印刷博物館', 'プリントミュージアム'], en: ['Printing Museum', 'Printing Museum Tokyo'], zh: ['印刷博物馆'] }
+  },
+  currency_museum: {
+    station: '日本橋', walk_min: 3, category: '博物館',
+    note: { ja: '日本橋駅から徒歩約3分（日本銀行金融研究所・お金の博物館）', en: 'About 3 min walk from Nihombashi Stn (money museum of the Bank of Japan)', zh: '从日本桥站步行约3分钟（日本银行金融研究所货币博物馆）' },
+    names: { ja: ['貨幣博物館', 'お金の博物館'], en: ['Currency Museum', 'Bank of Japan Currency Museum'], zh: ['货币博物馆'] }
+  },
+  postal_museum_japan: {
+    station: '押上', walk_min: 5, category: '博物館',
+    note: { ja: '押上駅から徒歩約5分（東京スカイツリータウン内・郵便の博物館）', en: 'About 5 min walk from Oshiage Stn (postal museum in Tokyo Skytree Town)', zh: '从押上站步行约5分钟（东京晴空塔城内的邮政博物馆）' },
+    names: { ja: ['郵政博物館', '切手博物館'], en: ['Postal Museum Japan'], zh: ['邮政博物馆'] }
+  },
+  police_museum: {
+    station: '京橋', walk_min: 3, category: '博物館',
+    note: { ja: '京橋駅から徒歩約3分（警察の歴史・無料）', en: 'About 3 min walk from Kyobashi Stn (police history museum, free)', zh: '从京桥站步行约3分钟（警察历史・免费）' },
+    names: { ja: ['警察博物館'], en: ['Police Museum'], zh: ['警察博物馆'] }
+  },
+  fire_museum: {
+    station: '四ツ谷', walk_min: 3, category: '博物館',
+    note: { ja: '四ツ谷駅から徒歩約3分（消防の歴史・無料）', en: 'About 3 min walk from Yotsuya Stn (firefighting history, free)', zh: '从四谷站步行约3分钟（消防历史・免费）' },
+    names: { ja: ['消防博物館'], en: ['Fire Museum'], zh: ['消防博物馆'] }
+  },
+  tokyo_toy_museum: {
+    station: '四ツ谷', walk_min: 5, category: '博物館',
+    note: { ja: '四ツ谷駅から徒歩約5分（おもちゃの美術館・体験型）', en: 'About 5 min walk from Yotsuya Stn (hands-on toy museum)', zh: '从四谷站步行约5分钟（互动式玩具美术馆）' },
+    names: { ja: ['東京おもちゃ美術館', 'おもちゃ美術館'], en: ['Tokyo Toy Museum'], zh: ['东京玩具美术馆'] }
+  },
+  meguro_parasitological_museum: {
+    station: '目黒', walk_min: 5, category: '博物館',
+    note: { ja: '目黒駅から徒歩約5分（寄生虫の博物館・無料・世界的に珍しい）', en: 'About 5 min walk from Meguro Stn (parasite museum, free, world-renowned)', zh: '从目黑站步行约5分钟（寄生虫博物馆・免费・世界闻名）' },
+    names: { ja: ['目黒寄生虫館', '寄生虫館'], en: ['Meguro Parasitological Museum'], zh: ['目黑寄生虫馆'] }
+  },
+  national_theatre_japan: {
+    station: '永田町', walk_min: 5, category: '劇場',
+    note: { ja: '永田町駅から徒歩約5分（歌舞伎・能楽などの国立劇場）', en: 'About 5 min walk from Nagatacho Stn (national theatre for kabuki, noh, etc.)', zh: '从永田町站步行约5分钟（歌舞伎・能乐等国立剧场）' },
+    names: { ja: ['国立劇場'], en: ['National Theatre of Japan'], zh: ['国立剧场'] }
+  },
+  new_national_theatre_tokyo: {
+    station: '初台', walk_min: 3, category: '劇場',
+    note: { ja: '初台駅から徒歩約3分（オペラ・バレエの新国立劇場）', en: 'About 3 min walk from Hatsudai Stn (opera & ballet theatre)', zh: '从初台站步行约3分钟（歌剧・芭蕾剧场）' },
+    names: { ja: ['新国立劇場'], en: ['New National Theatre Tokyo'], zh: ['新国立剧场'] }
+  },
+  tokyo_metropolitan_theatre: {
+    station: '池袋', walk_min: 2, category: '劇場',
+    note: { ja: '池袋駅西口から徒歩約2分（東京芸術劇場）', en: 'About 2 min walk from Ikebukuro Stn West Exit', zh: '从池袋站西口步行约2分钟' },
+    names: { ja: ['東京芸術劇場', '芸術劇場'], en: ['Tokyo Metropolitan Theatre'], zh: ['东京艺术剧场'] }
+  },
+  kasai_seaside_aquarium: {
+    station: '葛西臨海公園', walk_min: 5, category: '水族館',
+    note: { ja: '葛西臨海公園駅から徒歩約5分（マグロの回遊水槽・無料）', en: 'About 5 min walk from Kasai-Rinkai-Koen Stn (tuna school tank, free)', zh: '从葛西临海公园站步行约5分钟（金枪鱼洄游水槽・免费）' },
+    names: { ja: ['葛西臨海水族園', '葛西臨海水族館'], en: ['Tokyo Sea Life Park', 'Kasai Rinkai Aquarium'], zh: ['葛西临海水族园'] }
+  },
+  odaiba_seaside_park: {
+    station: 'お台場海浜公園', walk_min: 1, category: '公園',
+    note: { ja: 'ゆりかもめ「お台場海浜公園」駅直結（砂浜とレインボーブリッジ）', en: 'Directly connected to Odaiba-Kaihinkoen Stn (Yurikamome); beach & Rainbow Bridge views', zh: '与百合海鸥号「台场海滨公园」站直连（沙滩与彩虹大桥）' },
+    names: { ja: ['お台場海浜公園', '台場海浜公園', 'お台場ビーチ'], en: ['Odaiba Seaside Park', 'Odaiba Beach'], zh: ['台场海滨公园', '台场沙滩'] }
+  },
+  yasukuni_shrine: {
+    station: '九段下', walk_min: 5, category: '神社',
+    note: { ja: '九段下駅から徒歩約5分', en: 'About 5 min walk from Kudanshita Stn', zh: '从九段下站步行约5分钟' },
+    names: { ja: ['靖国神社'], en: ['Yasukuni Shrine'], zh: ['靖国神社'] }
+  },
+  sengakuji: {
+    station: '泉岳寺', walk_min: 3, category: '寺院',
+    note: { ja: '泉岳寺駅から徒歩約3分（赤穂浪士の墓所）', en: 'About 3 min walk from Sengakuji Stn (burial site of the 47 Ronin)', zh: '从泉岳寺站步行约3分钟（赤穗浪士之墓）' },
+    names: { ja: ['泉岳寺', '赤穂義士記念館'], en: ['Sengaku-ji', 'Sengakuji Temple'], zh: ['泉岳寺'] }
+  },
+  jindaiji: {
+    station: '調布', walk_min: 25, category: '寺院',
+    note: { ja: '調布駅からバス約15分（深大寺・蕎麦と鬼太郎茶屋）', en: 'About 15 min by bus from Chofu Stn (Jindaiji Temple, soba & Gegegeno Kitaro teahouse)', zh: '从调布站乘巴士约15分钟（深大寺・荞麦面与鬼太郎茶馆）' },
+    names: { ja: ['深大寺', '深大寺蕎麦'], en: ['Jindaiji Temple', 'Jindai-ji'], zh: ['深大寺'] }
+  },
+  takao_san: {
+    station: '高尾山口', walk_min: 5, category: '公園',
+    note: { ja: '高尾山口駅から徒歩約5分（ケーブルカー乗り場・ミシュラン三つ星の山）', en: 'About 5 min walk from Takaosanguchi Stn (cable car station; Michelin 3-star mountain)', zh: '从高尾山口站步行约5分钟（缆车站・米其林三星之山）' },
+    names: { ja: ['高尾山', '高尾山ケーブルカー'], en: ['Mount Takao', 'Mt. Takao'], zh: ['高尾山'] }
   }
 };
 
