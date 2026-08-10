@@ -33,6 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
+- **官庁街・銀座エリアの近接異名駅10組を追加（WALK_TRANSFERS・Issue #68）**
+  - 官庁街5組: 国会議事堂前⇔永田町（5分）／虎ノ門ヒルズ⇔虎ノ門（3分）／霞ケ関⇔内幸町（5分）／虎ノ門⇔霞ケ関（7分）／内幸町⇔虎ノ門ヒルズ（6分）
+  - 銀座地下通路5組: 有楽町⇔銀座（5分）／銀座一丁目⇔銀座（5分）／京橋⇔銀座一丁目（5分）／宝町⇔銀座一丁目（5分）／東京⇔二重橋前（10分）
+  - 国会議事堂前→永田町: **丸ノ内線→赤坂見附→徒歩連絡の遠回り → 徒歩連絡5分**に短縮。有楽町→銀座: **10分・乗換1回 → 徒歩5分**に改善
+  - **検証** — probe-all-lang 26/26・check-railway-integrity PASS・#68対象10ペア全PASS
 - **日本橋エリアの地下通路連絡2組を追加（WALK_TRANSFERS）**
   - 茅場町⇔日本橋（地下通路・改札外連絡・東京メトロ公式案内）／新日本橋⇔三越前（日本橋地下歩道・コレド室町経由）
   - 新日本橋→三越前: **19分・乗換2回（東京⇔大手町迂回）→ 4分・乗換0回（地下歩道直結）** に改善
@@ -585,6 +590,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Added 10 nearby-name station links in the government district & Ginza area (WALK_TRANSFERS・Issue #68)**
+  - Government district (5): Kokkai-gijidomae⇔Nagatacho (5 min) / Toranomon Hills⇔Toranomon (3 min) / Kasumigaseki⇔Uchisaiwaicho (5 min) / Toranomon⇔Kasumigaseki (7 min) / Uchisaiwaicho⇔Toranomon Hills (6 min)
+  - Ginza underground passages (5): Yurakucho⇔Ginza (5 min) / Ginza-Itchome⇔Ginza (5 min) / Kyobashi⇔Ginza-Itchome (5 min) / Takaracho⇔Ginza-Itchome (5 min) / Tokyo⇔Nijubashimae (10 min)
+  - Kokkai-gijidomae→Nagatacho: **detour via Marunouchi Line→Akasaka-Mitsuke→walk → direct 5-min walk**. Yurakucho→Ginza: **10 min / 1 transfer → 5-min walk**
+  - **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / all 10 #68 pairs PASS
 - **Added 2 underground-passage links in the Nihonbashi area (WALK_TRANSFERS)**
   - Kayabacho⇔Nihonbashi (underground passage, outside-gate connection, per Tokyo Metro) / Shin-Nihonbashi⇔Mitsukoshimae (Nihonbashi underground walkway via COREDO Muromachi)
   - Shin-Nihonbashi→Mitsukoshimae: **19 min / 2 transfers (detour via Tokyo⇔Otemachi) → 4 min / 0 transfers (direct underground walkway)**
@@ -1099,6 +1109,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **新增官厅街・银座地区近邻异名站 10 组（WALK_TRANSFERS・Issue #68）**
+  - 官厅街 5 组: 国会议事堂前⇔永田町（5 分钟）／虎之门新城⇔虎之门（3 分钟）／霞关⇔内幸町（5 分钟）／虎之门⇔霞关（7 分钟）／内幸町⇔虎之门新城（6 分钟）
+  - 银座地下通道 5 组: 有乐町⇔银座（5 分钟）／银座一丁目⇔银座（5 分钟）／京桥⇔银座一丁目（5 分钟）／宝町⇔银座一丁目（5 分钟）／东京⇔二重桥前（10 分钟）
+  - 国会议事堂前→永田町: **经丸之内线→赤坂见附绕行 → 步行 5 分钟**。有乐町→银座: **10 分钟・换乘 1 次 → 步行 5 分钟**
+  - **验证** — probe-all-lang 26/26・check-railway-integrity 通过・#68 对象 10 组全部通过
 - **新增日本桥地区地下通道连接 2 组（WALK_TRANSFERS）**
   - 茅场町⇔日本桥（地下通道・检票口外连接・东京地铁官方指引）／新日本桥⇔三越前（日本桥地下步道・经 COREDO 室町）
   - 新日本桥→三越前: **19 分钟・换乘 2 次（经东京⇔大手町绕行）→ 4 分钟・无需换乘（地下步道直连）**
