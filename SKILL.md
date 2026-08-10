@@ -132,12 +132,19 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.38.5（2026-08-10）— 関東圏バス5社の実GTFSデータを追加（ODPT静的GTFS・基本ライセンス）
+### v2.38.6（2026-08-10）— 運休路線の経路除外・structuredContent公開・inputSchema検証強化（issues #70 #71 #72）
 
-- `BUS_GTFS_SOURCES` に `{ url, date }` 方式の実データソース5社を追加（フェリーと同じ展開パターン）:
-  - **川崎市バス**（527停名・系統）/ **川崎鶴見臨港バス**（433・BRT快速/川01〜川23等の実系統番号付き）/ **関東バス**（869・ムーバス含む）/ **西東京バス**（1081）/ **京成バス千葉ウエスト**（128）
-- search_bus の busstop_name 検索で実在の停名・系統がヒット（「川崎駅前」→BRT快速/川01/川02、「登戸」→川崎市バス6件、「吉祥寺駅南口」→関東バス6号路線 三鷹・吉祥寺循環）
-- 実装: fetchAllBuses の GTFS 取得パス（hardCoded でないソースは adm-zip で展開）。stops/trips/stop_times は各1回だけパースし、stop_times は代表1trip の起終点（先頭/末尾の stop_sequence）のみ抽出（95万行超を全展開しない）
-- バグ修正: `normalizeBusStop` がサフィックス（駅/Station/站）除去後も元入力を返していた問題 → 除去後文字列（stripped）を返すよう修正。`resolveBusStopLang` も normalizeBusStop 結果を STATION_NAME_MAP 解決に使用（「Kawasaki Station」「川崎站」等の en/zh 入力が正しく駅名解決される）
-- 🔴 注意: GTFS ソースの date は固定日付（リソース有効期間に合わせる）。有効期間切れ時は CKAN の最新リソース URL に追随して更新する
-- **検証**: `npm run build` 成功・`probe-all-lang` 26/26・`check-railway-integrity` PASS・`test-transfer-pairs` 全PASS・en/zh サフィックス検索全PASS（test-walk の大宮系3件FAIL は既知・変更前から存在）
+- **#70 運休路線の経路除外**: ODPT TrainInformation から運休路線を検出し（resolveSuspendedLineNames で路線ID→グラフ路線名に解決）、`findShortestPath`/`computeRoutes` に `blockedLines` オプションを追加してダイクストラ探索から除外。出発ノード投入時・隣接ノード展開時にブロック路線をスキップ
+  - 全路線が運休で NO_ROUTE になる場合のみ通常ルートをフォールバック表示し、`route_operational: false` + `suspended_lines`（表示名・3言語対応）で運休中であることを明示
+  - `-test` 障害シミュレーション時も障害種別から該当路線を blockedLines に追加
+- **#71 structuredContent 公開**: `jsonResponse()` が従来の content ブロックと並行して `structuredContent` にも同一データを公開（MCPクライアントが content 順序に依存せず構造化データを取得可能・後方互換維持）
+- **#72 inputSchema 検証強化**: `applyInputSchemaConstraints()` を追加し全ツールの宣言的スキーマに自動適用（additionalProperties: false・string に minLength:1/maxLength:100・flight_date に YYYY-MM-DD pattern・lat/lon に範囲制約）
+  - 実行時検証も追加: searchRoute の user_location 緯度経度範囲チェック（範囲外は無視）、searchFlight の未対応空港/不正日付を INVALID_INPUT で明確にエラー化
+- **堅牢化**:
+  - GTFS 取得の `fetchGtfsZipBuffer()` を新設 — 固定日付リソースが404の場合に当日日付で1回だけ再試行（フェリー・バス取得も移行）
+  - RFC 4180 準拠 CSV パーサー `parseCsvRecords()` を新設（引用符・改行・CRLF 対応）
+  - キャッシュ汚染防止: 全滅時（全事業者/全路線の取得失敗）は空データをキャッシュしない（時刻表・バスグラフ・バス停geo・駅geo）。時刻表は全路線失敗時に例外化して空をキャッシュしない
+  - searchBusTransfer: AbortController でタイムアウト時に実際の HTTP リクエストも中断（Promise.race のみでは通信が残り遅延完了レスポンスがキャッシュを書き換える問題を修正）
+  - フライト遅延計算 `calculateFlightDelayMinutes()` で日跨ぎ補正（例: 22:55→00:01 を +66分 に）
+  - fetchFlightsOdp / fetchFlights が失敗を null で握りつぶさず throw し、API障害と正常な空結果を区別（障害時は handleApiError）
+- **検証**: `npm run build` 成功・`probe-all-lang` 全PASS・`check-railway-integrity` PASS・`test-transfer-pairs` 全PASS

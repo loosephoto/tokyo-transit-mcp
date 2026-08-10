@@ -33,12 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **関東圏バス5社の実GTFSデータを追加（v2.38.5・ODPT静的GTFS・基本ライセンス）**
-  - `BUS_GTFS_SOURCES` に { url, date } 方式の実データソースを追加: **川崎市バス**（527停名・系統）・**川崎鶴見臨港バス**（433・BRT快速/川01〜川23等の実系統番号付き）・**関東バス**（869・ムーバス含む）・**西東京バス**（1081）・**京成バス千葉ウエスト**（128）
-  - search_bus の busstop_name 検索で実在の停名・系統がヒット（例: 「川崎駅前」→ BRT快速/川01/川02、登戸→川崎市バス6件、「吉祥寺駅南口」→ 関東バス6号路線 三鷹・吉祥寺循環）
-  - フェリーと同じ { url, date } 展開パターン（adm-zip・stops/routes/trips 1回ずつパース）。stop_times は95万行超と巨大なため各系統の代表1trip の起終点のみ抽出
-  - バグ修正: `normalizeBusStop` が「川崎站/川崎Station」等のサフィックス除去後も元の入力を返していた問題を修正（en/zh 入力でも正しく駅名解決）
-  - **検証** — probe-all-lang 26/26・check-railway-integrity PASS・test-transfer-pairs 全PASS・en/zh サフィックス検索全PASS
+- **運休路線の経路除外・structuredContent公開・inputSchema検証強化（v2.38.6・issues #70 #71 #72）**
+  - #70 運休路線の経路除外: ODPT TrainInformation から運休路線を検出し、ダイクストラ探索から除外。全路線が運休で経路が存在しない場合のみ通常ルートをフォールバック表示し、`route_operational: false` + `suspended_lines` で運休中であることを明示
+  - #71 structuredContent 公開: 全ツールの応答で従来の content ブロックと並行して構造化データを structuredContent にも公開（後方互換維持）
+  - #72 inputSchema 検証強化: 全ツールに宣言的制約を適用（additionalProperties: false・minLength/maxLength・flight_date の YYYY-MM-DD パターン・lat/lon 範囲）。実行時検証も追加（user_location 範囲チェック・未対応空港/不正日付を INVALID_INPUT で明示）
+  - 堅牢化: GTFS固定日付404時に当日日付で再試行（fetchGtfsZipBuffer）・RFC 4180準拠CSVパーサー・全滅時（全事業者/全路線の取得失敗）に空データをキャッシュしない・searchBusTransfer のタイムアウト時に AbortController で実HTTPリクエストを中断・フライト遅延計算の日跨ぎ補正
+  - **検証** — probe-all-lang・check-railway-integrity PASS・test-transfer-pairs 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -587,12 +587,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Added real GTFS data for 5 Kanto-area bus operators (v2.38.5, ODPT static GTFS, Basic License)**
-  - Added `{ url, date }` real-data sources to `BUS_GTFS_SOURCES`: **Kawasaki City Bus** (527 stops/routes), **Kawasaki Tsurumi Rinko Bus** (433, with real route numbers like BRT Rapid / Kawasaki 01-23), **Kanto Bus** (869, incl. M-Bus), **Nishi Tokyo Bus** (1081), **Keisei Bus Chiba West** (128)
-  - `search_bus` busstop_name search now hits real stops and routes (e.g., "Kawasaki Station Mae" → BRT Rapid/Kawasaki 01/02, "Noborito" → 6 Kawasaki City Bus stops, "Kichijoji Station South Exit" → Kanto Bus Route 6 Mitaka/Kichijoji loop)
-  - Same `{ url, date }` expansion pattern as ferry (adm-zip, parses stops/routes/trips once each). stop_times exceeds 950K rows, so only each route's representative trip endpoints are extracted
-  - Bug fix: `normalizeBusStop` returned the original input even after stripping station suffixes (川崎站/Kawasaki Station etc.); en/zh input now resolves station names correctly
-  - **Verification** — probe-all-lang 26/26, check-railway-integrity PASS, test-transfer-pairs all PASS, en/zh suffix search all PASS
+- **Exclude suspended railway lines from route search, expose structuredContent, strengthen inputSchema validation (v2.38.6, issues #70 #71 #72)**
+  - #70 Suspended-line exclusion: detects suspended railway lines from ODPT TrainInformation and excludes them from the Dijkstra search. Only when every line is suspended and no route exists, falls back to the normal route and explicitly reports `route_operational: false` + `suspended_lines`
+  - #71 structuredContent exposure: every tool response now also publishes structured data in `structuredContent` alongside the legacy `content` blocks (backward compatible)
+  - #72 inputSchema validation: declarative constraints applied to all tools (additionalProperties: false, minLength/maxLength, YYYY-MM-DD pattern for flight_date, lat/lon bounds). Runtime validation added too (user_location range check, unsupported airport / invalid date → INVALID_INPUT)
+  - Robustness: GTFS fixed-date 404 → retry with today's date (fetchGtfsZipBuffer), RFC 4180-compliant CSV parser, no caching of empty data when all operators/lines fail, AbortController aborts real HTTP requests on searchBusTransfer timeout, cross-midnight flight delay correction
+  - **Verification** — probe-all-lang, check-railway-integrity PASS, test-transfer-pairs all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1103,12 +1103,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **新增关东地区 5 家公交公司的真实 GTFS 数据（v2.38.5・ODPT 静态 GTFS・基础许可证）**
-  - `BUS_GTFS_SOURCES` 新增 `{ url, date }` 方式的数据源: **川崎市公交**（527 站名・线路）・**川崎鹤见临港公交**（433・含 BRT 快速/川01〜川23 等真实线路编号）・**关东公交**（869・含 M-Bus）・**西东京公交**（1081）・**京成巴士千叶西**（128）
-  - `search_bus` 的 busstop_name 搜索可命中真实站名与线路（例: 「川崎站前」→ BRT 快速/川01/川02、登户→川崎市公交 6 条、「吉祥寺站南口」→ 关东公交 6 号线路 三鹰・吉祥寺循环）
-  - 与轮渡相同的 `{ url, date }` 展开模式（adm-zip・stops/routes/trips 各解析 1 次）。stop_times 超过 95 万行过于庞大，仅提取各线路代表 1 个班次的起终点
-  - 缺陷修复: `normalizeBusStop` 在去除「川崎站/川崎Station」等后缀后仍返回原始输入，现已修复（en/zh 输入也能正确解析站名）
-  - **验证** — probe-all-lang 26/26・check-railway-integrity 通过・test-transfer-pairs 全部通过・en/zh 后缀搜索全部通过
+- **停运线路排除・structuredContent 公开・inputSchema 校验强化（v2.38.6・issues #70 #71 #72）**
+  - #70 停运线路排除: 从 ODPT TrainInformation 检测停运线路并从 Dijkstra 搜索中排除。仅当所有线路停运导致无路线时，才回退显示常规路线，并通过 `route_operational: false` + `suspended_lines` 明确标示停运中
+  - #71 structuredContent 公开: 所有工具响应在保留传统 content 块的同时，也将结构化数据发布到 structuredContent（向后兼容）
+  - #72 inputSchema 校验强化: 为所有工具应用声明式约束（additionalProperties: false・minLength/maxLength・flight_date 的 YYYY-MM-DD 格式・lat/lon 范围）。同时新增运行时校验（user_location 范围检查・不支持机场/非法日期 → INVALID_INPUT）
+  - 健壮性: GTFS 固定日期 404 时以当日日期重试（fetchGtfsZipBuffer）・RFC 4180 兼容 CSV 解析器・全部运营商/线路获取失败时不缓存空数据・searchBusTransfer 超时时用 AbortController 中断实际 HTTP 请求・航班延误计算的跨日修正
+  - **验证** — probe-all-lang・check-railway-integrity 通过・test-transfer-pairs 全部通过
 
 ### 🤖 AI 智能建议
 

@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.5 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.6 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -4516,7 +4516,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.5' },
+  { name: 'tokyo-transit-mcp', version: '2.38.6' },
   { capabilities: { tools: {} } }
 );
 
