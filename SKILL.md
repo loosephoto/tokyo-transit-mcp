@@ -132,11 +132,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.38.4（2026-08-10）— search_flight を ODPT 航空データ（JAL/ANA リアルタイム発着）に切替
+### v2.38.5（2026-08-10）— 関東圏バス5社の実GTFSデータを追加（ODPT静的GTFS・基本ライセンス）
 
-- `odpt:FlightInformationDeparture/Arrival`（JAL/ANA リアルタイム発着・基本ライセンス・回数制限明記なし）をプライマリに使用。AviationStack はフォールバック（FLIGHT_API_KEY 設定時のみ・JAL/ANA 以外の便や海外空港を補完）
-- 便名検索（odpt:flightNumber=JL002 → 1件）・空港検索（odpt:departureAirport=HND → 544件 / NRT 58件）を実地確認
-- 遅延は実績−予定で算出（例: JL003 28分早着 / NH961 20分早着）。ターミナル（Terminal3→3）・ゲート・予定/実績/予想時刻を正規化
-- 運航ステータス32種を `ODPT_FLIGHT_STATUS_MAP` で ja/en/zh 対応（定刻・搭乗中・最終搭乗案内・天候調査中 等）
-- 旧 AviationStack の 429 レート制限・無料プラン制限（flight_date 非対応）から解放。`flight_api_configured` は ODPT_API_KEY 考慮に変更
-- **検証**: `npm run build` 成功・`probe-all-lang` 26/26・便名/空港/遅延検出/foreign便フォールバック全PASS・羽田到着→東京駅アクセス経路（モノレール→浜松町→山手線 35分）維持
+- `BUS_GTFS_SOURCES` に `{ url, date }` 方式の実データソース5社を追加（フェリーと同じ展開パターン）:
+  - **川崎市バス**（527停名・系統）/ **川崎鶴見臨港バス**（433・BRT快速/川01〜川23等の実系統番号付き）/ **関東バス**（869・ムーバス含む）/ **西東京バス**（1081）/ **京成バス千葉ウエスト**（128）
+- search_bus の busstop_name 検索で実在の停名・系統がヒット（「川崎駅前」→BRT快速/川01/川02、「登戸」→川崎市バス6件、「吉祥寺駅南口」→関東バス6号路線 三鷹・吉祥寺循環）
+- 実装: fetchAllBuses の GTFS 取得パス（hardCoded でないソースは adm-zip で展開）。stops/trips/stop_times は各1回だけパースし、stop_times は代表1trip の起終点（先頭/末尾の stop_sequence）のみ抽出（95万行超を全展開しない）
+- バグ修正: `normalizeBusStop` がサフィックス（駅/Station/站）除去後も元入力を返していた問題 → 除去後文字列（stripped）を返すよう修正。`resolveBusStopLang` も normalizeBusStop 結果を STATION_NAME_MAP 解決に使用（「Kawasaki Station」「川崎站」等の en/zh 入力が正しく駅名解決される）
+- 🔴 注意: GTFS ソースの date は固定日付（リソース有効期間に合わせる）。有効期間切れ時は CKAN の最新リソース URL に追随して更新する
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26・`check-railway-integrity` PASS・`test-transfer-pairs` 全PASS・en/zh サフィックス検索全PASS（test-walk の大宮系3件FAIL は既知・変更前から存在）

@@ -33,12 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **search_flight を ODPT 航空データ（JAL/ANA リアルタイム発着・基本ライセンス）に切替（v2.38.4）**
-  - `odpt:FlightInformationDeparture/Arrival` をプライマリに使用（フライト便名・予定/実績/予想時刻・遅延・ターミナル・ゲート・運航ステータス32種）。AviationStack はフォールバック（FLIGHT_API_KEY 設定時のみ・JAL/ANA 以外の便や海外空港を補完）
-  - 遅延は実績−予定で算出（例: JL003 28分早着 / NH961 20分早着）、ステータスは 32 種を ja/en/zh 対応（定刻・搭乗中・最終搭乗案内・天候調査中 等）
-  - 羽田到着→東京駅のアクセス経路連携は従来どおり（モノレール→浜松町→山手線 35分・乗換2回）
-  - 旧 AviationStack の 429 レート制限・無料プラン制限（flight_date 非対応）から解放
-  - **検証** — probe-all-lang 26/26・便名検索（JL002/NH961）・空港検索（HND 544件/NRT 58件）・遅延検出・foreign便フォールバック全PASS
+- **関東圏バス5社の実GTFSデータを追加（v2.38.5・ODPT静的GTFS・基本ライセンス）**
+  - `BUS_GTFS_SOURCES` に { url, date } 方式の実データソースを追加: **川崎市バス**（527停名・系統）・**川崎鶴見臨港バス**（433・BRT快速/川01〜川23等の実系統番号付き）・**関東バス**（869・ムーバス含む）・**西東京バス**（1081）・**京成バス千葉ウエスト**（128）
+  - search_bus の busstop_name 検索で実在の停名・系統がヒット（例: 「川崎駅前」→ BRT快速/川01/川02、登戸→川崎市バス6件、「吉祥寺駅南口」→ 関東バス6号路線 三鷹・吉祥寺循環）
+  - フェリーと同じ { url, date } 展開パターン（adm-zip・stops/routes/trips 1回ずつパース）。stop_times は95万行超と巨大なため各系統の代表1trip の起終点のみ抽出
+  - バグ修正: `normalizeBusStop` が「川崎站/川崎Station」等のサフィックス除去後も元の入力を返していた問題を修正（en/zh 入力でも正しく駅名解決）
+  - **検証** — probe-all-lang 26/26・check-railway-integrity PASS・test-transfer-pairs 全PASS・en/zh サフィックス検索全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -587,12 +587,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **search_flight switched to ODPT aviation data (JAL/ANA realtime arrivals/departures, Basic License) (v2.38.4)**
-  - Uses `odpt:FlightInformationDeparture/Arrival` as primary source (flight number, scheduled/actual/estimated times, delay, terminal, gate, 32-step flight status). AviationStack remains as fallback (only when FLIGHT_API_KEY is set, covering non-JAL/ANA flights and overseas airports)
-  - Delay computed as actual − scheduled (e.g., JL003 arrived 28 min early / NH961 20 min early); statuses localized to ja/en/zh (On time, Now boarding, Final call, Weather check, etc.)
-  - Haneda arrival → Tokyo Station access-route linkage unchanged (Monorail→Hamamatsucho→Yamanote, 35 min, 2 transfers)
-  - Freed from AviationStack's 429 rate limits and free-plan restrictions (no flight_date parameter)
-  - **Verification** — probe-all-lang 26/26, flight-number search (JL002/NH961), airport search (HND 544 / NRT 58), delay detection, foreign-flight fallback all PASS
+- **Added real GTFS data for 5 Kanto-area bus operators (v2.38.5, ODPT static GTFS, Basic License)**
+  - Added `{ url, date }` real-data sources to `BUS_GTFS_SOURCES`: **Kawasaki City Bus** (527 stops/routes), **Kawasaki Tsurumi Rinko Bus** (433, with real route numbers like BRT Rapid / Kawasaki 01-23), **Kanto Bus** (869, incl. M-Bus), **Nishi Tokyo Bus** (1081), **Keisei Bus Chiba West** (128)
+  - `search_bus` busstop_name search now hits real stops and routes (e.g., "Kawasaki Station Mae" → BRT Rapid/Kawasaki 01/02, "Noborito" → 6 Kawasaki City Bus stops, "Kichijoji Station South Exit" → Kanto Bus Route 6 Mitaka/Kichijoji loop)
+  - Same `{ url, date }` expansion pattern as ferry (adm-zip, parses stops/routes/trips once each). stop_times exceeds 950K rows, so only each route's representative trip endpoints are extracted
+  - Bug fix: `normalizeBusStop` returned the original input even after stripping station suffixes (川崎站/Kawasaki Station etc.); en/zh input now resolves station names correctly
+  - **Verification** — probe-all-lang 26/26, check-railway-integrity PASS, test-transfer-pairs all PASS, en/zh suffix search all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1103,12 +1103,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **search_flight 切换为 ODPT 航空数据（JAL/ANA 实时到达・出发・基础许可证）（v2.38.4）**
-  - 以 `odpt:FlightInformationDeparture/Arrival` 为主数据源（航班号・计划/实际/预计时刻・延误・航站楼・登机口・32 种航班状态）。AviationStack 仅作后备（配置 FLIGHT_API_KEY 时，补充非 JAL/ANA 航班与海外机场）
-  - 延误按实际−计划计算（例: JL003 早到 28 分钟 / NH961 早到 20 分钟）；状态支持 ja/en/zh（准点・登机中・最后登机通知・天气检查中等）
-  - 羽田到达→东京站的接驳路线联动保持原样（单轨→滨松町→山手线，35 分钟・换乘 2 次）
-  - 摆脱 AviationStack 的 429 频率限制与免费套餐限制（不支持 flight_date 参数）
-  - **验证** — probe-all-lang 26/26・航班号搜索（JL002/NH961）・机场搜索（HND 544 条/NRT 58 条）・延误检测・外航后备全部通过
+- **新增关东地区 5 家公交公司的真实 GTFS 数据（v2.38.5・ODPT 静态 GTFS・基础许可证）**
+  - `BUS_GTFS_SOURCES` 新增 `{ url, date }` 方式的数据源: **川崎市公交**（527 站名・线路）・**川崎鹤见临港公交**（433・含 BRT 快速/川01〜川23 等真实线路编号）・**关东公交**（869・含 M-Bus）・**西东京公交**（1081）・**京成巴士千叶西**（128）
+  - `search_bus` 的 busstop_name 搜索可命中真实站名与线路（例: 「川崎站前」→ BRT 快速/川01/川02、登户→川崎市公交 6 条、「吉祥寺站南口」→ 关东公交 6 号线路 三鹰・吉祥寺循环）
+  - 与轮渡相同的 `{ url, date }` 展开模式（adm-zip・stops/routes/trips 各解析 1 次）。stop_times 超过 95 万行过于庞大，仅提取各线路代表 1 个班次的起终点
+  - 缺陷修复: `normalizeBusStop` 在去除「川崎站/川崎Station」等后缀后仍返回原始输入，现已修复（en/zh 输入也能正确解析站名）
+  - **验证** — probe-all-lang 26/26・check-railway-integrity 通过・test-transfer-pairs 全部通过・en/zh 后缀搜索全部通过
 
 ### 🤖 AI 智能建议
 

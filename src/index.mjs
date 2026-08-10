@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.4 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.5 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -4415,7 +4415,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.4' },
+  { name: 'tokyo-transit-mcp', version: '2.38.5' },
   { capabilities: { tools: {} } }
 );
 
@@ -8102,6 +8102,53 @@ const BUS_GTFS_SOURCES = [
       ['檜原村（やまびこ）', '武蔵五日市駅'], ['豊島区役所（池07系統）', '池袋駅'],
       ['小金井市役所（CoCoバス）', '武蔵小金井駅'], ['昭島市役所（Aバス）', '昭島駅']
     ]
+  },
+  // ============================================================
+  // v2.38.5: ODPT 静的 GTFS（files/odpt/...・基本ライセンス）の実データソース。
+  // CKAN データカタログ（ckan.odpt.org）で基本ライセンス公開が確認できた関東圏バス5社。
+  // fetchAllBuses の GTFS 取得パス（フェリーと同じ { url, date } 方式）で展開される。
+  // 🔴 date は毎回現在日付ではなく「有効期間内の固定日付」を返す（リソースの有効期間に合わせる）。
+  //    有効期間切れ時は CKAN の最新リソース URL に追随して更新する。
+  {
+    name: '川崎市バス', operatorId: 'KawasakiCityBus',
+    label: '川崎市バス', labelEn: 'Kawasaki City Bus', labelZh: '川崎市公交',
+    website: 'https://www.city.kawasaki.jp/kurashi/category/19-1-1-1-0-0-0-0-0-0.html',
+    url: 'https://api.odpt.org/api/v4/files/odpt/TransportationBureau_CityOfKawasaki/AllLines.zip',
+    date: () => '20260801',
+    // stops.txt の stop_name を停名レコード、routes.txt の route_short_name を系統レコードとして合成
+    useStopsAndRoutes: true
+  },
+  {
+    name: '川崎鶴見臨港バス', operatorId: 'KawasakiTsurumiRinkoBus',
+    label: '川崎鶴見臨港バス', labelEn: 'Kawasaki Tsurumi Rinko Bus', labelZh: '川崎鹤见临港公交',
+    website: 'https://www.rinkobus.co.jp/',
+    url: 'https://api.odpt.org/api/v4/files/odpt/KawasakiTsurumiRinkoBus/allrinko.zip',
+    date: () => '20260716',
+    useStopsAndRoutes: true
+  },
+  {
+    name: '関東バス', operatorId: 'KantoBus',
+    label: '関東バス', labelEn: 'Kanto Bus', labelZh: '关东公交',
+    website: 'https://www.kantobus.co.jp/',
+    url: 'https://api.odpt.org/api/v4/files/odpt/KantoBus/AllLines.zip',
+    date: () => '20260701',
+    useStopsAndRoutes: true
+  },
+  {
+    name: '西東京バス', operatorId: 'NishiTokyoBus',
+    label: '西東京バス', labelEn: 'Nishi Tokyo Bus', labelZh: '西东京公交',
+    website: 'https://www.nisitokyobus.co.jp/',
+    url: 'https://api.odpt.org/api/v4/files/odpt/NishiTokyoBus/NTBus.zip',
+    date: () => '20260829',
+    useStopsAndRoutes: true
+  },
+  {
+    name: '京成バス千葉ウエスト', operatorId: 'KeiseiBusChibaWest',
+    label: '京成バス千葉ウエスト', labelEn: 'Keisei Bus Chiba West', labelZh: '京成巴士千叶西',
+    website: 'https://www.keiseibus.co.jp/',
+    url: 'https://api.odpt.org/api/v4/files/odpt/KeiseiTransitBus/AllLines.zip',
+    date: () => '20260401',
+    useStopsAndRoutes: true
   }
 ];
 
@@ -8280,14 +8327,121 @@ async function fetchAllBuses(userLang) {
     }
   }
   // GTFS-JP 個別取得パス: hardCoded ソース（JRバス関東・コミュニティバス等）をマージ
+  // および ODPT 静的 GTFS ソース（川崎市バス・関東バス等・{ url, date } 方式）を展開してマージ
   let hcCount = 0;
   for (const src of BUS_GTFS_SOURCES) {
     if (src.hardCoded) {
       const hcRecs = buildHardCodedBusRecords(src);
       for (const r of hcRecs) merged.push(r);
       hcCount++;
+      continue;
     }
-    // 将来的に { url, date } ソースが追加されたらここで axios.get + zip展開（フェリーと同様）
+    // ODPT 静的 GTFS（files/odpt/...・基本ライセンス）: フェリーと同じ { url, date } 方式。
+    // stops.txt の stop_name を停名レコード、routes.txt の route_short_name を系統レコードとして合成。
+    // 🔴 stop_times.txt は最大95万行（川崎市バス）と巨大なため、全体は保持せず各系統の代表1trip の
+    //    起終点（先頭/末尾の stop_sequence）だけを取得する（searchBus は停名/系統検索が主目的）。
+    try {
+      const res = await axios.get(src.url, { params: { date: src.date(), 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: 20000 });
+      const AdmZip = (await import('adm-zip')).default;
+      const zip = new AdmZip(Buffer.from(res.data));
+      const parseCsv = (entryName) => {
+        const e = zip.getEntry(entryName);
+        if (!e) return [];
+        const lines = e.getData().toString('utf8').split(/\r?\n/).filter(l => l.trim());
+        if (!lines.length) return [];
+        const headers = lines[0].split(',').map(h => h.trim());
+        return lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim());
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = values[i] || ''; });
+          return obj;
+        });
+      };
+      // 1) stops.txt → stop_id → stop_name（1回だけパース）
+      const stopRows = parseCsv('stops.txt');
+      const stopNameById = new Map();
+      for (const s of stopRows) if (s.stop_id) stopNameById.set(s.stop_id, s.stop_name || s.stop_id);
+      // 2) trips.txt → route_id の代表 trip_id（先頭1件のみ・1回だけパース）
+      const tripRows = parseCsv('trips.txt');
+      const firstTripByRoute = new Map();
+      for (const t of tripRows) {
+        if (t.route_id && !firstTripByRoute.has(t.route_id)) firstTripByRoute.set(t.route_id, t.trip_id);
+      }
+      // 3) stop_times.txt → 代表 trip の起終点 stop（先頭/末尾の stop_sequence のみ抽出・1回だけパース）
+      const endpointByTrip = new Map(); // trip_id -> { first: stop_id, last: stop_id }
+      {
+        const wanted = new Set(firstTripByRoute.values());
+        let seq = new Map(); // trip_id -> [stop_id, maxSeq]
+        const e = zip.getEntry('stop_times.txt');
+        if (e) {
+          const lines = e.getData().toString('utf8').split(/\r?\n/).filter(l => l.trim());
+          if (lines.length) {
+            const headers = lines[0].split(',').map(h => h.trim());
+            const ti = headers.indexOf('trip_id'), si = headers.indexOf('stop_id'), qi = headers.indexOf('stop_sequence');
+            for (let i = 1; i < lines.length; i++) {
+              const vals = lines[i].split(',').map(v => v.trim());
+              const tid = vals[ti], sid = vals[si], q = Number(vals[qi] || 0);
+              if (!wanted.has(tid)) continue;
+              const cur = seq.get(tid);
+              if (!cur) seq.set(tid, [sid, sid, q, q]);
+              else {
+                if (q < cur[2]) cur[0] = sid, cur[2] = q;
+                if (q > cur[3]) cur[1] = sid, cur[3] = q;
+              }
+            }
+          }
+        }
+        for (const [tid, v] of seq) endpointByTrip.set(tid, { first: v[0], last: v[1] });
+      }
+      const seen = new Set();
+      // 4) 停名レコード（stops.txt）
+      for (const s of stopRows) {
+        const name = s.stop_name || s.stop_id || '';
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        merged.push({
+          'odpt:note': name,
+          'odpt:busroute': `${src.operatorId}:stop:${s.stop_id}`,
+          'odpt:busNumber': '',
+          'odpt:frequency': '',
+          'odpt:operator': `odpt.Operator:${src.operatorId}`,
+          _operatorId: src.operatorId,
+          _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
+          _searchKeys: [name],
+          _displayNote: name,
+          _gtfsSource: src.name
+        });
+      }
+      // 5) 系統レコード（routes.txt）: 起終点を「起点 → 終点」形式で合成
+      for (const r of parseCsv('routes.txt')) {
+        const shortName = r.route_short_name || r.route_long_name || r.route_id || '';
+        const tripId = firstTripByRoute.get(r.route_id);
+        const ep = tripId ? endpointByTrip.get(tripId) : null;
+        const origin = ep ? (stopNameById.get(ep.first) || ep.first) : '';
+        const dest = ep ? (stopNameById.get(ep.last) || ep.last) : '';
+        const note = (origin && dest) ? `${origin} → ${dest}` : shortName;
+        if (seen.has(note)) continue;
+        seen.add(note);
+        merged.push({
+          'odpt:note': note,
+          'odpt:busroute': `${src.operatorId}:route:${r.route_id}`,
+          'odpt:busNumber': shortName,
+          'odpt:frequency': '',
+          'odpt:operator': `odpt.Operator:${src.operatorId}`,
+          _operatorId: src.operatorId,
+          _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
+          _searchKeys: [shortName, note, origin, dest].filter(Boolean),
+          _displayNote: note,
+          _gtfsSource: src.name
+        });
+      }
+      console.log(`[Bus] ${src.name}: GTFS loaded (${seen.size} 停名・系統)`);
+      odptBreaker.onSuccess();
+      hcCount++;
+    } catch (e) {
+      console.log(`[Bus] ${src.name}: GTFS skip (${e.message})`);
+      odptBreaker.onFailure(e);
+    }
   }
   // コミュニティバス（めぐりん・江戸バス等・COMMUNITY_BUS_ROUTES）の停留所も検索プールに追加。
   // 乗り継ぎグラフ（buildTransferGraph）には既に組み込まれているが、busstop_name 検索モードでは
@@ -8331,7 +8485,12 @@ function normalizeBusStop(name) {
   // 末尾の 駅/Station/站 サフィックスを除去してから駅名正規化（バス停名「渋谷駅前」は対象外）
   const stripped = trimmed.replace(/(駅|Station|站|St\.?)\s*$/i, '').trim();
   const normalized = normalizeStationName(stripped);
-  return (normalized && normalized !== stripped) ? normalized : trimmed;
+  // 🔴 サフィックス除去後（stripped）を常に返す。normalizeStationName はローマ字→日本語辞書で、
+  // 「川崎站」→「川崎」のように日本語名のままの場合は何もしない（normalized === stripped）が、
+  // その場合も「川崎站」ではなく「川崎」を返さないと検索がヒットしない。
+  if (normalized && normalized !== stripped) return normalized;
+  if (stripped && stripped !== trimmed) return stripped;
+  return trimmed;
 }
 
 // odpt:BusroutePattern から (operator, routePatternId, [orderedStopNames]) を取得
@@ -9348,9 +9507,10 @@ async function searchBus(args) {
     // 取得できた事業者ラベル（ODPT 3社 + hardCoded GTFSソース）
     const operatorSumm = [
       ...BUS_OPERATORS.map(o => ({ operator: o.id, label: userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label, website: o.website })),
-      ...BUS_GTFS_SOURCES.filter(s => s.hardCoded).map(s => ({ operator: s.operatorId, label: userLang === 'en' ? s.labelEn : userLang === 'zh' ? s.labelZh : s.label, website: s.website, hardcoded: true }))
+      ...BUS_GTFS_SOURCES.filter(s => s.hardCoded).map(s => ({ operator: s.operatorId, label: userLang === 'en' ? s.labelEn : userLang === 'zh' ? s.labelZh : s.label, website: s.website, hardcoded: true })),
+      ...BUS_GTFS_SOURCES.filter(s => !s.hardCoded && s.url).map(s => ({ operator: s.operatorId, label: userLang === 'en' ? s.labelEn : userLang === 'zh' ? s.labelZh : s.label, website: s.website, gtfs: true }))
     ];
-    const dataSourceNote = `ODPT Bus (${okCount}/${BUS_OPERATORS.length} 事業者取得成功)` + (failCount > 0 ? ` / ${failCount}社取得失敗` : '') + (hcCount > 0 ? ` + GTFS個別(${hcCount}ソース: JRバス関東・都内コミュニティバス等)` : '');
+    const dataSourceNote = `ODPT Bus (${okCount}/${BUS_OPERATORS.length} 事業者取得成功)` + (failCount > 0 ? ` / ${failCount}社取得失敗` : '') + (hcCount > 0 ? ` + GTFS-JP(${hcCount}ソース: JRバス関東・都内コミュニティバス・川崎市バス・関東バス等)` : '');
 
     // 🔴 足の悪いユーザー向けバリアフリー注意喚起（odpt:Bus に車椅子/低床情報は無いため案内のみ）
     const barrierFreeNote = userLang === 'en'
@@ -9385,12 +9545,18 @@ async function searchBus(args) {
       if (!trimmed) return trimmed;
       const norm = normalizeBusStop(trimmed);
       const lower = trimmed.toLowerCase();
+      const normLower = norm.toLowerCase();
       for (const [jp, trans] of Object.entries(STATION_DISPLAY_NAMES)) {
         const en = (trans.en || '').toLowerCase();
         const zh = trans.zh || '';
-        if ((en && lower === en) || (zh && trimmed === zh)) return jp;
+        // 入力（例: Kawasaki Station）と normalizeBusStop 結果（例: 川崎）の両方で駅名解決
+        if ((en && (lower === en || normLower === en)) || (zh && (trimmed === zh || norm === zh))) return jp;
       }
+      // 🔴 normalizeBusStop で「駅/Station/站」サフィックス除去・駅名正規化された結果も参照する
+      // （例: 「Kawasaki Station」→ normalizeBusStop → 「川崎」→ STATION_NAME_MAP['川崎'] は無いが
+      //   STATION_NAME_MAP['Kawasaki'] はある。norm がローマ字の場合は STATION_NAME_MAP[norm] を引く）
       if (STATION_NAME_MAP[trimmed]) return STATION_NAME_MAP[trimmed];
+      if (norm !== trimmed && STATION_NAME_MAP[norm]) return STATION_NAME_MAP[norm];
       return trimmed;
     };
     const resolvedBusstop = resolveBusStopLang(busstopName);
