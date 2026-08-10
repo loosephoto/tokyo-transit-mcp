@@ -33,15 +33,15 @@
 
 ### 🛤️ 直近の更新内容
 
-- **官庁街・銀座エリアの近接異名駅10組を追加（WALK_TRANSFERS・Issue #68）**
-  - 官庁街5組: 国会議事堂前⇔永田町（5分）／虎ノ門ヒルズ⇔虎ノ門（3分）／霞ケ関⇔内幸町（5分）／虎ノ門⇔霞ケ関（7分）／内幸町⇔虎ノ門ヒルズ（6分）
-  - 銀座地下通路5組: 有楽町⇔銀座（5分）／銀座一丁目⇔銀座（5分）／京橋⇔銀座一丁目（5分）／宝町⇔銀座一丁目（5分）／東京⇔二重橋前（10分）
-  - 国会議事堂前→永田町: **丸ノ内線→赤坂見附→徒歩連絡の遠回り → 徒歩連絡5分**に短縮。有楽町→銀座: **10分・乗換1回 → 徒歩5分**に改善
-  - **検証** — probe-all-lang 26/26・check-railway-integrity PASS・#68対象10ペア全PASS
-- **日本橋エリアの地下通路連絡2組を追加（WALK_TRANSFERS）**
-  - 茅場町⇔日本橋（地下通路・改札外連絡・東京メトロ公式案内）／新日本橋⇔三越前（日本橋地下歩道・コレド室町経由）
-  - 新日本橋→三越前: **19分・乗換2回（東京⇔大手町迂回）→ 4分・乗換0回（地下歩道直結）** に改善
-  - 茅場町→日本橋は東西線乗車（3分）が最適のため従来どおり。**検証** — probe-all-lang 26/26・check-railway-integrity PASS・周辺経路6件回帰全PASS
+- **地下連絡通路で直結する近接異名駅6組を追加（WALK_TRANSFERS・Issue #69・都庁前⇔西新宿）**
+  - 都庁前⇔西新宿（8分・大江戸線⇔丸ノ内線・地下連絡通路直結・動く歩道あり）
+  - 馬喰町⇔馬喰横山（3分・JR総武線快速⇔都営新宿線・乗り換え専用連絡改札・都営公式乗換案内）
+  - 上野広小路⇔上野御徒町（3分・銀座線⇔大江戸線・地下通路直結・都営公式乗換案内）
+  - 上野御徒町⇔仲御徒町（3分・大江戸線⇔日比谷線・地下通路直結・都営公式乗換案内）
+  - 新富町⇔築地（5分・有楽町線⇔日比谷線・2018年より東京メトロ公式の同一駅扱い）
+  - 銀座一丁目⇔東銀座（7分・有楽町線⇔浅草線・日比谷線・#68登録漏れ是正）
+  - 都庁前→西新宿: **12分・乗換1回（新宿経由）→ 徒歩連絡8分・乗換0回**に短縮。本郷三丁目→仲御徒町も徒歩連絡経由10分に改善
+  - **検証** — probe-all-lang 26/26・check-railway-integrity PASS・test-transfer-pairs 33ペア全PASS・バウンス/連鎖なし
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -590,15 +590,15 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Added 10 nearby-name station links in the government district & Ginza area (WALK_TRANSFERS・Issue #68)**
-  - Government district (5): Kokkai-gijidomae⇔Nagatacho (5 min) / Toranomon Hills⇔Toranomon (3 min) / Kasumigaseki⇔Uchisaiwaicho (5 min) / Toranomon⇔Kasumigaseki (7 min) / Uchisaiwaicho⇔Toranomon Hills (6 min)
-  - Ginza underground passages (5): Yurakucho⇔Ginza (5 min) / Ginza-Itchome⇔Ginza (5 min) / Kyobashi⇔Ginza-Itchome (5 min) / Takaracho⇔Ginza-Itchome (5 min) / Tokyo⇔Nijubashimae (10 min)
-  - Kokkai-gijidomae→Nagatacho: **detour via Marunouchi Line→Akasaka-Mitsuke→walk → direct 5-min walk**. Yurakucho→Ginza: **10 min / 1 transfer → 5-min walk**
-  - **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / all 10 #68 pairs PASS
-- **Added 2 underground-passage links in the Nihonbashi area (WALK_TRANSFERS)**
-  - Kayabacho⇔Nihonbashi (underground passage, outside-gate connection, per Tokyo Metro) / Shin-Nihonbashi⇔Mitsukoshimae (Nihonbashi underground walkway via COREDO Muromachi)
-  - Shin-Nihonbashi→Mitsukoshimae: **19 min / 2 transfers (detour via Tokyo⇔Otemachi) → 4 min / 0 transfers (direct underground walkway)**
-  - Kayabacho→Nihonbashi keeps the Tozai Line ride (3 min, optimal). **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / 6 nearby-route regression cases all PASS
+- **Added 6 nearby-name station links connected by underground passages (WALK_TRANSFERS・Issue #69・Tochomae⇔Nishi-Shinjuku)**
+  - Tochomae⇔Nishi-Shinjuku (8 min, Oedo Line⇔Marunouchi Line, direct underground passage with moving walkway)
+  - Bakurocho⇔Bakuro-Yokoyama (3 min, JR Sobu Rapid⇔Toei Shinjuku Line, dedicated transfer gate per Toei)
+  - Ueno-Hirokoji⇔Ueno-Okachimachi (3 min, Ginza Line⇔Oedo Line, direct underground passage per Toei)
+  - Ueno-Okachimachi⇔Naka-Okachimachi (3 min, Oedo Line⇔Hibiya Line, direct underground passage per Toei)
+  - Shintomicho⇔Tsukiji (5 min, Yurakucho Line⇔Hibiya Line, treated as the same station by Tokyo Metro since 2018)
+  - Ginza-Itchome⇔Higashi-Ginza (7 min, Yurakucho Line⇔Asakusa/Hibiya Line, #68 registration gap fixed)
+  - Tochomae→Nishi-Shinjuku: **12 min / 1 transfer (via Shinjuku) → 8-min walk / 0 transfers**. Hongo-Sanchome→Naka-Okachimachi also improved to 10 min via walk link
+  - **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / test-transfer-pairs 33 pairs all PASS / no bounce or chained detour
 
 ### 🤖 AI Intelligent Advice
 
@@ -1109,15 +1109,15 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **新增官厅街・银座地区近邻异名站 10 组（WALK_TRANSFERS・Issue #68）**
-  - 官厅街 5 组: 国会议事堂前⇔永田町（5 分钟）／虎之门新城⇔虎之门（3 分钟）／霞关⇔内幸町（5 分钟）／虎之门⇔霞关（7 分钟）／内幸町⇔虎之门新城（6 分钟）
-  - 银座地下通道 5 组: 有乐町⇔银座（5 分钟）／银座一丁目⇔银座（5 分钟）／京桥⇔银座一丁目（5 分钟）／宝町⇔银座一丁目（5 分钟）／东京⇔二重桥前（10 分钟）
-  - 国会议事堂前→永田町: **经丸之内线→赤坂见附绕行 → 步行 5 分钟**。有乐町→银座: **10 分钟・换乘 1 次 → 步行 5 分钟**
-  - **验证** — probe-all-lang 26/26・check-railway-integrity 通过・#68 对象 10 组全部通过
-- **新增日本桥地区地下通道连接 2 组（WALK_TRANSFERS）**
-  - 茅场町⇔日本桥（地下通道・检票口外连接・东京地铁官方指引）／新日本桥⇔三越前（日本桥地下步道・经 COREDO 室町）
-  - 新日本桥→三越前: **19 分钟・换乘 2 次（经东京⇔大手町绕行）→ 4 分钟・无需换乘（地下步道直连）**
-  - 茅场町→日本桥仍以东西线乘车（3 分钟）为最优。**验证** — probe-all-lang 26/26・check-railway-integrity 通过・周边 6 条路线回归全部通过
+- **新增经地下通道直连的近邻异名站 6 组（WALK_TRANSFERS・Issue #69・都厅前⇔西新宿）**
+  - 都厅前⇔西新宿（8 分钟・大江户线⇔丸之内线・地下连络通道直连・设有自动步道）
+  - 马喰町⇔马喰横山（3 分钟・JR 总武快速线⇔都营新宿线・专用换乘闸机・都营官方换乘指引）
+  - 上野广小路⇔上野御徒町（3 分钟・银座线⇔大江户线・地下通道直连・都营官方换乘指引）
+  - 上野御徒町⇔仲御徒町（3 分钟・大江户线⇔日比谷线・地下通道直连・都营官方换乘指引）
+  - 新富町⇔筑地（5 分钟・有乐町线⇔日比谷线・2018 年起东京地铁官方视为同一车站）
+  - 银座一丁目⇔东银座（7 分钟・有乐町线⇔浅草线・日比谷线・修正 #68 漏登）
+  - 都厅前→西新宿: **12 分钟・换乘 1 次（经新宿）→ 步行 8 分钟・无需换乘**。本乡三丁目→仲御徒町亦经步行通道改善至 10 分钟
+  - **验证** — probe-all-lang 26/26・check-railway-integrity 通过・test-transfer-pairs 33 组全部通过・无往复/链式绕行
 
 ### 🤖 AI 智能建议
 
