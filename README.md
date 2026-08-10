@@ -33,6 +33,10 @@
 
 ### 🛤️ 直近の更新内容
 
+- **日本橋エリアの地下通路連絡2組を追加（WALK_TRANSFERS）**
+  - 茅場町⇔日本橋（地下通路・改札外連絡・東京メトロ公式案内）／新日本橋⇔三越前（日本橋地下歩道・コレド室町経由）
+  - 新日本橋→三越前: **19分・乗換2回（東京⇔大手町迂回）→ 4分・乗換0回（地下歩道直結）** に改善
+  - 茅場町→日本橋は東西線乗車（3分）が最適のため従来どおり。**検証** — probe-all-lang 26/26・check-railway-integrity PASS・周辺経路6件回帰全PASS
 - **軽量乗換を拡張（新百合ヶ丘・二俣川）— 小田急・相鉄の直通が正しく選択される**
   - **新百合ヶ丘**（小田急小田原線⇔多摩線・同一ホーム対面乗換）: 新宿→唐木田 が 京王相模原線経由（乗換3回・79分）→ **小田急直通（乗換1回・79分）** に改善
   - **二俣川**（相鉄本線⇔いずみ野線・改札内同一ホーム乗換）: 海老名→湘南台 が 相鉄二俣川乗換で直通
@@ -626,6 +630,10 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
+- **Added 2 underground-passage links in the Nihonbashi area (WALK_TRANSFERS)**
+  - Kayabacho⇔Nihonbashi (underground passage, outside-gate connection, per Tokyo Metro) / Shin-Nihonbashi⇔Mitsukoshimae (Nihonbashi underground walkway via COREDO Muromachi)
+  - Shin-Nihonbashi→Mitsukoshimae: **19 min / 2 transfers (detour via Tokyo⇔Otemachi) → 4 min / 0 transfers (direct underground walkway)**
+  - Kayabacho→Nihonbashi keeps the Tozai Line ride (3 min, optimal). **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / 6 nearby-route regression cases all PASS
 - **Light transfers extended (Shin-Yurigaoka & Futamatagawa) — Odakyu / Sotetsu through routes now selected correctly**
   - **Shin-Yurigaoka** (Odakyu Odawara ⇔ Tama Lines; same-platform facing transfer): Shinjuku→Karakida improved from Keio Sagamihara detour (3 transfers / 79 min) to **Odakyu direct (1 transfer / 79 min)**
   - **Futamatagawa** (Sotetsu Main ⇔ Izumino Lines; in-gate same-platform transfer): Ebina→Shonandai now uses the Sotetsu Futamatagawa transfer
@@ -1181,6 +1189,10 @@ MIT License
 
 ### 🛤️ 最近更新
 
+- **新增日本桥地区地下通道连接 2 组（WALK_TRANSFERS）**
+  - 茅场町⇔日本桥（地下通道・检票口外连接・东京地铁官方指引）／新日本桥⇔三越前（日本桥地下步道・经 COREDO 室町）
+  - 新日本桥→三越前: **19 分钟・换乘 2 次（经东京⇔大手町绕行）→ 4 分钟・无需换乘（地下步道直连）**
+  - 茅场町→日本桥仍以东西线乘车（3 分钟）为最优。**验证** — probe-all-lang 26/26・check-railway-integrity 通过・周边 6 条路线回归全部通过
 - **扩展轻量换乘（新百合丘・二俣川）— 小田急・相铁直通路线被正确选择**
   - **新百合丘**（小田急小田原线⇔多摩线・同站台对向换乘）: 新宿→唐木田 从京王相模原线绕行（换乘 3 次・79 分钟）→ **小田急直通（换乘 1 次・79 分钟）**
   - **二俣川**（相铁本线⇔泉野线・闸内同站台换乘）: 海老名→湘南台 经相铁二俣川换乘直通

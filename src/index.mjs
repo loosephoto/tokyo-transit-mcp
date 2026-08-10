@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.2 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.3 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -3858,6 +3858,8 @@ const WALK_TRANSFERS = [
   { from: '御徒町', to: '仲御徒町', minutes: 3 },        // JR山手線・京浜東北線 ⇔ 都営大江戸線（連絡通路）
   { from: '上野', to: '上野御徒町', minutes: 4 },        // JR・銀座線・日比谷線 ⇔ 都営大江戸線（上野公園経由）
   { from: '有楽町', to: '日比谷', minutes: 3 },          // JR・有楽町線 ⇔ 日比谷線・千代田線・三田線（地下通路）
+  { from: '茅場町', to: '日本橋', minutes: 4 },          // 日比谷線・東西線 ⇔ 浅草線・銀座線・東西線（地下通路・改札外連絡。東京メトロ公式で案内）
+  { from: '新日本橋', to: '三越前', minutes: 4 },        // JR総武線快速 ⇔ 銀座線・半蔵門線（日本橋地下歩道・コレド室町経由）
   { from: '津田沼', to: '京成津田沼', minutes: 4 },      // JR総武線・新京成線 ⇔ 京成本線（連絡通路）
   { from: '川崎', to: '京急川崎', minutes: 3 },          // JR ⇔ 京急本線（連絡通路）
   { from: '溝の口', to: '武蔵溝ノ口', minutes: 3 },      // 東急田園都市線 ⇔ JR南武線（同一駅扱い）
@@ -4395,7 +4397,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.2' },
+  { name: 'tokyo-transit-mcp', version: '2.38.3' },
   { capabilities: { tools: {} } }
 );
 
