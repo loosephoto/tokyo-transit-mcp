@@ -2,7 +2,6 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.38.3
 ---
 
 # Tokyo Transit MCP Server
