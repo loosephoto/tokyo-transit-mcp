@@ -678,10 +678,16 @@ function jsonResponse(data) {
       content: [
         { type: 'text', text: ai_transit_advice },
         { type: 'text', text: JSON.stringify(rest, null, 2) }
-      ]
+      ],
+      // 構造化データはMCPクライアントがcontentの順序に依存せず取得できるよう、
+      // 後方互換のcontentブロックと並行してstructuredContentにも公開する。
+      structuredContent: rest
     };
   }
-  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  return {
+    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    structuredContent: data
+  };
 }
 
 const getParams = (operator, additionalParams = {}) => {
@@ -689,6 +695,85 @@ const getParams = (operator, additionalParams = {}) => {
   if (operator) params['odpt:operator'] = `odpt.Operator:${operator}`;
   return params;
 };
+
+// RFC 4180-compatible CSV helpers for GTFS feeds.
+function parseCsvRecords(content) {
+  const records = [];
+  let row = [], field = '', quoted = false;
+  const text = String(content || '');
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else quoted = false;
+      } else field += ch;
+    } else if (ch === '"' && field.length === 0) {
+      quoted = true;
+    } else if (ch === ',') {
+      row.push(field.trim()); field = '';
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(field.trim()); field = '';
+      if (row.some(v => v !== '')) records.push(row);
+      row = [];
+    } else field += ch;
+  }
+  if (field.length || row.length) {
+    row.push(field.trim());
+    if (row.some(v => v !== '')) records.push(row);
+  }
+  return records;
+}
+
+function parseCsvLine(line) { return parseCsvRecords(`${line}\n`)[0] || []; }
+
+function calculateFlightDelayMinutes(scheduled, actual) {
+  if (!scheduled || !actual) return null;
+  const toMinutes = (value) => {
+    const match = String(value).match(/^(\d{1,2}):(\d{2})/);
+    return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+  };
+  const scheduledMinutes = toMinutes(scheduled);
+  const actualMinutes = toMinutes(actual);
+  if (scheduledMinutes === null || actualMinutes === null) return null;
+  let delta = actualMinutes - scheduledMinutes;
+  if (delta < -720) delta += 1440;
+  return delta;
+}
+
+function validateFlightDate(value) {
+  if (!value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function normalizeAirportIata(value) {
+  const normalized = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) && ['HND', 'NRT', 'IBR'].includes(normalized) ? normalized : null;
+}
+
+// GTFS取得に使う date クエリ候補（固定日付 → 当日 の順・重複除去）。
+// 固定日付リソースの有効期限切れ（404）時に当日日付で1回だけ再試行するための一覧。
+function gtfsFetchDates(fixedDate) {
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const dates = [String(fixedDate || today)];
+  if (!dates.includes(today)) dates.push(today);
+  return dates;
+}
+
+// ODPT 静的 GTFS zip を取得。固定日付で404等になった場合は当日日付でフォールバック。
+async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
+  let lastError = null;
+  for (const d of gtfsFetchDates(src.date())) {
+    try {
+      const res = await axios.get(src.url, { params: { date: d, 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: timeoutMs });
+      return res.data;
+    } catch (e) { lastError = e; }
+  }
+  throw lastError;
+}
 
 // 駅名変換辞書（ノーマライズ用）
 const STATION_NAME_MAP = {
@@ -1568,6 +1653,16 @@ const STATION_NAME_MAP = {
 // 路線名: 日本語 → ODPT ローマ字IDキー（odpt:railway の末尾セグメント）
 // ODPT は 'odpt.Railway:JR-East.Yamanote' の形式で、末尾がローマ字ID（Yamanote）のため、
 // 日本語入力（山手線）との照合に使用。部分一致でも検索できるよう複数形を用意。
+function resolveSuspendedLineNames(railwayId) {
+  const suffix = String(railwayId || '').split('.').pop().toLowerCase();
+  if (!suffix) return [];
+  const aliases = Object.entries(RAILWAY_NAME_MAP)
+    .filter(([, value]) => String(value).toLowerCase() === suffix)
+    .map(([name]) => name);
+  const graphLines = new Set(Object.values(STATION_TO_LINES).flat().map(entry => entry.line));
+  return [...graphLines].filter(line => aliases.some(alias => line === alias || line.includes(alias)));
+}
+
 const RAILWAY_NAME_MAP = {
   '山手線': 'yamanote', '山手': 'yamanote',
   '中央線': 'chuo', '中央': 'chuo', '中央・総武線': 'chuo-sobu', '総武線': 'sobu', '総武線快速': 'sobu-rapid', '総武快速': 'sobu-rapid', '成田線': 'narita', 'JR成田線': 'narita',
@@ -4069,7 +4164,8 @@ function resolveStation(rawName) {
 // ダイクストラ法による最短経路探索（ハイパーノード版）
 // 出発・到着は「駅名」で与えられ、内部ではその駅の全路線ノードを仮想起点/終点とする。
 // 評価基準: 第1に乗換回数を最小化、第2に実距離（駅間重み）を最小化。
-function findShortestPath(start, goal) {
+function findShortestPath(start, goal, options = {}) {
+  const blockedLines = options.blockedLines instanceof Set ? options.blockedLines : new Set(options.blockedLines || []);
   const startNodes = (STATION_TO_LINES[start] || []).map(e => `${start}@${e.line}`);
   const goalNodes = (STATION_TO_LINES[goal] || []).map(e => `${goal}@${e.line}`);
   if (!startNodes.length || !goalNodes.length) return null;
@@ -4090,7 +4186,12 @@ const betterThan = (a, b) => {
   const prev = {};
   const visited = new Set();
   const pq = [];
-  for (const n of startNodes) { best[n] = { transfers: 0, dist: 0 }; pq.push({ node: n, transfers: 0, dist: 0 }); }
+  for (const n of startNodes) {
+    if (!blockedLines.has(n.split('@')[1])) {
+      best[n] = { transfers: 0, dist: 0 };
+      pq.push({ node: n, transfers: 0, dist: 0 });
+    }
+  }
   let bestGoal = null; // { transfers, dist, node }
   while (pq.length) {
     pq.sort((a, b) => costOf(a) - costOf(b) || a.transfers - b.transfers);
@@ -4106,6 +4207,7 @@ const betterThan = (a, b) => {
       continue; // ゴールノードからの先は探索しない（到着済み）
     }
     for (const [next, w] of Object.entries(GRAPH[node] || {})) {
+      if (blockedLines.has(node.split('@')[1]) || blockedLines.has(next.split('@')[1])) continue;
       const isTransfer = w >= TRANSFER_PENALTY;
       const nTransfers = transfers + (isTransfer ? 1 : 0);
       const nDist = dist + (isTransfer ? 0 : w);
@@ -4191,7 +4293,7 @@ function commonLines(a, b) {
 }
 
 // ルート検索のメインエントリ（searchRouteから呼び出し）
-function computeRoutes(fromRaw, toRaw) {
+function computeRoutes(fromRaw, toRaw, options = {}) {
   const fromRes = resolveStation(fromRaw);
   const toRes = resolveStation(toRaw);
   // 曖昧（複数候補がありどれが正解か確定できない）の場合は検索を中断し選択を促す
@@ -4206,7 +4308,7 @@ function computeRoutes(fromRaw, toRaw) {
   if (!from || !to) {
     return { error: 'STATION_NOT_FOUND', from, to, suggestion_from: fromRaw, suggestion_to: toRaw };
   }
-  const result = findShortestPath(from, to);
+  const result = findShortestPath(from, to, options);
   if (!result || !result.path) {
     return { error: 'NO_ROUTE', from, to, fromLandmark: fromRes.landmark, toLandmark: toRes.landmark };
   }
@@ -4297,11 +4399,10 @@ async function fetchFerryData() {
   }
   const AdmZip = (await import('adm-zip')).default;
   const parseCsv = (content) => {
-    const lines = content.split(/\r?\n/).filter(l => l.trim());
-    if (!lines.length) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
+    const records = parseCsvRecords(content);
+    if (!records.length) return [];
+    const headers = records[0];
+    return records.slice(1).map(values => {
       const obj = {};
       headers.forEach((h, i) => { obj[h] = values[i] || ''; });
       return obj;
@@ -4340,8 +4441,8 @@ async function fetchFerryData() {
       continue;
     }
     try {
-      const res = await axios.get(src.url, { params: { date: src.date(), 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: 10000 });
-      const zip = new AdmZip(Buffer.from(res.data));
+      const zipBuf = await fetchGtfsZipBuffer(src, 10000);
+      const zip = new AdmZip(Buffer.from(zipBuf));
       const safeParse = (entryName) => { const e = zip.getEntry(entryName); return e ? parseCsv(e.getData().toString('utf8')) : []; };
       for (const s of safeParse('stops.txt')) { if (!seenStopIds.has(s.stop_id)) { allStops.push(s); seenStopIds.add(s.stop_id); } }
       for (const r of safeParse('routes.txt')) { const rid = src.name + ':' + r.route_id; if (!seenRouteIds.has(rid)) { allRoutes.push({ ...r, route_id: rid, _source: src.name }); seenRouteIds.add(rid); } }
@@ -4422,8 +4523,26 @@ const server = new Server(
 // ==========================================
 // 📋 ツール一覧
 // ==========================================
+function applyInputSchemaConstraints(tools) {
+  const visit = (schema, key = '') => {
+    if (!schema || typeof schema !== 'object') return;
+    if (schema.type === 'object') {
+      schema.additionalProperties = false;
+      for (const [property, child] of Object.entries(schema.properties || {})) visit(child, property);
+    }
+    if (schema.type === 'string') {
+      schema.minLength = schema.minLength ?? 1;
+      schema.maxLength = schema.maxLength ?? 100;
+      if (key === 'flight_date') schema.pattern = '^\\d{4}-\\d{2}-\\d{2}$';
+    }
+    if (key === 'lat' && schema.type === 'number') { schema.minimum = -90; schema.maximum = 90; }
+    if (key === 'lon' && schema.type === 'number') { schema.minimum = -180; schema.maximum = 180; }
+  };
+  for (const tool of tools) visit(tool.inputSchema);
+  return tools;
+}
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
+  tools: applyInputSchemaConstraints([
     { name: 'search_route',
       description: '乗り換えルート検索 - 出発駅から到着駅までのルートを検索。日本語・英語・中国語自動識別、天候/高温/運休を検出しAIアドバイスを返答。language（ja/en/zh）を指定すると応答言語を強制（ユーザーのクエリ言語に合わせて指定推奨）。荒天・降雪・凍結時を除き、到着地点周辺のレンタサイクル案内を表示。user_location（緯度経度）指定時は運転見合わせ時の代替シェアサイクル案内を現在地基準で表示。',
       inputSchema: { type: 'object', properties: { from: { type: 'string', description: '出発駅名' }, to: { type: 'string', description: '到着駅名' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時は駅名から自動判定）。ユーザーが英語で質問した場合は en、中国語なら zh を指定すると確実にその言語で応答。' }, user_location: { type: 'object', description: 'ユーザーの現在位置（緯度経度）。運転見合わせ時のシェアサイクル案内を現在地基準で表示する場合に指定。例: {"lat": 35.681, "lon": 139.767}', properties: { lat: { type: 'number' }, lon: { type: 'number' } } } }, required: ['from', 'to'] }
@@ -4470,7 +4589,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     { name: 'search_bus',
       description: '🚌🚃 バス路線・乗り継ぎ・横断乗り継ぎ検索 - 都営・西武・横浜市営バス（ODPT）。busstop_name でバス停/系統を検索、from+to で乗り継ぎ経路（バス内のみならず、バス→電車→バスの横断乗り継ぎも対応）を探索。足の悪い方へノンステップバス情報を含む。コミュニティバスは駅接続ルートで乗り継ぎ可能（JRバス関東は停留所順序データがなく対象外）。language（ja/en/zh）指定で応答言語を強制可能。',
       inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定・バス→電車→バスも可）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' }, vehicle: { type: 'string', enum: ['bus', 'train', 'community_bus', 'ferry', 'any'], description: '優先する乗り物（乗り継ぎ検索モードのみ）。bus=バス優先, train=電車優先, community_bus=コミュニティバス優先, ferry=水上バス優先, any=自動（最短）。指定乗り物が極端に遠回りになる場合は better_alternative でより良い経路を進言。' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時はバス停名から自動判定）' } }, required: [] } }
-  ]
+  ])
 }));
 
 // ツール実行ハンドラ
@@ -5825,6 +5944,10 @@ async function searchRoute(args) {
     const m = args.user_location.match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
     if (m) userLocation = { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
   }
+  // 🔴 緯度経度の範囲検証（lat: -90〜90 / lon: -180〜180）。範囲外は無効として無視する。
+  if (userLocation && !(userLocation.lat >= -90 && userLocation.lat <= 90 && userLocation.lon >= -180 && userLocation.lon <= 180)) {
+    userLocation = null;
+  }
 
   let userLang = 'ja';
   // 明示的な言語指定（args.language / args.lang）が最優先。
@@ -5872,6 +5995,7 @@ async function searchRoute(args) {
   let isRainy = false, isSevereWeather = false, weatherText = "未取得", isTrainSuspended = false, delayMessage = "";
   let busTransferDetected = false, busTransferDetail = "", isHot = false;
   let failureType = null, failureAdviceKey = null; // -test で指定された障害種別
+  const suspendedLineNames = new Set();
 
   // -test シミュレーション
   if (simulatedFailure) {
@@ -5883,6 +6007,8 @@ async function searchRoute(args) {
     weatherText = fc.weatherText || (userLang === 'en' ? "Disruption detected" : userLang === 'zh' ? "检测到交通故障" : "障害検知");
     delayMessage = "🚨 " + (fc.delayMessage || (userLang === 'en' ? "Simulated disruption" : userLang === 'zh' ? "模拟交通故障" : "シミュレーション障害"));
     failureType = simulatedFailure; failureAdviceKey = fc.adviceKey || null;
+    const simulatedLine = Object.keys(RAILWAY_LINES).find(line => simulatedFailure.includes(line));
+    if (simulatedLine) suspendedLineNames.add(simulatedLine);
   }
 
   // 通常API（並列実行＋統一キャッシュ）
@@ -5918,6 +6044,10 @@ async function searchRoute(args) {
           const operators = ['TokyoMetro', 'Toei', 'TamaMonorail', 'MIR', 'TWR'];
           const results = await Promise.allSettled(operators.map(op => axios.get(`${API_BASE_URL}/odpt:TrainInformation`, { params: getParams(op), timeout: 15000 })));
           const allDelays = []; let fb = false, fd = '';
+          const fulfilledCount = results.filter(res => res.status === 'fulfilled').length;
+          if (fulfilledCount === 0) {
+            throw new Error('All ODPT train information requests failed');
+          }
           for (const res of results) {
             if (res.status === 'rejected') continue;
             for (const info of res.value.data) {
@@ -5930,7 +6060,7 @@ async function searchRoute(args) {
           }
           busTransferDetected = fb; busTransferDetail = fd;
           odptBreaker.onSuccess();
-          return { delays: allDelays, busTransfer: fb, busTransferDetail: fd };
+          return { delays: allDelays, busTransfer: fb, busTransferDetail: fd, suspendedLineNames: [...suspendedLineNames] };
         } catch (e) { odptBreaker.onFailure(e); return { error: e.message }; }
       })()
     ]);
@@ -5943,6 +6073,7 @@ async function searchRoute(args) {
     } else { apiDegraded = true; } // 天気API取得失敗
     if (trainResult.status === 'fulfilled' && trainResult.value && !trainResult.value.error) {
       const t = trainResult.value;
+      for (const lineName of (t.suspendedLineNames || [])) suspendedLineNames.add(lineName);
       if (t.delays.length > 0) { isTrainSuspended = true; delayMessage = `🚨 ${t.delays[0].railway.replace('odpt:Railway:', '')}: ${translateTrainInfoDetail(t.delays[0].text, userLang)}`; }
       if (t.busTransfer && !delayMessage) delayMessage = `🚨 ${translateTrainInfoDetail(t.busTransferDetail, userLang)}`;
     } else if (trainResult.status === 'fulfilled' && trainResult.value?.error === 'CIRCUIT_OPEN') {
@@ -5990,7 +6121,17 @@ async function searchRoute(args) {
   const communityBusAccessOut = communityBusAccess.length ? communityBusAccess : undefined;
 
   // 🗺️ 経路探索エンジン（ODPTキー不要・自己完結型）で実ルートを算出
-  const routeResult = (simulatedFailure) ? { error: 'TEST_MODE' } : computeRoutes(fromName, toName);
+  let routeOperational = true;
+  let routeResult = (simulatedFailure)
+    ? { error: 'TEST_MODE' }
+    : computeRoutes(fromName, toName, { blockedLines: suspendedLineNames });
+  if (!simulatedFailure && suspendedLineNames.size > 0 && routeResult?.error === 'NO_ROUTE') {
+    const fallbackRoute = computeRoutes(fromName, toName);
+    if (fallbackRoute?.routes) {
+      routeResult = fallbackRoute;
+      routeOperational = false;
+    }
+  }
 
   // ルートが見つからない場合は、エラー種別に応じた統一エラー応答を返す（SUCCESSを誤って返さない）
   if (routeResult && routeResult.error && routeResult.error !== 'TEST_MODE') {
@@ -6102,6 +6243,8 @@ async function searchRoute(args) {
     degraded_mode: apiDegraded ? true : undefined,
     // 実ルート（自己完結型経路エンジンで算出）
     routes: routesPayload,
+    route_operational: routeOperational && (!isTrainSuspended || suspendedLineNames.size > 0),
+    suspended_lines: suspendedLineNames.size ? [...suspendedLineNames].map(line => getDisplayLineName(line, userLang)) : undefined,
     // ランドマーク（施設名）入力時の最寄り駅案内
     landmark_info: Object.keys(landmarkInfo).length ? landmarkInfo : undefined,
     // 降車駅周辺の文化・芸能・芸術施設（到着地側のみ表示）
@@ -7038,7 +7181,8 @@ async function getTimetableRailways() {
       .filter(Boolean);
     _timetableRailways = lines;
   } catch (_) {
-    _timetableRailways = [];
+    // 🔴 取得失敗時は空リストを永続キャッシュしない（次回呼び出しで再取得を試みる）
+    return [];
   }
   return _timetableRailways;
 }
@@ -7057,15 +7201,20 @@ async function getTimetable(args) {
     // 路線単位で取得してマージ（キャッシュはマージ結果で保持）
     const cached = cache.get(cache.trainTimetable.key);
     let allTimetables;
-    if (cached) { allTimetables = cached; odptBreaker.onSuccess(); }
+    if (cached) { allTimetables = cached; }
     else {
       const railways = await getTimetableRailways();
       const responses = await Promise.allSettled(railways.map(rw =>
         axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(null, { 'odpt:railway': rw }), timeout: 20000 })
       ));
-      allTimetables = responses
-        .filter(r => r.status === 'fulfilled' && Array.isArray(r.value.data))
-        .flatMap(r => r.value.data);
+      const fulfilled = responses.filter(r => r.status === 'fulfilled' && Array.isArray(r.value.data));
+      // 🔴 全路線の取得に失敗した場合は成功扱いにせず、空データもキャッシュしない
+      //（空の時刻表を1時間キャッシュすると、障害復旧後もNO_DATAを返し続けるため）。
+      if (railways.length > 0 && fulfilled.length === 0) {
+        const firstRejected = responses.find(r => r.status === 'rejected');
+        throw (firstRejected?.reason || new Error('All ODPT train timetable requests failed'));
+      }
+      allTimetables = fulfilled.flatMap(r => r.value.data);
       odptBreaker.onSuccess();
       cache.set(cache.trainTimetable.key, allTimetables, cache.trainTimetable.ttl);
     }
@@ -8341,17 +8490,16 @@ async function fetchAllBuses(userLang) {
     // 🔴 stop_times.txt は最大95万行（川崎市バス）と巨大なため、全体は保持せず各系統の代表1trip の
     //    起終点（先頭/末尾の stop_sequence）だけを取得する（searchBus は停名/系統検索が主目的）。
     try {
-      const res = await axios.get(src.url, { params: { date: src.date(), 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: 20000 });
+      const zipBuf = await fetchGtfsZipBuffer(src, 20000);
       const AdmZip = (await import('adm-zip')).default;
-      const zip = new AdmZip(Buffer.from(res.data));
+      const zip = new AdmZip(Buffer.from(zipBuf));
       const parseCsv = (entryName) => {
         const e = zip.getEntry(entryName);
         if (!e) return [];
-        const lines = e.getData().toString('utf8').split(/\r?\n/).filter(l => l.trim());
-        if (!lines.length) return [];
-        const headers = lines[0].split(',').map(h => h.trim());
-        return lines.slice(1).map(line => {
-          const values = line.split(',').map(v => v.trim());
+        const records = parseCsvRecords(e.getData().toString('utf8'));
+        if (!records.length) return [];
+        const headers = records[0];
+        return records.slice(1).map(values => {
           const obj = {};
           headers.forEach((h, i) => { obj[h] = values[i] || ''; });
           return obj;
@@ -8374,12 +8522,11 @@ async function fetchAllBuses(userLang) {
         let seq = new Map(); // trip_id -> [stop_id, maxSeq]
         const e = zip.getEntry('stop_times.txt');
         if (e) {
-          const lines = e.getData().toString('utf8').split(/\r?\n/).filter(l => l.trim());
-          if (lines.length) {
-            const headers = lines[0].split(',').map(h => h.trim());
+          const records = parseCsvRecords(e.getData().toString('utf8'));
+          if (records.length) {
+            const headers = records[0] || [];
             const ti = headers.indexOf('trip_id'), si = headers.indexOf('stop_id'), qi = headers.indexOf('stop_sequence');
-            for (let i = 1; i < lines.length; i++) {
-              const vals = lines[i].split(',').map(v => v.trim());
+            for (const vals of records.slice(1)) {
               const tid = vals[ti], sid = vals[si], q = Number(vals[qi] || 0);
               if (!wanted.has(tid)) continue;
               const cur = seq.get(tid);
@@ -8494,14 +8641,14 @@ function normalizeBusStop(name) {
 }
 
 // odpt:BusroutePattern から (operator, routePatternId, [orderedStopNames]) を取得
-async function fetchBusGraph() {
+async function fetchBusGraph(signal) {
   const cached = cache.get(cache.busGraph.key);
   if (cached) return cached;
   if (!odptBreaker.canExecute()) throw new Error('ODPT API is currently offline (Circuit Breaker is OPEN)');
   const patterns = []; // { operator, patternId, stops: [{name, poleId}] }
   const results = await Promise.allSettled(
     BUS_OPERATORS.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:BusroutePattern`, { params: getParams(op.id), timeout: 8000 })
+      axios.get(`${API_BASE_URL}/odpt:BusroutePattern`, { params: getParams(op.id), timeout: 8000, signal })
     )
   );
   results.forEach((res, i) => {
@@ -8521,6 +8668,10 @@ async function fetchBusGraph() {
       odptBreaker.onFailure(res.reason || new Error('BusroutePattern fetch failed'));
     }
   });
+  // 🔴 全事業者の取得に失敗した場合は空グラフをキャッシュしない（TTL中NOT_FOUND固定化を防ぐ）
+  if (results.every(r => r.status === 'rejected')) {
+    throw (results[0]?.reason || new Error('All BusroutePattern requests failed'));
+  }
   const data = { patterns };
   cache.set(cache.busGraph.key, data, cache.busGraph.ttl);
   return data;
@@ -8528,7 +8679,7 @@ async function fetchBusGraph() {
 
 // odpt:BusTimetable から (patternId → 各停留所の isNonStepBus) および
 // (stopName → isNonStepBus) を取得。stopName マップは patternId 不一致を回避するためのフォールバック。
-async function fetchBusTimetable() {
+async function fetchBusTimetable(signal) {
   const cached = cache.get(cache.busTimetable.key);
   if (cached) return cached;
   if (!odptBreaker.canExecute()) throw new Error('ODPT API is currently offline (Circuit Breaker is OPEN)');
@@ -8536,7 +8687,7 @@ async function fetchBusTimetable() {
   const nonStepByStop = {};     // stopName -> bool（patternId 不一致のフォールバック）
   const results = await Promise.allSettled(
     BUS_OPERATORS.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:BusTimetable`, { params: getParams(op.id), timeout: 8000 })
+      axios.get(`${API_BASE_URL}/odpt:BusTimetable`, { params: getParams(op.id), timeout: 8000, signal })
     )
   );
   results.forEach((res) => {
@@ -8563,6 +8714,10 @@ async function fetchBusTimetable() {
       odptBreaker.onFailure(res.reason || new Error('BusTimetable fetch failed'));
     }
   });
+  // 🔴 全事業者の取得に失敗した場合は空データをキャッシュしない
+  if (results.every(r => r.status === 'rejected')) {
+    throw (results[0]?.reason || new Error('All BusTimetable requests failed'));
+  }
   const data = { nonStepByPattern, nonStepByStop };
   cache.set(cache.busTimetable.key, data, cache.busTimetable.ttl);
   return data;
@@ -8643,14 +8798,14 @@ function buildTrainNameGraph() {
 }
 
 // odpt:BusstopPole から { バス停名(正規化) -> {lat, lon, operator} } を取得（geo 付き）
-async function fetchBusStopGeo() {
+async function fetchBusStopGeo(signal) {
   const cached = cache.get(cache.busStopGeo.key);
   if (cached) return cached;
   if (!odptBreaker.canExecute()) return {};
   const map = {};
   const results = await Promise.allSettled(
     BUS_OPERATORS.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:BusstopPole`, { params: getParams(op.id), timeout: 8000 })
+      axios.get(`${API_BASE_URL}/odpt:BusstopPole`, { params: getParams(op.id), timeout: 8000, signal })
     )
   );
   results.forEach((res) => {
@@ -8668,12 +8823,15 @@ async function fetchBusStopGeo() {
       odptBreaker.onFailure(res.reason || new Error('BusstopPole fetch failed'));
     }
   });
-  cache.set(cache.busStopGeo.key, map, cache.busStopGeo.ttl);
+  // 🔴 全滅時は空mapを返すがキャッシュはしない（TTL中の縮退固定化を防ぐ）
+  if (!results.every(r => r.status === 'rejected')) {
+    cache.set(cache.busStopGeo.key, map, cache.busStopGeo.ttl);
+  }
   return map;
 }
 
 // odpt:Station から { 駅名(正規化) -> {lat, lon} } を取得（geo 付き）
-async function fetchStationGeo() {
+async function fetchStationGeo(signal) {
   const cached = cache.get(cache.stationGeo.key);
   if (cached) return cached;
   if (!odptBreaker.canExecute()) return {};
@@ -8681,7 +8839,7 @@ async function fetchStationGeo() {
   const ops = ['TokyoMetro', 'Toei', 'JR-East', 'YokohamaMunicipal', 'Keio', 'Keikyu', 'Odakyu', 'Seibu', 'Tobu', 'TWR', 'MIR', 'Minatomirai'];
   const results = await Promise.allSettled(
     ops.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 8000 })
+      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 8000, signal })
     )
   );
   results.forEach((res) => {
@@ -8695,7 +8853,10 @@ async function fetchStationGeo() {
       }
     }
   });
-  cache.set(cache.stationGeo.key, map, cache.stationGeo.ttl);
+  // 🔴 全滅時は空mapを返すがキャッシュはしない（TTL中の縮退固定化を防ぐ）
+  if (!results.every(r => r.status === 'rejected')) {
+    cache.set(cache.stationGeo.key, map, cache.stationGeo.ttl);
+  }
   return map;
 }
 
@@ -8709,9 +8870,9 @@ function haversineM(lat1, lon1, lat2, lon2) {
 }
 
 // バス停→最寄り駅 の紐付けマップ（近接閾値以内の駅を結ぶ）
-async function fetchBusStopStationLinks(thresholdM = 500) {
-  const busGeo = await fetchBusStopGeo();
-  const stGeo = await fetchStationGeo();
+async function fetchBusStopStationLinks(thresholdM = 500, signal = undefined) {
+  const busGeo = await fetchBusStopGeo(signal);
+  const stGeo = await fetchStationGeo(signal);
   const links = {}; // バス停名 -> 駅名
   for (const [bName, b] of Object.entries(busGeo)) {
     let best = null, bestD = Infinity;
@@ -9035,24 +9196,31 @@ async function searchBusTransfer(fromInput, toInput, vehiclePref) {
   // 300s タイムアウトに到達しないよう、空データでフォールバックする。
   const BUS_TRANSFER_FETCH_TIMEOUT_MS = 25000;
   let graphData, ttData, links, stationGeoMap;
+  // 🔴 タイムアウト時に元のHTTPリクエストも中断する（Promise.raceだけでは通信が継続し、
+  // 遅延完了したレスポンスがキャッシュを書き換える・負荷が残る問題があった）。
+  const abortController = new AbortController();
+  const abortTimer = setTimeout(() => abortController.abort(new Error('bus transfer fetch timeout')), BUS_TRANSFER_FETCH_TIMEOUT_MS);
   try {
     const withTimeout = (p, label) => Promise.race([
       p,
       new Promise((_, rej) => setTimeout(() => rej(new Error(`bus transfer fetch timeout: ${label}`)), BUS_TRANSFER_FETCH_TIMEOUT_MS))
     ]);
     [graphData, ttData, links, stationGeoMap] = await Promise.all([
-      withTimeout(fetchBusGraph(), 'BusroutePattern'),
-      withTimeout(fetchBusTimetable(), 'BusTimetable'),
-      withTimeout(fetchBusStopStationLinks(), 'BusstopStationLinks'),
-      withTimeout(fetchStationGeo(), 'StationGeo')
+      withTimeout(fetchBusGraph(abortController.signal), 'BusroutePattern'),
+      withTimeout(fetchBusTimetable(abortController.signal), 'BusTimetable'),
+      withTimeout(fetchBusStopStationLinks(500, abortController.signal), 'BusstopStationLinks'),
+      withTimeout(fetchStationGeo(abortController.signal), 'StationGeo')
     ]);
   } catch (timeoutErr) {
-    // タイムアウト時は空データで継続（グラフは空＝NOT_FOUND を返し、コミュニティバス接続案内は維持）
+    // タイムアウト時は残リクエストを中断し、空データで継続（グラフは空＝NOT_FOUND を返し、コミュニティバス接続案内は維持）
+    abortController.abort(timeoutErr);
     console.error('[searchBusTransfer] fetch guard triggered:', timeoutErr.message);
     graphData = graphData || { patterns: [] };
     ttData = ttData || { nonStepByPattern: {}, nonStepByStop: {} };
     links = links || {};
     stationGeoMap = stationGeoMap || {};
+  } finally {
+    clearTimeout(abortTimer);
   }
   const { patterns } = graphData;
   const { nonStepByPattern, nonStepByStop } = ttData;
@@ -9677,9 +9845,9 @@ async function searchBus(args) {
 
 // 空港名（日本語/英語）→ IATA コード
 const AIRPORT_IATA = {
-  '羽田空港': 'HND', '羽田': 'HND', 'HND': 'HND', 'Haneda': 'HND', 'Haneda Airport': 'HND', '羽田机场': 'HND', '东京国际机场': 'HND', '东京国际': 'HND',
-  '成田空港': 'NRT', '成田': 'NRT', 'NRT': 'NRT', 'Narita': 'NRT', 'Narita Airport': 'NRT', '成田机场': 'NRT',
-  '茨城空港': 'IBR', 'IBR': 'IBR', '茨城机场': 'IBR'
+  '羽田空港': 'HND', '羽田': 'HND', 'HND': 'HND', 'hnd': 'HND', 'Haneda': 'HND', 'Haneda Airport': 'HND', '羽田机场': 'HND', '东京国际机场': 'HND', '东京国际': 'HND',
+  '成田空港': 'NRT', '成田': 'NRT', 'NRT': 'NRT', 'nrt': 'NRT', 'Narita': 'NRT', 'Narita Airport': 'NRT', '成田机场': 'NRT',
+  '茨城空港': 'IBR', 'IBR': 'IBR', 'ibr': 'IBR', '茨城机场': 'IBR'
 };
 // 空港 IATA → 天候取得用の気象庁地域コード（到着時の AI アドバイス用）
 const AIRPORT_WEATHER_AREA = {
@@ -9782,12 +9950,8 @@ function normalizeOdpFlight(f, direction, userLang) {
   const scheduled = isDep ? f['odpt:scheduledDepartureTime'] : f['odpt:scheduledArrivalTime'];
   const actual = isDep ? f['odpt:actualDepartureTime'] : f['odpt:actualArrivalTime'];
   const estimated = isDep ? f['odpt:estimatedDepartureTime'] : f['odpt:estimatedArrivalTime'];
-  // 遅延 = 実績 − 予定（分）
-  let delayMin = null;
-  if (actual && scheduled) {
-    const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
-    delayMin = toMin(actual) - toMin(scheduled);
-  }
+  // 遅延 = 実績 − 予定（分）。日跨ぎ（例: 22:55 → 00:01）を補正する。
+  const delayMin = calculateFlightDelayMinutes(scheduled, actual);
   return {
     flight_iata: flightIata,
     airline: airlineDef ? airlineDef[userLang === 'en' ? 'en' : userLang === 'zh' ? 'zh' : 'ja'] : opId,
@@ -9828,7 +9992,7 @@ async function fetchFlightsOdp(params) {
     return data;
   } catch (err) {
     console.warn('ODPT flight error:', err.message);
-    return null;
+    throw err;
   }
 }
 
@@ -9877,10 +10041,10 @@ async function fetchFlights(params) {
         return data;
       } catch (e2) {
         console.warn('AviationStack retry error:', e2.message);
-        return null;
+        throw e2;
       }
     }
-    return null;
+    throw err;
   }
 }
 
@@ -9945,7 +10109,18 @@ async function searchFlight(args) {
         { userLang }));
     }
     // 空港 IATA を解決（両モードで共有）
-    const iata = AIRPORT_IATA[normalizeAirportQuery(airportRaw)] || (airportRaw.match(/^[A-Z]{3}$/) ? airportRaw : null);
+    const airportQuery = normalizeAirportQuery(airportRaw);
+    const iata = AIRPORT_IATA[airportQuery] || normalizeAirportIata(airportQuery);
+    if (airportRaw && !iata && !flightNumber) {
+      return jsonResponse(buildErrorResponse('INVALID_INPUT',
+        label('対応していない空港コードまたは空港名です。', 'Unsupported airport code or airport name.', '不支持的机场代码或机场名称。'),
+        { userLang }));
+    }
+    if (!validateFlightDate(flightDate)) {
+      return jsonResponse(buildErrorResponse('INVALID_INPUT',
+        label('flight_date は YYYY-MM-DD 形式で指定してください。', 'flight_date must use YYYY-MM-DD format.', 'flight_date 必须使用 YYYY-MM-DD 格式。'),
+        { userLang }));
+    }
     // 到着時の AI インテリジェントアドバイス（天候連動・3か国語）
     // -test 障害シミュレーション指定時は障害アドバイスを優先
     let aiAdvice = testAdv.aiAdvice || null;
@@ -9960,6 +10135,7 @@ async function searchFlight(args) {
     // ODPT（JAL/ANA リアルタイム発着・基本ライセンス）を優先し、取得できない場合のみ
     // AviationStack（FLIGHT_API_KEY 設定時）にフォールバックする。
     let flights = null;
+    let flightApiError = null;
     const flightParams = { limit: 20, direction };
     if (flightNumber) flightParams.flight_iata = flightNumber.toUpperCase();
     else if (iata) flightParams[direction === 'arrival' ? 'arr_iata' : 'dep_iata'] = iata;
@@ -9972,11 +10148,18 @@ async function searchFlight(args) {
     if (airlineIata) flightParams.airline_iata = airlineIata.toUpperCase();
     // ODPT を先に試す（APIキー設定済みなら常に利用可能・429レート制限なし）
     if (API_KEY) {
-      flights = await fetchFlightsOdp(flightParams);
+      try { flights = await fetchFlightsOdp(flightParams); }
+      catch (error) { flightApiError = error; }
     }
     // ODPT で取得できない場合のみ AviationStack にフォールバック
     if ((!flights || flights.length === 0) && FLIGHT_API_KEY) {
-      flights = await fetchFlights(flightParams);
+      try { flights = await fetchFlights(flightParams); }
+      catch (error) { flightApiError = error; }
+    }
+
+    // API障害と、APIが正常に空結果を返した場合を区別する。
+    if ((!flights || flights.length === 0) && flightApiError && (API_KEY || FLIGHT_API_KEY)) {
+      return jsonResponse(handleApiError(flightApiError, { userLang, api: 'flight' }));
     }
 
     // キーなし / データなし → graceful degradation: 空港アクセス経路のみ
@@ -10101,7 +10284,7 @@ async function searchFlight(args) {
   }
 }
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES, calculateFlightDelayMinutes, parseCsvLine, validateFlightDate, normalizeAirportIata, gtfsFetchDates };
 
 async function main() {
   const transport = new StdioServerTransport();
