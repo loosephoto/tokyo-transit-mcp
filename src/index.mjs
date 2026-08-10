@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.3 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.4 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -4415,7 +4415,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.3' },
+  { name: 'tokyo-transit-mcp', version: '2.38.4' },
   { capabilities: { tools: {} } }
 );
 
@@ -4457,7 +4457,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: { operator_name: { type: 'string', description: '事業者キー' }, language: { type: 'string', enum: ['ja', 'en', 'zh'] } }, required: ['operator_name'] }
     },
     { name: 'search_flight',
-      description: '✈️ 空港フライト時刻・到着時刻表示 - 羽田(HND)/成田(NRT)等の空港または便名で到着/出発フライトを検索。海外からの来客・帰省時に最適: 到着フライト検索時に destination（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路を自動提案。FLIGHT_API_KEY 未設定時はフライト時刻なしで空港アクセス経路のみ表示（graceful degradation）。language（ja/en/zh）指定で応答言語を強制可能。',
+      description: '✈️ 空港フライト時刻・到着時刻表示 - 羽田(HND)/成田(NRT)等の空港または便名で到着/出発フライトを検索。JAL/ANA のリアルタイム発着データ（ODPT・基本ライセンス）をプライマリに使用し、取得できない場合は AviationStack にフォールバック。海外からの来客・帰省時に最適: 到着フライト検索時に destination（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路を自動提案。API キー未設定時はフライト時刻なしで空港アクセス経路のみ表示（graceful degradation）。language（ja/en/zh）指定で応答言語を強制可能。',
       inputSchema: { type: 'object', properties: { airport: { type: 'string', description: '空港名またはIATAコード（例: 羽田空港, 成田空港, HND, NRT）' }, flight_number: { type: 'string', description: '便名（例: NH001, JL000）' }, direction: { type: 'string', enum: ['arrival', 'departure'], description: '到着(arrival)または出発(departure)。省略時は到着。' }, flight_date: { type: 'string', description: 'フライト日付 YYYY-MM-DD（省略時は当日）' }, airline: { type: 'string', description: '航空会社IATAコード（任意・絞り込み）' }, destination: { type: 'string', description: '到着時の連携先（例: 東京駅）。指定すると到着ターミナル→目的地のアクセス経路を提案。' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時は空港名/便名から自動判定）' } }, required: [] } },
     { name: 'search_fare',
       description: '🚃 運賃検索 - 2駅間の運賃をODPTデータから検索します（東京メトロ・都営対応）。サーバー内で運賃を直接返します。language（ja/en/zh）指定で応答言語を強制可能。',
@@ -9543,7 +9543,130 @@ const DEFAULT_ACCESS_DESTINATIONS = {
   IBR: ['水戸']
 };
 
-// AviationStack からフライトを取得（キーなし・エラー時は null を返し graceful degradation）
+// ============================================================
+// ✈️ ODPT 航空データ（プライマリソース・JAL/ANA・基本ライセンス）
+// AviationStack はフォールバック（FLIGHT_API_KEY 設定時のみ・JAL/ANA 以外の便や海外空港を補完）
+// ============================================================
+
+// ODPT フライトステータス辞書（odpt:FlightStatus の 32 種 → ja/en/zh）
+const ODPT_FLIGHT_STATUS_MAP = {
+  Adjusting:        { ja: '機材繰り',           en: 'Adjusting aircraft',          zh: '调配飞机' },
+  Arrived:          { ja: '到着済み',           en: 'Arrived',                     zh: '已到达' },
+  BadWeather:       { ja: '天候不良',           en: 'Bad weather',                 zh: '天气恶劣' },
+  BaggageAvailable: { ja: '手荷物引渡中',       en: 'Baggage delivery',            zh: '行李交付中' },
+  BoardingComplete: { ja: '搭乗終了',           en: 'Boarding completed',          zh: '登机结束' },
+  CheckInClose:     { ja: '搭乗手続終了',       en: 'Check-in closed',             zh: '值机结束' },
+  CheckIn:          { ja: '搭乗手続中',         en: 'Check-in in progress',        zh: '值机中' },
+  Cancelled:        { ja: '欠航',               en: 'Cancelled',                   zh: '取消' },
+  Delayed:          { ja: '遅れ',               en: 'Delayed',                     zh: '延误' },
+  Departed:         { ja: '出発済み',           en: 'Departed',                    zh: '已起飞' },
+  DestinationChanged:{ ja: '到着地変更',        en: 'Destination changed',         zh: '目的地变更' },
+  Diverted:         { ja: 'ダイバート',         en: 'Diverted',                    zh: '备降' },
+  EstimatedArrival: { ja: '到着予定',           en: 'Estimated arrival',           zh: '预计到达' },
+  EstimatedDeparture:{ ja: '出発予定',          en: 'Estimated departure',         zh: '预计起飞' },
+  ExtraFlight:      { ja: '臨時便',             en: 'Extra flight',                zh: '临时航班' },
+  FinalCall:        { ja: '最終搭乗案内',       en: 'Final call',                  zh: '最后登机通知' },
+  InAir:            { ja: '航行中',             en: 'In flight',                   zh: '飞行中' },
+  Indefinite:       { ja: '時刻未定',           en: 'Time indefinite',             zh: '时间未定' },
+  Landed:           { ja: '着陸済み',           en: 'Landed',                      zh: '已着陆' },
+  LateArrival:      { ja: '使用機遅れ',         en: 'Late aircraft arrival',       zh: '飞机晚到' },
+  LeftGate:         { ja: 'ゲート出発済み',     en: 'Left gate',                   zh: '已出登机口' },
+  Maintenance:      { ja: '使用機整備',         en: 'Maintenance',                 zh: '飞机维护' },
+  NewTime:          { ja: '時刻変更',           en: 'Time changed',                zh: '时间变更' },
+  NowBoarding:      { ja: '搭乗中',             en: 'Now boarding',                zh: '登机中' },
+  OnTime:           { ja: '定刻',               en: 'On time',                     zh: '准点' },
+  Other:            { ja: 'その他',             en: 'Other',                       zh: '其他' },
+  PostponedTomorrow:{ ja: '翌日運行',           en: 'Postponed to tomorrow',       zh: '顺延至明日' },
+  StopCheckIn:      { ja: '搭乗手続中止中',     en: 'Check-in suspended',           zh: '值机暂停' },
+  Takeoff:          { ja: '離陸済み',           en: 'Departed (takeoff)',          zh: '已起飞' },
+  Unknown:          { ja: '不明',               en: 'Unknown',                     zh: '不明' },
+  WeatherCheck:     { ja: '天候調査中',         en: 'Weather check',               zh: '天气检查中' },
+  Yesterday:        { ja: '昨日便',             en: "Yesterday's flight",          zh: '昨日航班' }
+};
+// 空港 IATA → 航空会社表示名（ODPT は operator が odpt.Operator:JAL/ANA 形式）
+const ODPT_AIRLINE_NAMES = {
+  JAL: { ja: '日本航空', en: 'Japan Airlines', zh: '日本航空' },
+  ANA: { ja: '全日空',   en: 'All Nippon Airways', zh: '全日空' }
+};
+// odpt.Airport:HND / odpt.AirportTerminal:HND.Terminal3 形式 → 末尾コード抽出
+function odpIdSuffix(id, prefix) {
+  if (!id) return null;
+  const s = String(id);
+  return s.startsWith(prefix) ? s.slice(prefix.length) : s;
+}
+// ODPT のフライト1件を共通フォーマットに正規化
+function normalizeOdpFlight(f, direction, userLang) {
+  const isDep = direction === 'departure';
+  const flightNumbers = f['odpt:flightNumber'];
+  const flightIata = Array.isArray(flightNumbers) ? flightNumbers[0] : (flightNumbers || null);
+  const opId = odpIdSuffix(f['odpt:operator'] || f['odpt:airline'], 'odpt.Operator:');
+  const airlineDef = ODPT_AIRLINE_NAMES[opId] || null;
+  const statusId = odpIdSuffix(f['odpt:flightStatus'], 'odpt.FlightStatus:');
+  const statusDef = statusId ? (ODPT_FLIGHT_STATUS_MAP[statusId] || null) : null;
+  // 着目側（到着なら到着側、出発なら出発側）
+  const endAirportId = odpIdSuffix(isDep ? f['odpt:departureAirport'] : f['odpt:arrivalAirport'], 'odpt.Airport:');
+  const otherAirportId = odpIdSuffix(isDep ? f['odpt:destinationAirport'] : f['odpt:originAirport'], 'odpt.Airport:');
+  const terminalId = odpIdSuffix(isDep ? f['odpt:departureAirportTerminal'] : f['odpt:arrivalAirportTerminal'], 'odpt.AirportTerminal:');
+  // ターミナル: HND.Terminal3 → 3 / Terminal1 → 1（既存の「羽田空港第Nターミナル」組み立てと整合）
+  let terminal = null;
+  if (terminalId) {
+    const m = String(terminalId).match(/Terminal(\d+)/i);
+    terminal = m ? m[1] : null;
+  }
+  const scheduled = isDep ? f['odpt:scheduledDepartureTime'] : f['odpt:scheduledArrivalTime'];
+  const actual = isDep ? f['odpt:actualDepartureTime'] : f['odpt:actualArrivalTime'];
+  const estimated = isDep ? f['odpt:estimatedDepartureTime'] : f['odpt:estimatedArrivalTime'];
+  // 遅延 = 実績 − 予定（分）
+  let delayMin = null;
+  if (actual && scheduled) {
+    const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
+    delayMin = toMin(actual) - toMin(scheduled);
+  }
+  return {
+    flight_iata: flightIata,
+    airline: airlineDef ? airlineDef[userLang === 'en' ? 'en' : userLang === 'zh' ? 'zh' : 'ja'] : opId,
+    status: statusId,
+    status_text: statusDef ? statusDef[userLang === 'en' ? 'en' : userLang === 'zh' ? 'zh' : 'ja'] : statusId,
+    terminal,
+    gate: isDep ? f['odpt:departureGate'] : f['odpt:arrivalGate'],
+    baggage: null, // ODPT 航空データには手荷物受取情報なし
+    scheduled_time: scheduled,
+    actual_time: actual,
+    estimated_time: estimated,
+    delay_minutes: delayMin,
+    airport_name: endAirportId,
+    airport_iata: endAirportId,
+    other_airport_name: otherAirportId,
+    other_airport_iata: otherAirportId
+  };
+}
+
+// ODPT からフライトを取得（プライマリ・JAL/ANA のリアルタイム発着）
+async function fetchFlightsOdp(params) {
+  if (!API_KEY) return null;
+  const isDep = params.direction === 'departure';
+  const type = isDep ? 'odpt:FlightInformationDeparture' : 'odpt:FlightInformationArrival';
+  const q = { 'acl:consumerKey': API_KEY };
+  if (params.flight_iata) q['odpt:flightNumber'] = params.flight_iata;
+  else if (params.arr_iata) q['odpt:arrivalAirport'] = `odpt.Airport:${params.arr_iata}`;
+  else if (params.dep_iata) q['odpt:departureAirport'] = `odpt.Airport:${params.dep_iata}`;
+  if (params.airline_iata) q['odpt:operator'] = `odpt.Operator:${params.airline_iata}`;
+  const url = `${API_BASE_URL}/${type}?${new URLSearchParams(q).toString()}`;
+  const cacheKey = cache.flightData.key + ':odp:' + url;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+  try {
+    const res = await axios.get(`${API_BASE_URL}/${type}`, { params: q, timeout: 15000 });
+    const data = Array.isArray(res.data) ? res.data : [];
+    cache.set(cacheKey, data, cache.flightData.ttl);
+    return data;
+  } catch (err) {
+    console.warn('ODPT flight error:', err.message);
+    return null;
+  }
+}
+
+// AviationStack からフライトを取得（フォールバック・キーなし・エラー時は null を返し graceful degradation）
 // 注意: AviationStack は flight_status の複数値（カンマ区切り）を拒否する（validation_error）。
 // また無料プランは flight_date パラメータ非対応（function_access_restricted）のため、
 // エラー時は必須パラメータ（空港/便名/limit）のみで再試行する。
@@ -9597,6 +9720,10 @@ async function fetchFlights(params) {
 
 // フライト1件を共通フォーマットに正規化
 function normalizeFlight(f, direction, userLang) {
+  // ODPT形式（odpt:FlightInformationDeparture / Arrival）: プライマリデータソース
+  if (f && f['@type'] && String(f['@type']).startsWith('odpt:FlightInformation')) {
+    return normalizeOdpFlight(f, direction, userLang);
+  }
   const dep = f.departure || {};
   const arr = f.arrival || {};
   const end = direction === 'departure' ? dep : arr; // 着目側（到着なら到着側、出発なら出発側）
@@ -9663,22 +9790,27 @@ async function searchFlight(args) {
         aiAdvice = wa.advice || null;
       } catch (_) { aiAdvice = null; }
     }
-    // フライト取得（キーなし時は null）
+    // フライト取得（プライマリ: ODPT / フォールバック: AviationStack）
+    // ODPT（JAL/ANA リアルタイム発着・基本ライセンス）を優先し、取得できない場合のみ
+    // AviationStack（FLIGHT_API_KEY 設定時）にフォールバックする。
     let flights = null;
-    if (FLIGHT_API_KEY) {
-      const params = { limit: 20 };
-      if (flightNumber) params.flight_iata = flightNumber.toUpperCase();
-      else if (iata) params[direction === 'arrival' ? 'arr_iata' : 'dep_iata'] = iata;
-      else {
-        return jsonResponse(buildErrorResponse('INVALID_INPUT',
-          label('空港名または便名を指定してください。', 'Specify an airport name or flight number.', '请指定机场名或航班号。'),
-          { userLang }));
-      }
-      if (flightDate) params.flight_date = flightDate;
-      if (airlineIata) params.airline_iata = airlineIata.toUpperCase();
-      // flight_status は複数値が AviationStack で拒否される（validation_error）ため送らない
-      // （当日分はステータス問わず取得し、表示時に各便のステータスをそのまま見せる）
-      flights = await fetchFlights(params);
+    const flightParams = { limit: 20, direction };
+    if (flightNumber) flightParams.flight_iata = flightNumber.toUpperCase();
+    else if (iata) flightParams[direction === 'arrival' ? 'arr_iata' : 'dep_iata'] = iata;
+    else {
+      return jsonResponse(buildErrorResponse('INVALID_INPUT',
+        label('空港名または便名を指定してください。', 'Specify an airport name or flight number.', '请指定机场名或航班号。'),
+        { userLang }));
+    }
+    if (flightDate) flightParams.flight_date = flightDate;
+    if (airlineIata) flightParams.airline_iata = airlineIata.toUpperCase();
+    // ODPT を先に試す（APIキー設定済みなら常に利用可能・429レート制限なし）
+    if (API_KEY) {
+      flights = await fetchFlightsOdp(flightParams);
+    }
+    // ODPT で取得できない場合のみ AviationStack にフォールバック
+    if ((!flights || flights.length === 0) && FLIGHT_API_KEY) {
+      flights = await fetchFlights(flightParams);
     }
 
     // キーなし / データなし → graceful degradation: 空港アクセス経路のみ
@@ -9716,15 +9848,16 @@ async function searchFlight(args) {
       }
       // 便名のみ指定で空港が特定できない場合の案内
       const isFlightNumberOnly = !airportRaw && !!flightNumber;
+      const flightApiOn = !!(API_KEY || FLIGHT_API_KEY);
       const note = isFlightNumberOnly
-        ? (FLIGHT_API_KEY
-          ? label('指定された便は当日のデータに見つかりませんでした（無料プランでは当日分のみ取得可能・日付指定は非対応です）。',
-                  'No flights found for the specified flight number (free plan covers current-day data only; date parameter is not supported).',
-                  '未找到指定航班（免费套餐仅支持当日数据，不支持日期参数）。')
-          : label('便名検索には FLIGHT_API_KEY の設定が必要です（到着空港を特定できません）。',
-                  'Flight number search requires FLIGHT_API_KEY (cannot determine arrival airport).',
-                  '按航班号查询需要配置 FLIGHT_API_KEY（无法确定到达机场）。'))
-        : (FLIGHT_API_KEY
+        ? (flightApiOn
+          ? label('指定された便は当日のデータに見つかりませんでした（JAL/ANA のリアルタイムデータは当日分のみ取得可能です）。',
+                  'No flights found for the specified flight number (JAL/ANA realtime data covers current-day flights only).',
+                  '未找到指定航班（JAL/ANA 实时数据仅支持当日航班）。')
+          : label('便名検索には API キーの設定が必要です（到着空港を特定できません）。',
+                  'Flight number search requires an API key (cannot determine arrival airport).',
+                  '按航班号查询需要配置 API 密钥（无法确定到达机场）。'))
+        : (flightApiOn
           ? label('フライトが見つかりませんでした。', 'No flights found.', '未找到航班。')
           : label('フライト時刻は設定されていません（APIキー未設定）。空港へのアクセス経路のみ表示します。',
                   'Flight times are unavailable (API key not set). Showing airport access route only.',
@@ -9738,7 +9871,7 @@ async function searchFlight(args) {
         ai_transit_advice: aiAdvice,
         access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
         access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
-        flight_api_configured: !!FLIGHT_API_KEY,
+        flight_api_configured: !!(API_KEY || FLIGHT_API_KEY),
         test_mode: testAdv.testMode,
         simulated_failure_type: testAdv.failureType || undefined
       });
@@ -9793,7 +9926,7 @@ async function searchFlight(args) {
       flights: normalized.slice(0, 20),
       access_route: accessRoutes.length === 1 ? accessRoutes[0] : null,
       access_routes: accessRoutes.length > 1 ? accessRoutes : undefined,
-      flight_api_configured: !!FLIGHT_API_KEY,
+      flight_api_configured: !!(API_KEY || FLIGHT_API_KEY),
       test_mode: testAdv.testMode,
       simulated_failure_type: testAdv.failureType || undefined
     });

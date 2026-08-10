@@ -33,15 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **地下連絡通路で直結する近接異名駅6組を追加（WALK_TRANSFERS・Issue #69・都庁前⇔西新宿）**
-  - 都庁前⇔西新宿（8分・大江戸線⇔丸ノ内線・地下連絡通路直結・動く歩道あり）
-  - 馬喰町⇔馬喰横山（3分・JR総武線快速⇔都営新宿線・乗り換え専用連絡改札・都営公式乗換案内）
-  - 上野広小路⇔上野御徒町（3分・銀座線⇔大江戸線・地下通路直結・都営公式乗換案内）
-  - 上野御徒町⇔仲御徒町（3分・大江戸線⇔日比谷線・地下通路直結・都営公式乗換案内）
-  - 新富町⇔築地（5分・有楽町線⇔日比谷線・2018年より東京メトロ公式の同一駅扱い）
-  - 銀座一丁目⇔東銀座（7分・有楽町線⇔浅草線・日比谷線・#68登録漏れ是正）
-  - 都庁前→西新宿: **12分・乗換1回（新宿経由）→ 徒歩連絡8分・乗換0回**に短縮。本郷三丁目→仲御徒町も徒歩連絡経由10分に改善
-  - **検証** — probe-all-lang 26/26・check-railway-integrity PASS・test-transfer-pairs 33ペア全PASS・バウンス/連鎖なし
+- **search_flight を ODPT 航空データ（JAL/ANA リアルタイム発着・基本ライセンス）に切替（v2.38.4）**
+  - `odpt:FlightInformationDeparture/Arrival` をプライマリに使用（フライト便名・予定/実績/予想時刻・遅延・ターミナル・ゲート・運航ステータス32種）。AviationStack はフォールバック（FLIGHT_API_KEY 設定時のみ・JAL/ANA 以外の便や海外空港を補完）
+  - 遅延は実績−予定で算出（例: JL003 28分早着 / NH961 20分早着）、ステータスは 32 種を ja/en/zh 対応（定刻・搭乗中・最終搭乗案内・天候調査中 等）
+  - 羽田到着→東京駅のアクセス経路連携は従来どおり（モノレール→浜松町→山手線 35分・乗換2回）
+  - 旧 AviationStack の 429 レート制限・無料プラン制限（flight_date 非対応）から解放
+  - **検証** — probe-all-lang 26/26・便名検索（JL002/NH961）・空港検索（HND 544件/NRT 58件）・遅延検出・foreign便フォールバック全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -590,15 +587,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Added 6 nearby-name station links connected by underground passages (WALK_TRANSFERS・Issue #69・Tochomae⇔Nishi-Shinjuku)**
-  - Tochomae⇔Nishi-Shinjuku (8 min, Oedo Line⇔Marunouchi Line, direct underground passage with moving walkway)
-  - Bakurocho⇔Bakuro-Yokoyama (3 min, JR Sobu Rapid⇔Toei Shinjuku Line, dedicated transfer gate per Toei)
-  - Ueno-Hirokoji⇔Ueno-Okachimachi (3 min, Ginza Line⇔Oedo Line, direct underground passage per Toei)
-  - Ueno-Okachimachi⇔Naka-Okachimachi (3 min, Oedo Line⇔Hibiya Line, direct underground passage per Toei)
-  - Shintomicho⇔Tsukiji (5 min, Yurakucho Line⇔Hibiya Line, treated as the same station by Tokyo Metro since 2018)
-  - Ginza-Itchome⇔Higashi-Ginza (7 min, Yurakucho Line⇔Asakusa/Hibiya Line, #68 registration gap fixed)
-  - Tochomae→Nishi-Shinjuku: **12 min / 1 transfer (via Shinjuku) → 8-min walk / 0 transfers**. Hongo-Sanchome→Naka-Okachimachi also improved to 10 min via walk link
-  - **Verification** — probe-all-lang 26/26 / check-railway-integrity PASS / test-transfer-pairs 33 pairs all PASS / no bounce or chained detour
+- **search_flight switched to ODPT aviation data (JAL/ANA realtime arrivals/departures, Basic License) (v2.38.4)**
+  - Uses `odpt:FlightInformationDeparture/Arrival` as primary source (flight number, scheduled/actual/estimated times, delay, terminal, gate, 32-step flight status). AviationStack remains as fallback (only when FLIGHT_API_KEY is set, covering non-JAL/ANA flights and overseas airports)
+  - Delay computed as actual − scheduled (e.g., JL003 arrived 28 min early / NH961 20 min early); statuses localized to ja/en/zh (On time, Now boarding, Final call, Weather check, etc.)
+  - Haneda arrival → Tokyo Station access-route linkage unchanged (Monorail→Hamamatsucho→Yamanote, 35 min, 2 transfers)
+  - Freed from AviationStack's 429 rate limits and free-plan restrictions (no flight_date parameter)
+  - **Verification** — probe-all-lang 26/26, flight-number search (JL002/NH961), airport search (HND 544 / NRT 58), delay detection, foreign-flight fallback all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1109,15 +1103,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **新增经地下通道直连的近邻异名站 6 组（WALK_TRANSFERS・Issue #69・都厅前⇔西新宿）**
-  - 都厅前⇔西新宿（8 分钟・大江户线⇔丸之内线・地下连络通道直连・设有自动步道）
-  - 马喰町⇔马喰横山（3 分钟・JR 总武快速线⇔都营新宿线・专用换乘闸机・都营官方换乘指引）
-  - 上野广小路⇔上野御徒町（3 分钟・银座线⇔大江户线・地下通道直连・都营官方换乘指引）
-  - 上野御徒町⇔仲御徒町（3 分钟・大江户线⇔日比谷线・地下通道直连・都营官方换乘指引）
-  - 新富町⇔筑地（5 分钟・有乐町线⇔日比谷线・2018 年起东京地铁官方视为同一车站）
-  - 银座一丁目⇔东银座（7 分钟・有乐町线⇔浅草线・日比谷线・修正 #68 漏登）
-  - 都厅前→西新宿: **12 分钟・换乘 1 次（经新宿）→ 步行 8 分钟・无需换乘**。本乡三丁目→仲御徒町亦经步行通道改善至 10 分钟
-  - **验证** — probe-all-lang 26/26・check-railway-integrity 通过・test-transfer-pairs 33 组全部通过・无往复/链式绕行
+- **search_flight 切换为 ODPT 航空数据（JAL/ANA 实时到达・出发・基础许可证）（v2.38.4）**
+  - 以 `odpt:FlightInformationDeparture/Arrival` 为主数据源（航班号・计划/实际/预计时刻・延误・航站楼・登机口・32 种航班状态）。AviationStack 仅作后备（配置 FLIGHT_API_KEY 时，补充非 JAL/ANA 航班与海外机场）
+  - 延误按实际−计划计算（例: JL003 早到 28 分钟 / NH961 早到 20 分钟）；状态支持 ja/en/zh（准点・登机中・最后登机通知・天气检查中等）
+  - 羽田到达→东京站的接驳路线联动保持原样（单轨→滨松町→山手线，35 分钟・换乘 2 次）
+  - 摆脱 AviationStack 的 429 频率限制与免费套餐限制（不支持 flight_date 参数）
+  - **验证** — probe-all-lang 26/26・航班号搜索（JL002/NH961）・机场搜索（HND 544 条/NRT 58 条）・延误检测・外航后备全部通过
 
 ### 🤖 AI 智能建议
 
