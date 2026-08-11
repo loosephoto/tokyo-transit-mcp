@@ -80,7 +80,7 @@ for (const l of extremes) console.log(`${l.stations.length}駅 | ${l.name} | ${l
 console.log('\n=== 5. 公式駅数の目視チェック対象（主要路線） ===');
 const known = {
   'JR山手線': 30, 'JR中央線快速': 17, 'JR総武線各停': 22, 'JR中央総武線各停': 39,
-  'JR常磐線快速': 14, 'JR常磐線各停': 22, 'JR埼京線': 19, 'JR横須賀線': 14,
+  'JR常磐線快速': 27, 'JR常磐線各停': 14, 'JR埼京線': 19, 'JR横須賀線': 14,
   '東京メトロ銀座線': 19, '東京メトロ丸ノ内線': 25, '都営大江戸線': 38, '都営浅草線': 20,
 };
 for (const [name, expected] of Object.entries(known)) {

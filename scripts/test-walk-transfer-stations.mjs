@@ -152,8 +152,9 @@ for (const [f, t, line] of [
     `${f}→${t}: ${line}直通 (${r.error || r.main_line})`);
 }
 // v2.25 連絡駅の徒歩連絡
+// #87: 柴又⇔金町（徒歩3分）は存在しない短絡エッジのため削除済み。柴又は京成金町経由で接続。
 for (const [f, t, expectMin] of [
-  ['柴又', '金町', 5], ['京成金町', '金町', 5], ['川越', '本川越', 6],
+  ['京成金町', '金町', 5], ['川越', '本川越', 6],
 ]) {
   const r = route(f, t);
   const walkOk = r.error === undefined && r.transfers <= 1 && r.estimated_minutes <= expectMin;

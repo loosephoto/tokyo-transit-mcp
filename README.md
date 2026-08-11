@@ -33,12 +33,18 @@
 
 ### 🛤️ 直近の更新内容
 
-- **運休路線の経路除外・structuredContent公開・inputSchema検証強化（v2.38.6・issues #70 #71 #72）**
-  - #70 運休路線の経路除外: ODPT TrainInformation から運休路線を検出し、ダイクストラ探索から除外。全路線が運休で経路が存在しない場合のみ通常ルートをフォールバック表示し、`route_operational: false` + `suspended_lines` で運休中であることを明示
-  - #71 structuredContent 公開: 全ツールの応答で従来の content ブロックと並行して構造化データを structuredContent にも公開（後方互換維持）
-  - #72 inputSchema 検証強化: 全ツールに宣言的制約を適用（additionalProperties: false・minLength/maxLength・flight_date の YYYY-MM-DD パターン・lat/lon 範囲）。実行時検証も追加（user_location 範囲チェック・未対応空港/不正日付を INVALID_INPUT で明示）
-  - 堅牢化: GTFS固定日付404時に当日日付で再試行（fetchGtfsZipBuffer）・RFC 4180準拠CSVパーサー・全滅時（全事業者/全路線の取得失敗）に空データをキャッシュしない・searchBusTransfer のタイムアウト時に AbortController で実HTTPリクエストを中断・フライト遅延計算の日跨ぎ補正
-  - **検証** — probe-all-lang・check-railway-integrity PASS・test-transfer-pairs 全PASS
+- **イシュー10件一括修正: 通信障害のエラー化・天気キャッシュ地域別化・バス停曖昧化・データ是正（v2.38.7・issues #73 #74 #77 #78 #79 #80 #81 #84 #85 #86 #87）**
+  - #84 search_fare が ODPT 通信障害を「対象外・運賃なし」の SUCCESS/fare:null に変換せず、NETWORK_ERROR / API_TIMEOUT / CIRCUIT_BREAKER_OPEN を返すように。通信失敗の空配列はキャッシュせず、正常0件のみ5分の negative TTL で保持
+  - #79 天気キャッシュをエリアコード別に分離（地域をまたいで東京の予報を再利用しない）。API 失敗時は SUCCESS/null を返さずエラー応答に。横浜指定の en/zh 応答が Tokyo/东京 固定にならないようエリアコード別 3言語ラベル辞書を新設
+  - #80 search_bus の部分一致が複数候補から先頭1件をサイレント選択せず、完全一致→前方一致→部分一致の順に一意のときだけ解決し、複数候補は AMBIGUOUS_BUS_STOP + disambiguation（ja/en/zh・再入力可能な正式名）で検索を中断
+  - #85 駅名の「駅・站・Station」接尾辞を正規化して解決（例: 新宿駅 → 新宿）。#86 ローマ字入力（Ryogoku / Ogawamachi 等）でも同名駅の曖昧性チェックを迂回せず候補提示
+  - #73 JR常磐線各停から東武野田線の駅（逆井・高柳）を除外。**#74 常磐線快速27駅・各停14駅の区間定義を実態に是正し、integrity 期待値も更新**
+  - #77 運休路線 ID を内蔵路線名へ変換して経路除外リストに反映（空のままにならないよう修正）
+  - #87 存在しない短絡エッジ（柴又⇔金町 徒歩3分）を削除（京成金町⇔金町 は維持）
+  - #81 node_modules（1,189ファイル）の Git 追跡を解除し、.gitignore を拡充（node_modules/・_tmp*・coverage/・*.log）
+  - #78 probe-all-lang の誤った引数名（station/operator → station_name/railway 等）を修正し、ERROR 応答を PASS 扱いしないよう status 検証を追加（偽陽性を排除）
+  - get_timetable の応答 railway フィールドを言語別表示に（en: JR Yamanote Line / zh: JR山手线）
+  - **検証** — probe-all-lang 26/26 PASS・check-railway-integrity PASS・test:issue（#84 #79 #80 回帰）全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -587,12 +593,18 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Exclude suspended railway lines from route search, expose structuredContent, strengthen inputSchema validation (v2.38.6, issues #70 #71 #72)**
-  - #70 Suspended-line exclusion: detects suspended railway lines from ODPT TrainInformation and excludes them from the Dijkstra search. Only when every line is suspended and no route exists, falls back to the normal route and explicitly reports `route_operational: false` + `suspended_lines`
-  - #71 structuredContent exposure: every tool response now also publishes structured data in `structuredContent` alongside the legacy `content` blocks (backward compatible)
-  - #72 inputSchema validation: declarative constraints applied to all tools (additionalProperties: false, minLength/maxLength, YYYY-MM-DD pattern for flight_date, lat/lon bounds). Runtime validation added too (user_location range check, unsupported airport / invalid date → INVALID_INPUT)
-  - Robustness: GTFS fixed-date 404 → retry with today's date (fetchGtfsZipBuffer), RFC 4180-compliant CSV parser, no caching of empty data when all operators/lines fail, AbortController aborts real HTTP requests on searchBusTransfer timeout, cross-midnight flight delay correction
-  - **Verification** — probe-all-lang, check-railway-integrity PASS, test-transfer-pairs all PASS
+- **Batch fix of 10 issues: network failures become errors, area-scoped weather cache, bus-stop disambiguation, data corrections (v2.38.7, issues #73 #74 #77 #78 #79 #80 #81 #84 #85 #86 #87)**
+  - #84 search_fare no longer converts ODPT network failures into "not covered / no fare" SUCCESS/fare:null — now returns NETWORK_ERROR / API_TIMEOUT / CIRCUIT_BREAKER_OPEN. Failed empty results are not cached; only genuine 0-result lookups are cached with a 5-minute negative TTL
+  - #79 weather cache is now scoped per JMA area code (no more reusing Tokyo's forecast for other regions). API failures return an error instead of SUCCESS/null. Added a per-area-code 3-language label dictionary so a Yokohama query is no longer displayed as "Tokyo Area"/"东京地区"
+  - #80 search_bus partial matching no longer silently picks the first of several candidates: resolves only when unique, in the order exact → prefix → substring, and pauses with AMBIGUOUS_BUS_STOP + disambiguation (ja/en/zh with re-enterable canonical names) when multiple candidates match
+  - #85 station-name suffixes 「駅 / 站 / Station」 are normalized before resolution (e.g. 新宿駅 → 新宿). #86 romanized input (Ryogoku / Ogawamachi etc.) no longer bypasses the same-name disambiguation check
+  - #73 removed Tobu Noda Line stations (逆井 / 高柳) from the JR Joban Line local train list. **#74 corrected the Joban rapid (27) / local (14) station ranges and updated the integrity expectations**
+  - #77 suspended railway IDs are now converted to built-in line names before being added to the route-exclusion set (no longer silently empty)
+  - #87 removed the non-existent shortcut edge (Shibamata ⇔ Kanamachi, "3 min walk"); Keisei-Kanamachi ⇔ Kanamachi is kept
+  - #81 untracked node_modules (1,189 files) and extended .gitignore (node_modules/, _tmp*, coverage/, *.log)
+  - #78 fixed wrong probe-all-lang argument names (station/operator → station_name/railway etc.) and added status validation so ERROR responses are no longer counted as PASS (removing false positives)
+  - get_timetable now returns the railway field localized (en: JR Yamanote Line / zh: JR山手线)
+  - **Verification** — probe-all-lang 26/26 PASS, check-railway-integrity PASS, test:issue (#84 #79 #80 regression) all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1103,12 +1115,18 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **停运线路排除・structuredContent 公开・inputSchema 校验强化（v2.38.6・issues #70 #71 #72）**
-  - #70 停运线路排除: 从 ODPT TrainInformation 检测停运线路并从 Dijkstra 搜索中排除。仅当所有线路停运导致无路线时，才回退显示常规路线，并通过 `route_operational: false` + `suspended_lines` 明确标示停运中
-  - #71 structuredContent 公开: 所有工具响应在保留传统 content 块的同时，也将结构化数据发布到 structuredContent（向后兼容）
-  - #72 inputSchema 校验强化: 为所有工具应用声明式约束（additionalProperties: false・minLength/maxLength・flight_date 的 YYYY-MM-DD 格式・lat/lon 范围）。同时新增运行时校验（user_location 范围检查・不支持机场/非法日期 → INVALID_INPUT）
-  - 健壮性: GTFS 固定日期 404 时以当日日期重试（fetchGtfsZipBuffer）・RFC 4180 兼容 CSV 解析器・全部运营商/线路获取失败时不缓存空数据・searchBusTransfer 超时时用 AbortController 中断实际 HTTP 请求・航班延误计算的跨日修正
-  - **验证** — probe-all-lang・check-railway-integrity 通过・test-transfer-pairs 全部通过
+- **批量修复10个问题：网络故障转为错误・天气缓存按地区分离・公交站消歧・数据修正（v2.38.7・issues #73 #74 #77 #78 #79 #80 #81 #84 #85 #86 #87）**
+  - #84 search_fare 不再把 ODPT 网络故障转换成「不覆盖・无票价」的 SUCCESS/fare:null，改为返回 NETWORK_ERROR / API_TIMEOUT / CIRCUIT_BREAKER_OPEN。通信失败的空结果不缓存，仅正常0结果以5分钟 negative TTL 缓存
+  - #79 天气缓存按 JMA 地区代码分离（不再跨地区复用东京预报）。API 失败时返回错误而非 SUCCESS/null。新增按地区代码的3语言标签词典，横滨查询不再固定显示 Tokyo/东京地区
+  - #80 search_bus 部分匹配不再从多个候选中静默选择第一个：仅在唯一时解析（完全一致→前缀→包含），多个候选时以 AMBIGUOUS_BUS_STOP + disambiguation（ja/en/zh・可重新输入的正式名称）暂停搜索
+  - #85 站名后缀「駅・站・Station」在解析前规范化（例: 新宿駅 → 新宿）。#86 罗马字输入（Ryogoku / Ogawamachi 等）不再绕过同名车站的消歧检查
+  - #73 从 JR 常磐线各站停靠列表中移除东武野田线车站（逆井・高柳）。**#74 将常磐线快速（27站）・各站停靠（14站）的区间定义修正为实际状态，并更新 integrity 期望值**
+  - #77 停运线路 ID 转换为内置线路名后再加入路径排除列表（不再静默为空）
+  - #87 删除不存在的捷径边（柴又⇔金町「步行3分钟」）；保留京成金町⇔金町
+  - #81 解除 node_modules（1,189 个文件）的 Git 跟踪，扩充 .gitignore（node_modules/・_tmp*・coverage/・*.log）
+  - #78 修正 probe-all-lang 的错误参数名（station/operator → station_name/railway 等），并加入 status 验证使 ERROR 响应不再被计为 PASS（消除误报）
+  - get_timetable 的 railway 字段改为按语言显示（en: JR Yamanote Line / zh: JR山手线）
+  - **验证** — probe-all-lang 26/26 通过・check-railway-integrity 通过・test:issue（#84 #79 #80 回归）全部通过
 
 ### 🤖 AI 智能建议
 

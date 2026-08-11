@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.6 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.7 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -637,6 +637,12 @@ function buildErrorResponse(errorType, errorMessage, details = {}) {
         en: ["Multiple stations matched, so the search was paused.", "Please pick the correct station from the candidates and retry."],
         zh: ["匹配到多个车站，已暂停搜索。", "请从候补中选择正确的车站后重试。"] },
       suggestionKey: "AMBIGUOUS_STATION" },
+    AMBIGUOUS_BUS_STOP: { httpCode: 300, retryable: false,
+      suggestions: {
+        ja: ["一致するバス停が複数あるため、検索を中断しました。", "提示された候補から正しいバス停を選択して再度お試しください。"],
+        en: ["Multiple bus stops matched, so the search was paused.", "Please pick the correct bus stop from the candidates and retry."],
+        zh: ["匹配到多个公交站，已暂停搜索。", "请从候补中选择正确的公交站后重试。"] },
+      suggestionKey: "AMBIGUOUS_BUS_STOP" },
     UNKNOWN_ERROR: { httpCode: 500, retryable: false,
       suggestions: {
         ja: ["予期しないエラーが発生しました。", "もう一度お試しいただくか、管理者にお問い合わせください。"],
@@ -3406,6 +3412,20 @@ const JMA_AREA_MAP = {
   '友部': '080000', '内原': '080000', '赤塚': '080000', '水戸': '080000'
 };
 
+// 気象庁エリアコード → 3言語表示名（#79: 地域表示を東京固定にしない）
+// en/zh は気象庁エリア名の一般的な訳・行政区分名を使用。
+const JMA_AREA_LABELS = {
+  '130000': { ja: '東京', en: 'Tokyo', zh: '东京' },
+  '131010': { ja: '千代田', en: 'Chiyoda', zh: '千代田' },
+  '131020': { ja: '渋谷', en: 'Shibuya', zh: '涩谷' },
+  '131030': { ja: '新宿', en: 'Shinjuku', zh: '新宿' },
+  '131040': { ja: '中央', en: 'Chuo', zh: '中央区' },
+  '131060': { ja: '港', en: 'Minato', zh: '港区' },
+  '131170': { ja: '台東', en: 'Taito', zh: '台东' },
+  '140010': { ja: '横浜', en: 'Yokohama', zh: '横滨' },
+  '080000': { ja: '茨城', en: 'Ibaraki', zh: '茨城' }
+};
+
 const GOV_FACILITY_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=%E5%BD%B9%E6%89%80+%E5%87%BA%E5%BC%B5%E6%89%80+%E5%85%AC%E6%B0%91%E9%A4%A8+%E5%B8%82%E6%B0%91%E3%82%BB%E3%83%B3%E3%82%BF%E3%83%BC";
 const EMERGENCY_EVACUATION_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=%E6%8C%87%E5%AE%9A%E7%B7%8A%E6%80%A5%E9%81%BF%E9%9B%A3%E5%A0%B4%E6%89%80+%E9%81%BF%E9%9B%A3%E6%89%80";
 
@@ -3716,7 +3736,7 @@ const RAILWAY_LINES = {
   'JR武蔵野線': ['府中本町','北府中','西国分寺','新小平','新秋津','東所沢','新座','北朝霞','西浦和','武蔵浦和','南浦和','東浦和','東川口','南越谷','越谷レイクタウン','吉川','吉川美南','新三郷','三郷','南流山','新松戸','新八柱','東松戸','市川大野','船橋法典','西船橋'],
   'JR武蔵野線（大崎支線）': ['大崎','西浦和'],
   'JR常磐線快速': ['上野','日暮里','三河島','南千住','北千住','綾瀬','亀有','金町','松戸','柏','我孫子','取手','藤代','龍ケ崎市','牛久','ひたち野うしく','荒川沖','土浦','神立','高浜','石岡','羽鳥','岩間','友部','内原','赤塚','水戸'],
-  'JR常磐線各停': ['上野','日暮里','三河島','南千住','北千住','綾瀬','亀有','金町','松戸','北松戸','馬橋','新松戸','北小金','南柏','柏','逆井','高柳','我孫子','天王台','取手','藤代','龍ケ崎市','牛久','ひたち野うしく','荒川沖','土浦','神立','高浜','石岡','羽鳥','岩間','友部','内原','赤塚','水戸'],
+  'JR常磐線各停': ['北千住','綾瀬','亀有','金町','松戸','北松戸','馬橋','新松戸','北小金','南柏','柏','我孫子','天王台','取手'],
   'JR南武線': ['川崎','尻手','矢向','鹿島田','平間','向河原','武蔵小杉','武蔵中原','武蔵新城','武蔵溝ノ口','津田山','久地','宿河原','登戸','中野島','稲田堤','矢野口','稲城長沼','南多摩','府中本町','分倍河原','西府','谷保','矢川','西国立','立川'],
   // ===== JR東海（東海道線・熱海方面）=====
   'JR東海道線': ['東京','新橋','品川','川崎','横浜','戸塚','大船','藤沢','辻堂','茅ヶ崎','平塚','大磯','二宮','国府津','鴨宮','小田原','早川','根府川','真鶴','湯河原','熱海'],
@@ -3970,7 +3990,6 @@ const WALK_TRANSFERS = [
   { from: '小田急多摩センター', to: '多摩センター', minutes: 2 },     // 小田急多摩線 ⇔ 多摩モノレール（ペデストリアンデッキ直結）
   { from: '京王多摩センター', to: '多摩センター', minutes: 2 },       // 京王相模原線 ⇔ 多摩モノレール（ペデストリアンデッキ直結）
   // 2026-08 v2.25 #20 追加路線の連絡駅
-  { from: '柴又', to: '金町', minutes: 3 },                // 京成金町線 ⇔ JR常磐線（柴又駅と金町駅は隣接）
   { from: '京成金町', to: '金町', minutes: 3 },            // 京成金町線終点 ⇔ JR常磐線（同一駅扱い）
   { from: '川越', to: '本川越', minutes: 4 },              // JR川越線・東武東上線 ⇔ 西武新宿線（約350m）
   // 2026-08 #55: 関東鉄道竜ヶ崎線の接続駅。竜ヶ崎線佐貫駅は JR常磐線龍ケ崎市駅と同一駅舎
@@ -4122,6 +4141,11 @@ function resolveStation(rawName) {
 
   // 完全一致（正規化後）
   const norm = normalizeStationName(key);
+  // ローマ字・英語別名を日本語駅名へ正規化した後も、同名駅の曖昧性を必ず再評価する。
+  // 例: Ryogoku / Ogawamachi / Iriya は日本語入力と同じ候補提示が必要。
+  if (AMBIGUOUS_STATION_NAMES[norm]) {
+    return { station: null, candidates: AMBIGUOUS_STATION_NAMES[norm], ambiguous: true, exact: false, landmark: null };
+  }
   if (STATION_TO_LINES[norm]) return { station: norm, candidates: [norm], ambiguous: false, exact: true, landmark: null };
 
   // ランドマーク（施設名）から最寄り駅への変換
@@ -4516,7 +4540,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.6' },
+  { name: 'tokyo-transit-mcp', version: '2.38.7' },
   { capabilities: { tools: {} } }
 );
 
@@ -5617,9 +5641,18 @@ const STATION_NAME_MAP_LOWER = new Map(
   Object.entries(STATION_NAME_MAP).map(([k, v]) => [k.toLowerCase(), v])
 );
 function normalizeStationName(name) {
-  const trimmed = name.trim();
+  const trimmed = String(name || '').trim();
   if (STATION_NAME_MAP[trimmed]) return STATION_NAME_MAP[trimmed];
-  return STATION_NAME_MAP_LOWER.get(trimmed.toLowerCase()) || trimmed;
+  const mapped = STATION_NAME_MAP_LOWER.get(trimmed.toLowerCase());
+  if (mapped) return mapped;
+  // 一般的な駅名サフィックスは辞書登録の有無にかかわらず除去する。
+  // 先に完全一致と辞書を評価しているため、正式名称の一部を壊さない。
+  const withoutSuffix = trimmed.replace(/(?:駅|站|station)$/iu, '').trim();
+  if (withoutSuffix !== trimmed) {
+    if (STATION_NAME_MAP[withoutSuffix]) return STATION_NAME_MAP[withoutSuffix];
+    return STATION_NAME_MAP_LOWER.get(withoutSuffix.toLowerCase()) || withoutSuffix;
+  }
+  return trimmed;
 }
 
 // ==========================================
@@ -6018,7 +6051,7 @@ async function searchRoute(args) {
       (async () => {
         if (!jmaBreaker.canExecute()) return { error: 'CIRCUIT_OPEN' };
         try {
-          const cached = cache.get(cache.jmaWeather.key);
+          const cached = cache.get(`${cache.jmaWeather.key}:130000`);
           if (cached) { isHot = cached.isHot; return cached; }
           const res = await axios.get("https://www.jma.go.jp/bosai/forecast/data/forecast/130000.json", { timeout: 15000 });
           const text = res.data[0].timeSeries[0].areas[0].weathers[0];
@@ -6034,7 +6067,7 @@ async function searchRoute(args) {
           isHot = h;
           jmaBreaker.onSuccess();
           const result = { weather: text, isRainy: r, isSevere: s, isHot: h };
-          cache.set(cache.jmaWeather.key, result, cache.jmaWeather.ttl);
+          cache.set(`${cache.jmaWeather.key}:130000`, result, cache.jmaWeather.ttl);
           return result;
         } catch (e) { jmaBreaker.onFailure(e); return { error: e.message }; }
       })(),
@@ -6054,7 +6087,10 @@ async function searchRoute(args) {
               if (!info['odpt:trainInformationStatus']) continue;
               const t = info['odpt:trainInformationText']?.ja || '';
               const resumed = t.includes('再開');
-              if (!resumed && (t.includes("運転見合わせ") || t.includes("見合わせ") || t.includes("運休"))) allDelays.push({ railway: info['odpt:railway'], text: t });
+              if (!resumed && (t.includes("運転見合わせ") || t.includes("見合わせ") || t.includes("運休"))) {
+                allDelays.push({ railway: info['odpt:railway'], text: t });
+                for (const lineName of resolveSuspendedLineNames(info['odpt:railway'])) suspendedLineNames.add(lineName);
+              }
               if (t.includes('バス') || t.includes('振替') || t.includes('代行') || t.includes('輸送')) { fb = true; fd = t; }
             }
           }
@@ -6467,29 +6503,33 @@ async function getStationInfo(args) {
 // ==========================================
 // 天候から AIインテリジェントアドバイスを生成（getWeather と searchFlight で共有）
 // 戻り値: { advice: string(ai_transit_advice), weather: string, isRainy, isHot, maxTemp }
+// 🔴 #79: キャッシュキーを areaCode 別にする（地域をまたいで東京の予報を再利用しない）。
+// 通信障害時は SUCCESS/null を返さず throw し、呼び出し側（getWeather）が
+// NETWORK_ERROR / API_TIMEOUT を返す。getTransitAdvice / searchFlight は
+// try/catch 済みのため、throw しても従来どおり既定アドバイスへフォールバックする。
 async function getWeatherAdvice(userLang, areaCode = '130000') {
-  if (!jmaBreaker.canExecute()) return { advice: null, weather: null };
-  try {
-    const cached = cache.get(cache.jmaWeather.key);
-    let weather, isRainy = false, isHot = false, maxTemp = 0;
-    if (cached) { weather = cached.weather; isRainy = cached.isRainy; isHot = cached.isHot; }
-    else {
-      const response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
-      weather = response.data[0].timeSeries[0].areas[0].weathers[0];
-      isRainy = weather.includes("雨") || weather.includes("雪");
-      for (const ts of response.data[0]?.timeSeries || []) {
-        if (ts.areas?.[0]?.temps) { maxTemp = Math.max(...ts.areas[0].temps.map(t => parseInt(t) || 0)); if (maxTemp >= 33) isHot = true; }
-      }
-      cache.set(cache.jmaWeather.key, { weather, isRainy, isHot }, cache.jmaWeather.ttl);
-      jmaBreaker.onSuccess();
-    }
-    const adviceKey = isHot ? 'hot' : (isRainy ? 'rainy' : 'fair');
-    const advice = (MULTILINGUAL_ADVICE[adviceKey] && (MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja)) || '';
-    return { advice, weather, isRainy, isHot, maxTemp: maxTemp || undefined };
-  } catch (error) {
-    jmaBreaker.onFailure(error);
-    return { advice: null, weather: null };
+  if (!jmaBreaker.canExecute()) {
+    const err = new Error('JMA_API_UNAVAILABLE');
+    err.code = 'JMA_UNAVAILABLE';
+    throw err;
   }
+  const cacheKey = `${cache.jmaWeather.key}:${areaCode}`;
+  const cached = cache.get(cacheKey);
+  let weather, isRainy = false, isHot = false, maxTemp = 0;
+  if (cached) { weather = cached.weather; isRainy = cached.isRainy; isHot = cached.isHot; }
+  else {
+    const response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
+    weather = response.data[0].timeSeries[0].areas[0].weathers[0];
+    isRainy = weather.includes("雨") || weather.includes("雪");
+    for (const ts of response.data[0]?.timeSeries || []) {
+      if (ts.areas?.[0]?.temps) { maxTemp = Math.max(...ts.areas[0].temps.map(t => parseInt(t) || 0)); if (maxTemp >= 33) isHot = true; }
+    }
+    cache.set(cacheKey, { weather, isRainy, isHot }, cache.jmaWeather.ttl);
+    jmaBreaker.onSuccess();
+  }
+  const adviceKey = isHot ? 'hot' : (isRainy ? 'rainy' : 'fair');
+  const advice = (MULTILINGUAL_ADVICE[adviceKey] && (MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja)) || '';
+  return { advice, weather, isRainy, isHot, maxTemp: maxTemp || undefined };
 }
 
 async function getWeather(args) {
@@ -6498,18 +6538,33 @@ async function getWeather(args) {
   let areaCode = '130000', areaName = rawArea || "東京";
   if (rawArea && JMA_AREA_MAP[rawArea]) areaCode = JMA_AREA_MAP[rawArea];
   if (!jmaBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, area: areaName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
-  const { advice, weather, isHot, maxTemp } = await getWeatherAdvice(userLang, areaCode);
-  const displayArea = userLang === 'en' ? 'Tokyo Area' : userLang === 'zh' ? '东京地区' : areaName;
-  return jsonResponse({
-    status: "SUCCESS",
-    // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
-    ai_transit_advice: advice,
-    detected_language: userLang,
-    area: displayArea,
-    weather: translateWeather(weather, userLang),
-    max_temp: maxTemp,
-    heat_alert: isHot || undefined
-  });
+  try {
+    const { advice, weather, isHot, maxTemp } = await getWeatherAdvice(userLang, areaCode);
+    // 🔴 #79: 地域表示を東京固定にしない。エリアコード → 3言語ラベル辞書で表示する。
+    const areaLabel = JMA_AREA_LABELS[areaCode];
+    const displayArea = (areaLabel && areaLabel[userLang]) || areaName;
+    return jsonResponse({
+      status: "SUCCESS",
+      // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
+      ai_transit_advice: advice,
+      detected_language: userLang,
+      area: displayArea,
+      area_code: areaCode,
+      weather: translateWeather(weather, userLang),
+      max_temp: maxTemp,
+      heat_alert: isHot || undefined
+    });
+  } catch (error) {
+    // 🔴 #79: 通信障害を SUCCESS/null として隠蔽しない。
+    if (error?.code === 'JMA_UNAVAILABLE') {
+      return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, area: areaName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
+    }
+    const errType = error?.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'NETWORK_ERROR';
+    const errMsg = errType === 'API_TIMEOUT'
+      ? (userLang === 'en' ? 'Weather API timed out. Please try again later.' : userLang === 'zh' ? '天气API请求超时，请稍后重试。' : '気象庁APIがタイムアウトしました。しばらく待ってから再試行してください。')
+      : (userLang === 'en' ? 'Failed to fetch weather data. Please try again.' : userLang === 'zh' ? '获取天气数据失败，请重试。' : '気象庁APIから天気情報を取得できませんでした。');
+    return jsonResponse(buildErrorResponse(errType, errMsg, { userLang, area: areaName, area_code: areaCode }));
+  }
 }
 
 // ============================================================
@@ -6998,6 +7053,12 @@ async function getOperatorRoutes(args) {
 // ==========================================
 // 運賃検索用: 駅名 → odpt:Station 候補（全事業者）を解決（キャッシュ付き）。
 // dc:title 完全一致で候補を取得し、1000件上限問題（odpt:RailwayFare 一括取得）を回避する。
+// 🔴 通信障害と「取得成功だが0件」を分離する（#84）:
+//  - 全クエリが失敗（ネットワーク断・タイムアウト）した場合は throw し、searchFare の
+//    handleApiError が NETWORK_ERROR / API_TIMEOUT を返す。通信失敗はキャッシュしない。
+//  - 少なくとも1クエリが成功して0件なのは「対象外/未収録」の正常結果として扱い、
+//    短い negative TTL でのみキャッシュする（24時間ロック解除）。
+const FARE_STATION_NEGATIVE_TTL = 5 * 60 * 1000; // 取得成功・0件のみ 5分
 async function resolveFareStations(rawName) {
   const name = (normalizeStationName(rawName) || rawName || '').trim();
   if (!name) return [];
@@ -7008,10 +7069,13 @@ async function resolveFareStations(rawName) {
   const candidates = [];
   const queries = [name, name.replace(/(駅|站)$/, ''), name.replace(/駅前$/, '')]
     .filter((v, i, a) => v && a.indexOf(v) === i);
+  let anySuccess = false;
+  let lastError = null;
   for (const q of queries) {
     try {
       const res = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: { 'acl:consumerKey': API_KEY, 'dc:title': q }, timeout: 15000 });
       odptBreaker.onSuccess();
+      anySuccess = true;
       if (Array.isArray(res.data)) {
         for (const st of res.data) {
           const id = st['owl:sameAs'];
@@ -7021,9 +7085,14 @@ async function resolveFareStations(rawName) {
         }
       }
       if (candidates.length) break;
-    } catch (e) { odptBreaker.onFailure(e); }
+    } catch (e) { odptBreaker.onFailure(e); lastError = e; }
   }
-  cache.set(cacheKey, candidates, cache.railwayFare.ttl);
+  if (candidates.length === 0 && !anySuccess && lastError) {
+    // 全クエリ通信失敗 → データ非対応と区別せず、通信障害として上位に伝播
+    throw lastError;
+  }
+  const ttl = candidates.length ? cache.railwayFare.ttl : FARE_STATION_NEGATIVE_TTL;
+  cache.set(cacheKey, candidates, ttl);
   return candidates;
 }
 
@@ -7050,8 +7119,9 @@ async function fetchFaresByFromStation(stationId) {
     cache.set(cacheKey, fares, cache.railwayFare.ttl);
     return fares;
   } catch (e) {
+    // 🔴 通信失敗は空結果として握りつぶさず、searchFare の handleApiError に伝播させる（#84）
     odptBreaker.onFailure(e);
-    return [];
+    throw e;
   }
 }
 
@@ -7298,14 +7368,14 @@ async function getTimetable(args) {
         const rKey = r.split('.').pop() || r;
         return r.includes(railwayKey) || rKey.includes(railwayKey) || railwayKey.includes(rKey);
       });
-      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: railwayFilter, total: filtered.length, timetable: filtered.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: getDisplayLineName(railwayFilter, userLang), total: filtered.length, timetable: filtered.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
       // フィルタ結果が 0 件なら「該当路線のデータなし」を明確に返す（誤って全件を返さない）
       const noRailwayMsg = userLang === 'en'
-        ? `No timetable found for railway "${railwayFilter}" at ${displayStation}.`
+        ? `No timetable found for railway "${getDisplayLineName(railwayFilter, userLang)}" at ${displayStation}.`
         : userLang === 'zh'
-          ? `在${displayStation}未找到路线「${railwayFilter}」的时程表。`
+          ? `在${displayStation}未找到路线「${getDisplayLineName(railwayFilter, userLang)}」的时程表。`
           : `${displayStation}の「${railwayFilter}」の時刻表は見つかりませんでした。`;
-      return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, railway: railwayFilter, total: 0, message: noRailwayMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, railway: getDisplayLineName(railwayFilter, userLang), total: 0, message: noRailwayMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
     }
     if (matched.length === 0) {
       const noDataMsg = userLang === 'en'
@@ -9322,23 +9392,35 @@ async function searchBusTransfer(fromInput, toInput, vehiclePref) {
   };
   const resolve = (name) => {
     const langResolved = resolveBusStopLang(name) || name;
-    if (allNodes.has(langResolved)) return langResolved;
-    // バス停として部分一致
-    for (const n of busGraph.adj.keys()) {
-      if (n.includes(langResolved) || langResolved.includes(n)) return n;
-    }
-    // コミュニティバス停として部分一致
-    for (const n of cbGraph.keys()) {
-      if (n.includes(langResolved) || langResolved.includes(n)) return n;
-    }
-    // 駅として部分一致
-    for (const n of trainAdj.keys()) {
-      if (n.includes(langResolved) || langResolved.includes(n)) return n;
-    }
-    return null;
+    if (allNodes.has(langResolved)) return { node: langResolved, ambiguous: false };
+    // 🔴 #80: バス停・駅の部分一致は「前方一致のみ」で候補を収集し、
+    // 一意のときだけ解決する。複数候補がある場合はサイレントに先頭1件を選ばず、
+    // AMBIGUOUS を返して検索を中断する（鉄道駅の resolveStation と同じ安全方針）。
+    const collect = (pred) => {
+      const hits = [];
+      for (const n of allNodes) {
+        // 系統名・ID付きノイズ（「桜町病院:60008:桜町病院１」等）は候補から除外
+        if (/[：:〜→|]/.test(n)) continue;
+        if (pred(n)) hits.push(n);
+      }
+      return hits;
+    };
+    // 1) 前方一致（入力で始まるノード）を最優先
+    let hits = collect(n => n.startsWith(langResolved));
+    // 2) 前方一致が無い場合のみ、双方向包含の部分一致にフォールバック
+    //   （例: 「渋谷駅」→ ノード「渋谷」、逆に「桜新町」→ 入力「新町」等の表記ゆれ吸収）
+    if (hits.length === 0) hits = collect(n => n.includes(langResolved) || langResolved.includes(n));
+    if (hits.length === 1) return { node: hits[0], ambiguous: false };
+    if (hits.length > 1) return { node: null, ambiguous: true, candidates: hits };
+    return { node: null, ambiguous: false };
   };
-  const fNode = resolve(from);
-  const tNode = resolve(to);
+  const fRes = resolve(from);
+  const tRes = resolve(to);
+  if (fRes.ambiguous || tRes.ambiguous) {
+    return { found: false, ambiguous: true, side: fRes.ambiguous ? 'from' : 'to', input: fRes.ambiguous ? fromInput : toInput, candidates: fRes.ambiguous ? fRes.candidates : tRes.candidates, allNodeNames: [...allNodes] };
+  }
+  const fNode = fRes.node;
+  const tNode = tRes.node;
   if (!fNode || !tNode) {
     return { found: false, fromNode: fNode, toNode: tNode, allNodeNames: [...allNodes] };
   }
@@ -9486,6 +9568,28 @@ async function searchBus(args) {
         buildCommunityBusAccessBlock(fromInput, userLang),
         buildCommunityBusAccessBlock(toInput, userLang)
       ].filter(Boolean);
+      // 🔴 #80: 同名・類似バス停が複数ある場合はサイレントに1件選ばず、検索を中断して選択を促す。
+      if (result.ambiguous) {
+        const sideLabel = result.side === 'from'
+          ? (userLang === 'en' ? 'departure' : userLang === 'zh' ? '出发' : '出発')
+          : (userLang === 'en' ? 'arrival' : userLang === 'zh' ? '到达' : '到着');
+        // 候補は再入力可能な正式名（ja）を返しつつ、言語別表示でも併記する
+        const candidatesRaw = (result.candidates || []).slice(0, 10);
+        const candidatesDisp = candidatesRaw.map(c => getDisplayStationName(c, userLang));
+        const promptMsg = userLang === 'en'
+          ? `Multiple bus stops match "${result.input}" (${sideLabel}). Please choose one: ${candidatesDisp.join(' / ')}`
+          : userLang === 'zh'
+            ? `「${result.input}」匹配到多个公交站（${sideLabel}）。请选择其一：${candidatesDisp.join(' / ')}`
+            : `「${result.input}」に一致するバス停が複数あります（${sideLabel}）。どれかを選択してください：${candidatesDisp.join(' / ')}`;
+        const disambiguation = {
+          input: result.input,
+          side: result.side,
+          candidates: candidatesDisp,
+          candidates_raw: candidatesRaw, // #80: 再入力可能な正式キー
+          message: promptMsg
+        };
+        return jsonResponse(buildErrorResponse('AMBIGUOUS_BUS_STOP', promptMsg, { userLang, from: fromInput, to: toInput, disambiguation }));
+      }
       if (!result.found) {
         // 🔴 案内改善: 入力量の類似バス停を提示し、見つからない場合は徒歩・現実的アクセスを勧める
         const similarStops = [];

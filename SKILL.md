@@ -132,19 +132,17 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.38.6（2026-08-10）— 運休路線の経路除外・structuredContent公開・inputSchema検証強化（issues #70 #71 #72）
+### v2.38.7（2026-08-11）— 通信障害のエラー化・天気キャッシュ地域別化・バス停曖昧化・データ是正（issues #73 #74 #77 #78 #79 #80 #81 #84 #85 #86 #87）
 
-- **#70 運休路線の経路除外**: ODPT TrainInformation から運休路線を検出し（resolveSuspendedLineNames で路線ID→グラフ路線名に解決）、`findShortestPath`/`computeRoutes` に `blockedLines` オプションを追加してダイクストラ探索から除外。出発ノード投入時・隣接ノード展開時にブロック路線をスキップ
-  - 全路線が運休で NO_ROUTE になる場合のみ通常ルートをフォールバック表示し、`route_operational: false` + `suspended_lines`（表示名・3言語対応）で運休中であることを明示
-  - `-test` 障害シミュレーション時も障害種別から該当路線を blockedLines に追加
-- **#71 structuredContent 公開**: `jsonResponse()` が従来の content ブロックと並行して `structuredContent` にも同一データを公開（MCPクライアントが content 順序に依存せず構造化データを取得可能・後方互換維持）
-- **#72 inputSchema 検証強化**: `applyInputSchemaConstraints()` を追加し全ツールの宣言的スキーマに自動適用（additionalProperties: false・string に minLength:1/maxLength:100・flight_date に YYYY-MM-DD pattern・lat/lon に範囲制約）
-  - 実行時検証も追加: searchRoute の user_location 緯度経度範囲チェック（範囲外は無視）、searchFlight の未対応空港/不正日付を INVALID_INPUT で明確にエラー化
-- **堅牢化**:
-  - GTFS 取得の `fetchGtfsZipBuffer()` を新設 — 固定日付リソースが404の場合に当日日付で1回だけ再試行（フェリー・バス取得も移行）
-  - RFC 4180 準拠 CSV パーサー `parseCsvRecords()` を新設（引用符・改行・CRLF 対応）
-  - キャッシュ汚染防止: 全滅時（全事業者/全路線の取得失敗）は空データをキャッシュしない（時刻表・バスグラフ・バス停geo・駅geo）。時刻表は全路線失敗時に例外化して空をキャッシュしない
-  - searchBusTransfer: AbortController でタイムアウト時に実際の HTTP リクエストも中断（Promise.race のみでは通信が残り遅延完了レスポンスがキャッシュを書き換える問題を修正）
-  - フライト遅延計算 `calculateFlightDelayMinutes()` で日跨ぎ補正（例: 22:55→00:01 を +66分 に）
-  - fetchFlightsOdp / fetchFlights が失敗を null で握りつぶさず throw し、API障害と正常な空結果を区別（障害時は handleApiError）
-- **検証**: `npm run build` 成功・`probe-all-lang` 全PASS・`check-railway-integrity` PASS・`test-transfer-pairs` 全PASS
+- **#84 search_fare 通信障害のエラー化**: `resolveFareStations()` は全クエリ通信失敗時に throw し（成功0件のみ 5分 negative TTL `FARE_STATION_NEGATIVE_TTL` でキャッシュ）、`fetchFaresByFromStation()` も通信例外を throw。searchFare の既存 catch → handleApiError が NETWORK_ERROR / API_TIMEOUT を返す。ECONNRESET/timeout を「対象外・運賃なし」の SUCCESS/fare:null に変換しない
+- **#79 天気キャッシュの地域別化**: `getWeatherAdvice()` のキャッシュキーを `jma_weather:${areaCode}` に分離（searchRoute の東京固定キャッシュも `:130000` に）。ブレーカーOPEN・API失敗時は throw し、getWeather は CIRCUIT_BREAKER_OPEN / NETWORK_ERROR / API_TIMEOUT を返す（SUCCESS/null を返さない）。`JMA_AREA_LABELS`（エリアコード→ja/en/zh ラベル辞書）を新設し、横浜指定でも Tokyo/东京 固定にならない
+- **#80 search_bus の曖昧化**: `searchBusTransfer()` 内 `resolve()` を「完全一致 → 前方一致のみ → 双方向包含フォールバック」に変更し、一意のときだけ解決。複数候補は `{ ambiguous: true, side, input, candidates }` を返し、searchBus が `AMBIGUOUS_BUS_STOP` + disambiguation（candidates/candidates_raw・ja/en/zh）で検索を中断。候補から「系統名:ID」ノイズ（`/[：:〜→|]/`）を除外
+- **#85 駅名サフィックス正規化**: `normalizeStationName()` が辞書・ローマ字変換後に「駅/站/station」サフィックスを除去して解決（例: 新宿駅 → 新宿）
+- **#86 ローマ字の曖昧性チェック**: `resolveStation()` のローマ字・英語別名正規化後にも `AMBIGUOUS_STATION_NAMES` を再評価（Ryogoku / Ogawamachi / Iriya 等で候補提示を迂回しない）
+- **#73/#74 常磐線データ是正**: JR常磐線各停から東武野田線の駅（逆井・高柳）を除外し、快速27駅・各停14駅の区間定義を実態に是正。`check-railway-integrity.mjs` の known 期待値も更新
+- **#77 運休路線名解決**: searchRoute が ODPT TrainInformation の運休路線IDを `resolveSuspendedLineNames()` で内蔵路線名へ変換して `suspendedLineNames` に追加（除外リストが空にならないよう修正）
+- **#87 幻エッジ削除**: 存在しない短絡エッジ（柴又⇔金町 徒歩3分）を WALK_TRANSFERS から削除。京成金町⇔金町 は維持。test-walk の期待値も更新
+- **#81 リポジトリ衛生**: `git rm -r --cached node_modules`（1,189ファイル）で追跡解除し、.gitignore を拡充（node_modules/・_tmp*・scripts/_tmp-*・coverage/・*.log）
+- **#78 probe-all-lang の偽陽性排除**: 引数名を実装に合わせ修正（station/operator → station_name/railway、location → area_name）、`__expectedStatuses` による status 検証を追加し ERROR 応答を PASS 扱いしない
+- **get_timetable 言語表示**: railway フィールドを `getDisplayLineName()` で言語別表示に（en: JR Yamanote Line / zh: JR山手线）
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・`check-railway-integrity` PASS・`test:issue`（test-issue-84/79/80.mjs）全PASS

@@ -49,9 +49,15 @@ const run = async (name, lang, args, fn) => {
   const t0 = Date.now();
   try {
     const res = await fn(args);
-    const texts = (res.content || []).filter(c => c.type === 'text').map(c => c.text);
-    const jsonText = texts.find(t => t.trim().startsWith('{')) || texts[0];
-    const data = JSON.parse(jsonText);
+    const data = res.structuredContent || (() => {
+      const texts = (res.content || []).filter(c => c.type === 'text').map(c => c.text);
+      const jsonText = texts.find(t => t.trim().startsWith('{')) || texts[0];
+      return JSON.parse(jsonText);
+    })();
+    const expectedStatuses = args.__expectedStatuses || ['SUCCESS', 'NO_DATA'];
+    if (!expectedStatuses.includes(data.status)) {
+      throw new Error(`unexpected status: ${data.status || 'missing'}`);
+    }
     const mismatches = findLangMismatch(data, lang, '').filter(p => !isIgnored(p));
     const ok = mismatches.length === 0;
     results.push({ name, lang, ok, ms: Date.now() - t0, detail: mismatches.slice(0, 5) });
@@ -66,16 +72,16 @@ await run('search_route', 'en', { from: 'Shinjuku', to: 'Odawara', language: 'en
 await run('search_route', 'zh', { from: '新宿', to: '小田原', language: 'zh' }, searchRoute);
 await run('search_fare', 'en', { from: 'Shinjuku', to: 'Shibuya', language: 'en' }, searchFare);
 await run('search_fare', 'zh', { from: '新宿', to: '涩谷', language: 'zh' }, searchFare);
-await run('get_weather', 'en', { location: 'Tokyo', language: 'en' }, getWeather);
-await run('get_weather', 'zh', { location: '东京', language: 'zh' }, getWeather);
-await run('get_timetable', 'en', { station: 'Shinjuku', operator: 'jreast', language: 'en' }, getTimetable);
-await run('get_timetable', 'zh', { station: '新宿', operator: 'jreast', language: 'zh' }, getTimetable);
+await run('get_weather', 'en', { area_name: 'Tokyo', language: 'en' }, getWeather);
+await run('get_weather', 'zh', { area_name: '东京', language: 'zh' }, getWeather);
+await run('get_timetable', 'en', { station_name: 'Shinjuku', railway: 'JR山手線', language: 'en' }, getTimetable);
+await run('get_timetable', 'zh', { station_name: '新宿', railway: 'JR山手線', language: 'zh' }, getTimetable);
 await run('search_bus(transfer)', 'en', { from: 'Sakurabashi', to: 'Shintomicho', language: 'en' }, searchBus);
 await run('search_bus(transfer)', 'zh', { from: '樱桥', to: '新富町', language: 'zh' }, searchBus);
 await run('search_bus(busstop)', 'en', { busstop_name: 'Shimbashi', language: 'en' }, searchBus);
 await run('search_bus(busstop)', 'zh', { busstop_name: '新桥', language: 'zh' }, searchBus);
-await run('get_station_info', 'en', { station: 'Shinjuku', operator: 'jreast', language: 'en' }, getStationInfo);
-await run('get_station_info', 'zh', { station: '新宿', operator: 'jreast', language: 'zh' }, getStationInfo);
+await run('get_station_info', 'en', { station_name: 'Shinjuku', language: 'en' }, getStationInfo);
+await run('get_station_info', 'zh', { station_name: '新宿', language: 'zh' }, getStationInfo);
 await run('list_transit_operators', 'en', { language: 'en' }, listTransitOperators);
 await run('list_transit_operators', 'zh', { language: 'zh' }, listTransitOperators);
 await run('list_community_buses', 'en', { language: 'en' }, listCommunityBuses);
