@@ -1,6 +1,7 @@
 // イシュー#88/#89/#90 回帰テスト（weather 地域解決・風波・全角波高）
 // node scripts/test-issue-88-89-90.mjs（API不要・決定的）
 import { stationToJmaArea, parseSevereWeather } from '../src/advice/weather.mjs';
+import { detectFailureType } from '../src/advice/transit-advice.mjs';
 
 let pass = 0, fail = 0;
 const assert = (cond, name) => {
@@ -40,6 +41,14 @@ const s3 = parseSevereWeather('大雨特別警報', '北の風', '２メート�
 assert(s3.isSpecial === true && s3.isSevere === true, '#89 特別警報検出(isSpecial)');
 const s4 = parseSevereWeather('雨', '南の風 やや強く', '２メートル');
 assert(s4.isSevereWind === false && s4.isHighWave === false, '#89 やや強く・2mは非荒天');
+
+// 始発前の運転見合わせ対応（倒木・運転見合わせの障害種別検出）
+assert(detectFailureType('倒木', 'ja').adviceKey === 'fallen_tree', '倒木→fallen_tree');
+assert(detectFailureType('倒木除去作業のため運転見合わせ', 'ja').isTrainSuspended === true, '倒木除去作業→見合わせ検出');
+assert(detectFailureType('運転見合わせ', 'ja').adviceKey === 'service_suspension', '運転見合わせ→service_suspension');
+assert(detectFailureType('運休', 'ja').adviceKey === 'service_suspension', '運休→service_suspension');
+assert(detectFailureType('浸水', 'ja').adviceKey === 'flood', '浸水→flood（回帰）');
+assert(detectFailureType('高波', 'ja').adviceKey === 'ferry_rough_seas', '高波→ferry_rough_seas（回帰）');
 
 console.log(`\n結果: PASS=${pass} FAIL=${fail}`);
 process.exit(fail ? 1 : 0);

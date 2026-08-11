@@ -108,6 +108,18 @@ export const FAILURE_TYPES = {
     keywords: { ja: ['荒天', '高波', '強風', 'フェリー欠航', '船舶トラブル', '機関故障'], en: ['rough_seas', 'high_waves', 'ferry_cancelled', 'ferry_suspended', 'vessel_trouble'], zh: ['风浪', '大浪', '大风', '渡轮停航', '船舶故障'] },
     weatherText: { ja: "荒天・高波によるフェリー欠航", en: "Ferry cancellation due to rough seas", zh: "因风浪导致渡轮停航" },
     delayMessage: { ja: "荒天・高波によりフェリー・水上バスが欠航しています", en: "Ferries and water buses suspended due to rough seas", zh: "因风浪渡轮及水上巴士停航" }
+  },
+  'fallen_tree': {
+    type: 'weather', adviceKey: 'fallen_tree', isRainy: true, isSevereWeather: true, isTrainSuspended: true,
+    keywords: { ja: ['倒木', '倒木除去', '倒木処理', '樹木倒伏', '木の倒壊'], en: ['fallen_tree', 'falling_tree', 'tree_fall', 'tree_on_track', 'trees_on_line', 'uprooted_tree'], zh: ['倒木', '树木倒伏', '樹木倒伏', '断树', '树木倒塌'] },
+    weatherText: { ja: "強風による倒木・運転見合わせ", en: "Service suspended due to fallen trees from strong winds", zh: "因强风导致树木倒伏・暂停运行" },
+    delayMessage: { ja: "倒木による運転見合わせ", en: "Service suspended due to fallen trees", zh: "因倒木暂停运行" }
+  },
+  'service_suspension': {
+    type: 'disaster', adviceKey: 'service_suspension', isTrainSuspended: true,
+    keywords: { ja: ['運転見合わせ', '運休', '終日運転見合わせ'], en: ['service_suspension', 'operation_suspended', 'not_running', 'services_suspended'], zh: ['暂停运行', '停运', '暂停运营'] },
+    weatherText: { ja: "運転見合わせ・運休", en: "Service suspension", zh: "列车暂停运行" },
+    delayMessage: { ja: "運転を見合わせています", en: "Train services are suspended", zh: "列车暂停运行" }
   }
 };
 
@@ -337,6 +349,11 @@ export const MULTILINGUAL_ADVICE = {
     en: "🤖 [AI Intelligent Transit Advice (Typhoon Alert)]\n🌀 Heavy rain and strong winds may cause train suspensions. Check latest info before going out.",
     zh: "🤖 【AI智能出行建议 (台风接近)】\n🌀 强风暴雨可能导致列车停运，请确认最新运行信息后再出行。"
   },
+  fallen_tree: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (倒木・強風)】\n🌀 強風により倒木や折れた枝が線路・道路に落下しています。運転見合わせや遅延が発生中です。線路沿い・街路樹の下・高架下では頭上に十分注意し、駅係員の指示に従ってください。",
+    en: "🤖 [AI Intelligent Transit Advice (Fallen Trees / Wind)]\n🌀 Fallen trees and broken branches are on tracks/roads due to strong winds. Services are suspended or delayed. Watch overhead near tracks, trees, and viaducts, and follow station staff instructions.",
+    zh: "🤖 【AI智能出行建议 (倒木・强风)】\n🌀 强风导致倒木和断枝掉落在轨道和道路上，列车暂停运行或延误。在轨道旁、行道树下和高架下方请注意头顶安全，听从车站工作人员指示。"
+  },
   flood: {
     ja: "🤖 【AIからのインテリジェントアドバイス (浸水注意)】\n⚠ 周辺道路や駅構内が冠水している可能性があります。長靴や雨具をご準備ください。地下街やアンダーパスへの立ち入りは危険です。やむを得ない外出以外はお控えください。",
     en: "🤖 [AI Intelligent Transit Advice (Flood Alert)]\n⚠ Surrounding roads and station areas may be flooded. Avoid underpasses and underground areas.",
@@ -371,6 +388,11 @@ export const MULTILINGUAL_ADVICE = {
     ja: "🤖 【AIからのインテリジェントアドバイス (緊急アラート)】\\n🚨 重大な災害または交通機関の運行不能を検知しました。身の安全を最優先とし、以下のリンクから最寄りの指定緊急避難場所を確認してください。",
     en: "🤖 [AI Intelligent Transit Advice (Emergency Alert)]\\n🚨 Major disaster or transit suspension detected. Check the link for nearest evacuation shelters.",
     zh: "🤖 【AI智能出行建议 (紧急避难)】\\n🚨 检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
+  },
+  service_suspension: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (運転見合わせ)】\n🚨 一部路線が運転を見合わせています。最新の運行情報と振替輸送の有無を確認してください。お急ぎの場合は代替ルート（他社線・バス）をご検討ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Service Suspension)]\n🚨 Some lines have suspended service. Check the latest service status and substitute transport. If you are in a hurry, consider an alternative route (other lines or buses).",
+    zh: "🤖 【AI智能出行建议 (暂停运行)】\n🚨 部分线路暂停运行。请确认最新运行信息和接驳换乘安排。如急于出行，请考虑替代路线（其他线路或巴士）。"
   },
   vehicle_failure: {
     ja: "🤖 【AIからのインテリジェントアドバイス (機材故障)】\n🚃 機材故障の影響で一部の運行が見合わせています（鉄道・バス・航空機を問いません）。復旧まで時間を要する場合があり、振替輸送や他社線・バス・他モードへの乗り継ぎが案内されることもあります。係員の案内に従い、お急ぎの方は代替ルートをご検討ください。",
