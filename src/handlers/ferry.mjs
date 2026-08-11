@@ -385,6 +385,15 @@ export async function searchFerry(args) {
   if (isTsunamiRelevantToPorts(tsunamiSafety, fromPort, toPort)) {
     return await buildTsunamiWaterSafetyResponse(userLang, tsunamiSafety, { from_port: rawFrom, to_port: rawTo });
   }
+  // #90: -test 台風・高波・荒天・強風（typhoon / ferry_rough_seas）は、実天気が平穏でも
+  // 強風・高波ゲートをシミュレーションして運航見合わせを返す（実測で -test 台風が水上バスに SUCCESS を返す不都合を修正）
+  const typhoonLike = ['typhoon', 'ferry_rough_seas'];
+  if (testAdv.failureAdviceKey && typhoonLike.includes(testAdv.failureAdviceKey)) {
+    const live = await checkSevereWaterWeather(fromPort, toPort, userLang);
+    return await buildSevereWeatherWaterSafetyResponse(userLang, live?.wind, live?.wave, {
+      from_port: rawFrom, to_port: rawTo, test_mode: true, simulated_failure_type: parsedTest.simulatedFailure
+    });
+  }
   // #90: 強風・高波ゲート（津波がなくても、荒天・高波で運航見合わせの可能性がある場合は抑止）
   const severeWaterWeather = await checkSevereWaterWeather(fromPort, toPort, userLang);
   if (severeWaterWeather) {

@@ -50,6 +50,10 @@ assert(detectFailureType('運転見合わせ', 'ja').adviceKey === 'service_susp
 assert(detectFailureType('運休', 'ja').adviceKey === 'service_suspension', '運休→service_suspension');
 assert(detectFailureType('浸水', 'ja').adviceKey === 'flood', '浸水→flood（回帰）');
 assert(detectFailureType('高波', 'ja').adviceKey === 'ferry_rough_seas', '高波→ferry_rough_seas（回帰）');
+assert(detectFailureType('台風', 'ja').adviceKey === 'typhoon', '台風→typhoon（search_ferry の荒天ゲート用）');
+assert(detectFailureType('荒天', 'ja').adviceKey === 'ferry_rough_seas', '荒天→ferry_rough_seas（search_ferry の荒天ゲート用）');
+assert(detectFailureType('typhoon', 'ja').adviceKey === 'typhoon', 'typhoon→typhoon');
+assert(detectFailureType('high_waves', 'ja').adviceKey === 'ferry_rough_seas', 'high_waves→ferry_rough_seas');
 
 // 復旧・遅延（運転見合わせからの復旧）
 assert(detectFailureType('再開', 'ja').adviceKey === 'service_resumed', '再開→service_resumed');

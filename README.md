@@ -33,9 +33,9 @@
 
 ### 🛤️ 直近の更新内容
 
-- **フェリーの津波ゲートで港の津波予報区を補完（v2.39.7・イシュー#90）**
-  - **正規化港名の津波予報区を追加**: `search_ferry` の津波ゲートで `東京・竹芝`・`横浜・大さん橋`・`久里浜`・`館山`・`稲取` の津波予報区が未登録だったため、**東京湾内湾の津波警報で東京発の航路が停止されない**不都合を修正。各港の津波予報区（東京湾内湾・内房・静岡県）を追加
-  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 58/58 全PASS
+- **フェリーの -test 荒天シミュレーションを修正（v2.39.8・イシュー#90）**
+  - **-test 台風・高波・荒天で強風・高波ゲートを強制発動**: `search_ferry` の `-test 台風/高波/荒天/強風`（typhoon / ferry_rough_seas）は、実天気が平穏でも強風・高波ゲートをシミュレーションして運航見合わせを返すよう修正（従来は実天気が平穏だと水上バス等が通常航路を返した）
+  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 62/62 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -600,9 +600,9 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Ferry tsunami gate port forecast areas completed (v2.39.7, issue #90)**
-  - **Forecast areas added for normalized port names**: the `search_ferry` tsunami gate did not have forecast areas registered for `東京・竹芝`, `横浜・大さん橋`, `久里浜`, `館山`, `稲取`, so **a Tokyo Bay Inner tsunami warning did not stop Tokyo-departing routes**. Fixed by adding each port's tsunami forecast area (Tokyo Bay Inner / Uchibo / Shizuoka)
-  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 58/58 all PASS
+- **Ferry -test severe-weather simulation fixed (v2.39.8, issue #90)**
+  - **Forced severe-weather gate on -test typhoon/high-wave/storm**: `search_ferry`'s `-test 台風/高波/荒天/強風` (typhoon / ferry_rough_seas) now simulates the severe-wind/high-wave gate and returns a suspension advisory even when the live weather is calm (previously a calm live weather returned a normal route for water buses, etc.)
+  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 62/62 all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1129,9 +1129,9 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复轮渡海啸门控的港口海啸预报区（v2.39.7・议题#90）**
-  - **为规范化港口名称添加海啸预报区**: `search_ferry` 的海啸门控中 `东京・竹芝`・`横滨・大山桥`・`久里滨`・`馆山`・`稻取` 的海啸预报区未登记，导致**东京湾内湾的海啸警报未停止东京出发的航线**。已为各港添加海啸预报区（东京湾内湾・内房・静冈县）
-  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 58/58 全部通过
+- **修复轮渡 -test 恶劣天气模拟（v2.39.8・议题#90）**
+  - **在 -test 台风・大浪・恶劣天气时强制触发强风・大浪门控**: `search_ferry` 的 `-test 台风/大浪/恶劣天气/强风`（typhoon / ferry_rough_seas）现在即使实际天气平稳也模拟强风・大浪门控并返回停航提示（此前实际天气平稳时水上巴士等会返回正常航线）
+  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 62/62 全部通过
 
 ### 🤖 AI 智能建议
 
