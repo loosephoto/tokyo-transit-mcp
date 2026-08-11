@@ -24,6 +24,10 @@ import { STATION_COORDS, RAILWAY_LINES, LIGHT_TRANSFER_EDGES, CIRCULAR_LINES, WA
 import { FERRY_PORT_MAP, FERRY_PORT_NAMES, FERRY_GTFS_SOURCES, FERRY_PORT_TSUNAMI_AREAS } from './data/ferry-ports.mjs';
 import { COMMUNITY_BUS_NAME_MAP, BUS_STOP_SUFFIX_MAP, BUS_OPERATORS, TOKYO_COMMUNITY_BUSES, COMMUNITY_BUS_ROUTES, COMMUNITY_BUS_STATION_ACCESS, BUS_GTFS_SOURCES, BUSSTOP_ROMAN_TO_JA, BUS_OPERATOR_LABEL } from './data/bus-routes.mjs';
 import { FAILURE_TYPES, GSI_MUNICIPALITY_CODES, GSI_MUNICIPALITY_LABELS, GSI_SHELTER_HAZARD_FIELDS, WEATHER_TERM_MAP, TRAIN_INFO_TERM_MAP, OPERATOR_MAP, NON_RAIL_OPERATORS, JMA_AREA_MAP, JMA_AREA_LABELS, GOV_FACILITY_SEARCH_URL, EMERGENCY_EVACUATION_SEARCH_URL, MULTILINGUAL_ADVICE, GBFS_BASE, LIMITED_EXPRESS_KEYWORDS, LIMITED_EXPRESS_STATION_GUIDE, PRIVATE_EXPRESS_GUIDE, AIRPORT_IATA, AIRPORT_WEATHER_AREA, IATA_TO_TERMINAL_STATION, DEFAULT_ACCESS_DESTINATIONS, ODPT_FLIGHT_STATUS_MAP, ODPT_AIRLINE_NAMES } from './data/misc.mjs';
+import { parseCsvRecords, parseCsvLine } from './lib/csv.mjs';
+import { getDisplayStationName, getLineDisplayName, getCommunityBusDisplayName, getCommunityBusStopDisplayName, getDisplayLineName, translateWeather, translateTrainInfoDetail, detectLanguage, resolveLang } from './lib/lang.mjs';
+import { validateFlightDate, gtfsFetchDates, normalizeOvernightTime, timeToSortMinutes } from './lib/time.mjs';
+import { haversineDistance, haversineM } from './lib/geo.mjs';
 import { LANDMARK_DEFS, LANDMARK_LOOKUP, DESTINATION_CULTURAL_FACILITIES, CULTURAL_CATEGORY_NAMES, DERIVED_CULTURAL_FACILITIES } from './data/landmarks.mjs';
 
 // ローマ字駅ID → 日本語駅名 の逆引きマップ（ODPT odpt:Station から動的構築）
@@ -482,36 +486,7 @@ const getParams = (operator, additionalParams = {}) => {
 };
 
 // RFC 4180-compatible CSV helpers for GTFS feeds.
-function parseCsvRecords(content) {
-  const records = [];
-  let row = [], field = '', quoted = false;
-  const text = String(content || '');
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (quoted) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else quoted = false;
-      } else field += ch;
-    } else if (ch === '"' && field.length === 0) {
-      quoted = true;
-    } else if (ch === ',') {
-      row.push(field.trim()); field = '';
-    } else if (ch === '\n' || ch === '\r') {
-      if (ch === '\r' && text[i + 1] === '\n') i++;
-      row.push(field.trim()); field = '';
-      if (row.some(v => v !== '')) records.push(row);
-      row = [];
-    } else field += ch;
-  }
-  if (field.length || row.length) {
-    row.push(field.trim());
-    if (row.some(v => v !== '')) records.push(row);
-  }
-  return records;
-}
 
-function parseCsvLine(line) { return parseCsvRecords(`${line}\n`)[0] || []; }
 
 function calculateFlightDelayMinutes(scheduled, actual) {
   if (!scheduled || !actual) return null;
@@ -527,12 +502,6 @@ function calculateFlightDelayMinutes(scheduled, actual) {
   return delta;
 }
 
-function validateFlightDate(value) {
-  if (!value) return true;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return false;
-  const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}
 
 function normalizeAirportIata(value) {
   const normalized = String(value || '').trim().toUpperCase();
@@ -541,12 +510,6 @@ function normalizeAirportIata(value) {
 
 // GTFS取得に使う date クエリ候補（固定日付 → 当日 の順・重複除去）。
 // 固定日付リソースの有効期限切れ（404）時に当日日付で1回だけ再試行するための一覧。
-function gtfsFetchDates(fixedDate) {
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const dates = [String(fixedDate || today)];
-  if (!dates.includes(today)) dates.push(today);
-  return dates;
-}
 
 // ODPT 静的 GTFS zip を取得。固定日付で404等になった場合は当日日付でフォールバック。
 async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
@@ -578,128 +541,23 @@ function resolveSuspendedLineNames(railwayId) {
 
 // 多言語表示名辞書
 
-function getDisplayStationName(stationName, userLang) {
-  if (!stationName) return '';
-  if (userLang === 'ja') return stationName;
-  const trans = STATION_DISPLAY_NAMES[stationName];
-  if (trans && trans[userLang]) return trans[userLang];
-  return stationName;
-}
 
 // #64: 路線名の多言語表示（LINE_DISPLAY_NAMES 参照）。未登録なら日本語名をそのまま返す。
-function getLineDisplayName(lineName, userLang) {
-  if (!lineName) return '';
-  if (userLang === 'ja') return lineName;
-  const trans = LINE_DISPLAY_NAMES[lineName];
-  if (trans && trans[userLang]) return trans[userLang];
-  return lineName;
-}
 
 // 2026-08 コミュニティバス名・バス停名の多言語化（天気表示障害と同時修正・v2.25.0）
 // コミュニティバス事業者名（41自治体）の en/zh 表示名
 // バス停名の接尾辞（西口/東口/北口/南口/駅前 等）の en/zh 変換
 // コミュニティバス事業者名の多言語表示
-function getCommunityBusDisplayName(busName, userLang) {
-  if (!busName || userLang === 'ja') return busName;
-  const t = (COMMUNITY_BUS_NAME_MAP[userLang] || {})[busName];
-  return t || busName;
-}
 // バス停名の多言語表示（駅名部分は getDisplayStationName、接尾辞は BUS_STOP_SUFFIX_MAP で変換）
-function getCommunityBusStopDisplayName(stopName, userLang) {
-  if (!stopName || userLang === 'ja') return stopName;
-  // 「新宿駅西口」→ 駅名「新宿」＋接尾辞「西口」 に分解
-  for (const [suffix, trans] of Object.entries(BUS_STOP_SUFFIX_MAP[userLang] || {})) {
-    if (stopName.endsWith(suffix)) {
-      const stationPart = stopName.slice(0, -suffix.length);
-      const stName = stationPart.replace(/駅$/, '');
-      const stTrans = getDisplayStationName(stName, userLang);
-      return stTrans + (stationPart.endsWith('駅') ? (userLang === 'en' ? ' Sta.' : '站') : '') + trans;
-    }
-  }
-  // 接尾辞なし: 駅名のみ
-  if (stopName.endsWith('駅')) {
-    const stTrans = getDisplayStationName(stopName.replace(/駅$/, ''), userLang);
-    return stTrans + (userLang === 'en' ? ' Sta.' : '站');
-  }
-  return stopName;
-}
 
 // 路線名の多言語表示（経路探索グラフの日本語路線名 → en/zh）
 
-function getDisplayLineName(lineName, userLang) {
-  if (!lineName || userLang === 'ja') return lineName;
-  const trans = LINE_DISPLAY_NAMES[lineName];
-  if (trans && trans[userLang]) return trans[userLang];
-  // ODPT の dc:title は「丸ノ内線」等、辞書キーは「東京メトロ丸ノ内線」等のため部分一致で解決
-  // （例: "丸ノ内線" → "東京メトロ丸ノ内線" / "千代田線" → "東京メトロ千代田線"）
-  const norm = lineName.replace(/[・\s]/g, '');
-  for (const [key, t] of Object.entries(LINE_DISPLAY_NAMES)) {
-    const keyNorm = key.replace(/[・\s]/g, '');
-    if (keyNorm.includes(norm) || norm.includes(keyNorm)) {
-      if (t[userLang]) return t[userLang];
-    }
-  }
-  return lineName;
-}
 
 // 気象庁の日本語天気文を en/zh に機械翻訳（出現順に置換。長い語を先に置く）
-function translateWeather(text, userLang) {
-  if (!text || userLang === 'ja') return text;
-  const entries = (WEATHER_TERM_MAP[userLang] || []).slice().sort((a, b) => b[0].length - a[0].length);
-  const pattern = entries.map(e => e[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  // 最長一致を優先した一括置換（置換結果が再度翻訳される二重翻訳を防ぐ）
-  let t = pattern ? text.replace(new RegExp(pattern, 'g'), matched => {
-    const entry = entries.find(e => e[0] === matched);
-    return entry ? entry[1] : matched;
-  }) : text;
-  // 全角スペースは英中では通常のスペースに（JMAテキスト由来の整形用スペース）
-  t = t.split('\u3000').join(' ');
-  t = t.trim();
-  // 2026-08 天気表示障害の修正（v2.25.0）: 辞書漏れで日本語が残った場合、
-  // en は漢字・かなとも NG、zh はかな NG → 未翻訳語を除去し、全体が日本語のままなら汎用メッセージへ。
-  if (userLang === 'en' ? /[\u3040-\u30ff\u4e00-\u9fff]/.test(t) : /[\u3040-\u30ff]/.test(t)) {
-    if (userLang === 'en') {
-      // かな・漢字を含む断片を除去（例: 「thunderを伴う」→「thunder」）
-      t = t.replace(/[\u3040-\u30ff\u4e00-\u9fff]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    } else {
-      // かなのみ除去（漢字は中国語として通用する）
-      t = t.replace(/[\u3040-\u30ff]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    }
-    if (!t) {
-      t = userLang === 'en'
-        ? 'Weather forecast for the area is available in Japanese (see JMA).'
-        : '该地区天气预报目前仅提供日语（请参阅日本气象厅）。';
-    }
-  }
-  return t;
-}
 
 // ODPT運行情報テキスト（振替輸送・運転見合わせ・人身事故等）の英中ローカライズ。
 // LINE_DISPLAY_NAMES / STATION_DISPLAY_NAMES（路線・駅名）＋定型文辞書を最長一致で一括置換し、
 // 日本語が残った場合は汎用メッセージにフォールバックする（en/zh 応答に生の日本語を漏らさない）。
-function translateTrainInfoDetail(text, userLang) {
-  if (!text || userLang === 'ja') return text;
-  const dict = new Map();
-  for (const [ja, disp] of Object.entries(LINE_DISPLAY_NAMES)) {
-    if (disp && disp[userLang] && !dict.has(ja)) dict.set(ja, disp[userLang]);
-  }
-  for (const [ja, disp] of Object.entries(STATION_DISPLAY_NAMES)) {
-    if (disp && disp[userLang] && !dict.has(ja)) dict.set(ja, disp[userLang]);
-  }
-  for (const [ja, localized] of (TRAIN_INFO_TERM_MAP[userLang] || [])) {
-    if (!dict.has(ja)) dict.set(ja, localized);
-  }
-  const entries = [...dict.entries()].sort((a, b) => b[0].length - a[0].length);
-  const pattern = entries.map(e => e[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  let t = pattern ? text.replace(new RegExp(pattern, 'g'), m => dict.get(m)) : text;
-  // 日本語が残れば汎用メッセージにフォールバック（en はかな・漢字とも NG、zh はかなのみ NG）
-  if (userLang === 'en' ? /[\u3040-\u30ff\u4e00-\u9fff]/.test(t) : /[\u3040-\u30ff]/.test(t)) {
-    t = userLang === 'en'
-      ? 'Train services are disrupted; substitute bus transport may be in operation. Please follow station staff guidance.'
-      : '列车运行受到影响，可能正在实施接驳换乘巴士。请遵从车站工作人员的指引。';
-  }
-  return t.replace(/[ \t]+/g, ' ').replace(/\s*([,.])\s*/g, '$1 ').trim();
-}
 
 
 
@@ -758,46 +616,9 @@ function buildGovFacilitySearchSupport(userLocation, userLang = 'ja', placeName 
 // ==========================================
 // 🌐 多言語判定
 // ==========================================
-function detectLanguage(text) {
-  if (!text) return 'ja';
-  const str = text.trim();
-  if (!str) return 'ja';
-  // かな（ひらがな・カタカナ）を含む → 日本語
-  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(str)) return 'ja';
-  // 漢字（CJK）を1文字も含まない → 英語
-  // （-> / → / / / ( ) などの記号を含む英字入力もすべて英語として判定される）
-  if (!/[\u3400-\u9FFF\uF900-\uFAFF]/.test(str)) return 'en';
-  // 中国語シグナル: 簡体字専用字（日本語に存在しない字形。漢字は日本語でも使われるため、
-  // 「日本語に無い字形」のみを判定に使う。例: 場→场、東→东、線→线、関→关）
-  const zhChars = /[场东车机门银视动关风积灾电号涩沪这吗呢很从您请让说时颱澀灣這嗎從請讓]/;
-  // 中国語の語彙・機能語（地名・交通・天候・機能語を広くカバー）
-  const zhWords = ['台风','积水','淹水','火灾','停电','酷暑','中暑','积雪','暴雨','海啸','海嘯',
-    '地震','人身事故','信号故障','降雪','台场','站台','换乘','票价','时刻表','地铁','电车',
-    '巴士','机场','车站','线路','路线','前往','出发','到达','查询','怎么','如何','最近','附近',
-    '几点','多少','航班','列车','天气','码头','碼頭','渡轮','轮渡','要多久','多少钱',
-    // 交通・地名拡充（中国語ユーザーがよく使う表記。ただし東京/大阪等の大都市名は
-    // 日中で表記が共通するため判定シグナルには使わない）
-    '合羽桥','坐巴士','坐车','坐地铁',' bus','坐','去','到','从','巴士站',
-    '公交车','公车','捷运','高铁','火车','怎么去','怎么走','多长时间','多久','几点发车','首班车','末班车',
-    '浅草寺','雷门','雷門','晴空塔','天空树'];
-  if (zhWords.some(w => str.includes(w))) return 'zh';
-  if (zhChars.test(str)) return 'zh';
-  // かな無し・漢字のみの入力で中国語の方向助詞を含む場合 → 中国語
-  // （例: 品川到新宿 / 从浅草出发。日本語は「から」「まで」「へ」をかなで書くため競合しない）
-  if (/(从|到(?!着)|去|请|您|怎|吗|呢)/.test(str)) return 'zh';
-  // かな無し・漢字のみ（英字・かな・簡体字専用字なし）の入力:
-  // 日本語地名（浅草・新宿等）と中国語地名（合羽桥・道具街等）が混在し判定困難なため、
-  // このヒューリスティクスでは「中国語らしい語彙/字形/助詞が無い」= 日本語（ja）とする。
-  return 'ja';
-}
 
 // 明示的な言語指定（args.language / args.lang）を解決する。
 // 有効値（ja/en/zh）ならそれを返し、未指定・不正値は null（自動判定へフォールバック）。
-function resolveLang(args) {
-  const raw = args?.language || args?.lang;
-  if (raw === 'en' || raw === 'zh' || raw === 'ja') return raw;
-  return null;
-}
 
 
 // ==========================================
@@ -820,13 +641,6 @@ async function fetchBikeShareData() {
   return data;
 }
 
-function haversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-}
 
 
 // ==========================================
@@ -2997,29 +2811,9 @@ async function searchFare(args) {
 // 🕐 時刻表検索
 // ==========================================
 // TrainTimetable 発着時刻の深夜0時越え正規化（GTFS 24:xx / 25:xx → 翌日表記）
-function normalizeOvernightTime(timeStr) {
-  if (!timeStr) return null;
-  const m = String(timeStr).match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return String(timeStr);
-  let h = parseInt(m[1], 10);
-  const min = m[2];
-  if (h >= 24) {
-    h -= 24;
-    return `${String(h).padStart(2, '0')}:${min}`;
-  }
-  return String(timeStr);
-}
 
 // 24時超表記（25:xx 等）を「翌日フラグ付きのソート用分」へ変換する。
 // 例: "25:10" → { minutes: 1510, nextDay: true } / "23:40" → { minutes: 1420, nextDay: false }
-function timeToSortMinutes(timeStr) {
-  if (!timeStr) return null;
-  const m = String(timeStr).match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const h = parseInt(m[1], 10);
-  const min = parseInt(m[2], 10);
-  return { minutes: h * 60 + min, nextDay: h >= 24 };
-}
 
 // #82: 検索日（YYYY-MM-DD）または calendar 引数から対象カレンダーを判定する。
 // calendar 引数が指定されれば最優先。省略時は曜日で自動判定（土日=SaturdayHoliday）。
@@ -3847,13 +3641,6 @@ async function fetchStationGeo(signal) {
 }
 
 // 緯度経度から距離（m）を計算（簡易ヘイバーサイン近似）
-function haversineM(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
 
 // バス停→最寄り駅 の紐付けマップ（近接閾値以内の駅を結ぶ）
 async function fetchBusStopStationLinks(thresholdM = 500, signal = undefined) {
