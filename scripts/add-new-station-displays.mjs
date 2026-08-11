@@ -2,7 +2,7 @@
 // ローマ字変換は手動マップ（精度優先）+ フォールバック
 import fs from 'node:fs';
 
-let src = fs.readFileSync('src/index.mjs', 'utf8');
+let src = fs.readFileSync('src/data/station-names.mjs', 'utf8');
 
 // 手動ローマ字マップ（新規駅のみ）
 const ROMAN = {
@@ -171,5 +171,5 @@ for (const [ja, [en, zh]] of Object.entries(ROMAN)) {
 }
 const insert = '\n  // 2026-08 v2.25 残タスク(#20) 追加237駅\n' + lines.join('\n') + '\n';
 src = src.replace(anchor, anchor + insert);
-fs.writeFileSync('src/index.mjs', src);
+fs.writeFileSync('src/data/station-names.mjs', src);
 console.log('STATION_DISPLAY_NAMES に', Object.keys(ROMAN).length, '駅を追加しました');

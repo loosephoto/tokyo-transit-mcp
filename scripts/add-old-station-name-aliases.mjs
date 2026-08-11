@@ -2,7 +2,7 @@
 // 参考: desktoptetsu.com「駅名改称 1987-2024」。対象は現在の路線グラフに存在する駅のみ。
 import fs from 'node:fs';
 
-let src = fs.readFileSync('src/index.mjs', 'utf8');
+let src = fs.readFileSync('src/data/station-names.mjs', 'utf8');
 
 // [旧駅名, 現駅名]
 const ADD = [
@@ -61,5 +61,5 @@ if (!src.includes(anchor)) { console.error('NAME_MAP ANCHOR NOT FOUND'); process
 const lines = ADD.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n';
 const insert = '\n  // ===== 2026-08 旧駅名エイリアス（#26）=====\n' + lines + '\n';
 src = src.replace(anchor, anchor + insert);
-fs.writeFileSync('src/index.mjs', src);
+fs.writeFileSync('src/data/station-names.mjs', src);
 console.log('STATION_NAME_MAP に旧駅名エイリアス', ADD.length, '件追加');
