@@ -50,5 +50,14 @@ assert(detectFailureType('運休', 'ja').adviceKey === 'service_suspension', '�
 assert(detectFailureType('浸水', 'ja').adviceKey === 'flood', '浸水→flood（回帰）');
 assert(detectFailureType('高波', 'ja').adviceKey === 'ferry_rough_seas', '高波→ferry_rough_seas（回帰）');
 
+// 復旧・遅延（運転見合わせからの復旧）
+assert(detectFailureType('再開', 'ja').adviceKey === 'service_resumed', '再開→service_resumed');
+assert(detectFailureType('復旧', 'ja').adviceKey === 'service_resumed', '復旧→service_resumed');
+assert(detectFailureType('運転再開', 'ja').adviceKey === 'service_resumed', '運転再開→service_resumed');
+assert(detectFailureType('再開', 'ja').isTrainSuspended === false, '再開は復旧（見合わせではない）');
+assert(detectFailureType('復旧しました', 'ja').isTrainSuspended === false, '復旧しました→見合わせではない');
+assert(detectFailureType('遅延', 'ja').adviceKey === 'vehicle_delay', '遅延→vehicle_delay（運転継続）');
+assert(detectFailureType('遅延', 'ja').isTrainSuspended === false, '遅延は運転継続（見合わせではない）');
+
 console.log(`\n結果: PASS=${pass} FAIL=${fail}`);
 process.exit(fail ? 1 : 0);

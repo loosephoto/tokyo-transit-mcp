@@ -790,7 +790,8 @@ export async function searchRoute(args) {
             for (const info of res.value.data) {
               if (!info['odpt:trainInformationStatus']) continue;
               const t = info['odpt:trainInformationText']?.ja || '';
-              const resumed = t.includes('再開');
+              // #92: 復旧検出は「運転を再開」等の肯定的表現のみ。TODO「再開は未定」は除外
+              const resumed = /(運転を再開|運転再開|再開しました|復旧しました)/.test(t) && !/(再開は未定|再開未定|再開の見込み)/.test(t);
               if (!resumed && (t.includes("運転見合わせ") || t.includes("見合わせ") || t.includes("運休"))) {
                 allDelays.push({ railway: info['odpt:railway'], text: t });
                 for (const lineName of resolveSuspendedLineNames(info['odpt:railway'])) suspendedLineNames.add(lineName);

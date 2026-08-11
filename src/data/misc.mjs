@@ -120,6 +120,12 @@ export const FAILURE_TYPES = {
     keywords: { ja: ['運転見合わせ', '運休', '終日運転見合わせ'], en: ['service_suspension', 'operation_suspended', 'not_running', 'services_suspended'], zh: ['暂停运行', '停运', '暂停运营'] },
     weatherText: { ja: "運転見合わせ・運休", en: "Service suspension", zh: "列车暂停运行" },
     delayMessage: { ja: "運転を見合わせています", en: "Train services are suspended", zh: "列车暂停运行" }
+  },
+  'service_resumed': {
+    type: 'weather', adviceKey: 'service_resumed', isTrainSuspended: false,
+    keywords: { ja: ['運転再開', '再開しました', '復旧しました', '運転を再開'], en: ['resumed', 'service_resumed', 'reopened', 'restored', 'running_again'], zh: ['恢复运行', '恢复运营', '恢复通车'] },
+    weatherText: { ja: "運転を再開しました・復旧", en: "Services resumed / recovered", zh: "恢复运行・已恢复" },
+    delayMessage: { ja: "運転を再開しました（遅延が残る場合があります）", en: "Services resumed (residual delays may remain)", zh: "已恢复运行（可能仍有残余晚点）" }
   }
 };
 
@@ -393,6 +399,11 @@ export const MULTILINGUAL_ADVICE = {
     ja: "🤖 【AIからのインテリジェントアドバイス (運転見合わせ)】\n🚨 一部路線が運転を見合わせています。最新の運行情報と振替輸送の有無を確認してください。お急ぎの場合は代替ルート（他社線・バス）をご検討ください。",
     en: "🤖 [AI Intelligent Transit Advice (Service Suspension)]\n🚨 Some lines have suspended service. Check the latest service status and substitute transport. If you are in a hurry, consider an alternative route (other lines or buses).",
     zh: "🤖 【AI智能出行建议 (暂停运行)】\n🚨 部分线路暂停运行。请确认最新运行信息和接驳换乘安排。如急于出行，请考虑替代路线（其他线路或巴士）。"
+  },
+  service_resumed: {
+    ja: "🤖 【AIからのインテリジェントアドバイス (運転再開・復旧)】\n🚆 運転を再開しました。復旧直後はダイヤの乱れや遅延が残る場合があります。時間に余裕を持ち、最新の運行情報をご確認ください。",
+    en: "🤖 [AI Intelligent Transit Advice (Services Resumed)]\n🚆 Service has resumed. Residual delays or disruption may remain right after recovery. Allow extra time and check the latest service status.",
+    zh: "🤖 【AI智能出行建议 (恢复运行)】\n🚆 列车已恢复运行。恢复初期可能仍有时刻表混乱或残余晚点，请预留时间并确认最新运行信息。"
   },
   vehicle_failure: {
     ja: "🤖 【AIからのインテリジェントアドバイス (機材故障)】\n🚃 機材故障の影響で一部の運行が見合わせています（鉄道・バス・航空機を問いません）。復旧まで時間を要する場合があり、振替輸送や他社線・バス・他モードへの乗り継ぎが案内されることもあります。係員の案内に従い、お急ぎの方は代替ルートをご検討ください。",

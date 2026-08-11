@@ -33,12 +33,13 @@
 
 ### 🛤️ 直近の更新内容
 
-- **台風接近時の天気・水上交通の安全強化＋始発対応（v2.39.2・イシュー#88/#89/#90）**
+- **台風接近時の天気・水上交通の安全強化＋始発対応＋復旧対応（v2.39.3・イシュー#88/#89/#90）**
   - **天気の地域コード解決を拡張**: `get_weather` / `search_route` が千葉・埼玉・神奈川・栃木・群馬・静岡・主要駅（従来は東京固定）の予報を取得。`stationToJmaArea()` で駅名・地域名からJMA地域コードを解決
   - **強風・高波・特別警報の検出（#89）**: JMA予報の `winds`/`waves` をパースし、強風（非常に強く）・高波（2.5m以上）・特別警報を検出。AIアドバイスを typhoon（荒天）へ昇格し、風・波情報を `get_weather` 応答に表示
   - **フェリー・水上バスの強風・高波ゲート追加（#90）**: `search_ferry` が港の荒天を検出すると `SEVERE_WEATHER_ADVISORY` を返し、運航見合わせの可能性を案内（津波ゲートに加え強風・高波も抑止）
   - **倒木・運転見合わせの障害種別を追加**: FAILURE_TYPES に fallen_tree（倒木）・service_suspension（運転見合わせ・運休）を追加し、台風後の始発で典型的な「倒木による見合わせ」「原因不明の見合わせ」を専用AIアドバイス（🌀倒木・🚨運転見合わせ）で案内
-  - **検証** — build PASS・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 29/29 全PASS
+  - **復旧・遅延の挙動を改善**: FAILURE_TYPES に service_resumed（運転再開・復旧）を追加し、運転見合わせからの復旧を専用AIアドバイスで案内。LIVE の復旧判定を「再開は未定」を除外する肯定的表現に改善
+  - **検証** — build PASS・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 36/36 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -436,6 +437,7 @@ Check route from Asakusa to Shibuya -test typhoon
 | `豪雨` | `heavy_rain` | `暴雨` / `豪雨` | 大雨による視界不良・浸水注意報 |
 | `倒木` | `fallen_tree` | `倒木` / `树木倒伏` | 強風による倒木・運転見合わせ |
 | `運転見合わせ` / `運休` | `service_suspension` | `暂停运行` / `停运` | 運転見合わせ・運休 |
+| `再開` / `復旧` | `service_resumed` | `恢复运行` / `恢复运营` | 運転再開・復旧（遅延が残る場合あり） |
 
 ---
 
@@ -602,12 +604,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Weather & water-transport safety for approaching typhoons + first-train support (v2.39.2, issues #88/#89/#90)**
+- **Weather & water-transport safety for approaching typhoons + first-train & recovery support (v2.39.3, issues #88/#89/#90)**
   - **Regional weather-code resolution expanded**: `get_weather` / `search_route` now fetch forecasts for Chiba, Saitama, Kanagawa, Tochigi, Gunma, Shizuoka and major stations (previously fixed to Tokyo). `stationToJmaArea()` resolves JMA area codes from station/region names
   - **Severe wind / high wave / special warning detection (#89)**: parse `winds`/`waves` from JMA forecasts; detect severe wind ("very strong"), high waves (≥2.5 m) and special warnings; escalate AI advice to typhoon (storm) and surface wind/wave info in `get_weather`
   - **Severe-weather gate for ferries & water buses (#90)**: `search_ferry` returns `SEVERE_WEATHER_ADVISORY` and warns of possible suspension when its ports are in stormy/high-wave conditions (added to the tsunami gate)
   - **Added fallen-tree / service-suspension disruption types**: added `fallen_tree` (倒木) and `service_suspension` (運転見合わせ・運休) to FAILURE_TYPES, giving dedicated AI advice (🌀 fallen trees, 🚨 service suspension) for the typical post-typhoon morning-first-train situation
-  - **Verification** — build PASS, probe-all-lang 26/26, test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 29/29 all PASS
+  - **Improved recovery & delay behavior**: added `service_resumed` (運転再開・復旧) to FAILURE_TYPES so recovery from suspension gets dedicated AI advice; improved the LIVE resume detection to only accept positive resume phrases (excluding "再開は未定")
+  - **Verification** — build PASS, probe-all-lang 26/26, test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 36/36 all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -967,6 +970,7 @@ Check route from Asakusa to Shibuya -test earthquake
 | `heavy_rain` | `豪雨` | `暴雨` / `豪雨` | Heavy rain / flood advisory |
 | `fallen_tree` | `倒木` | `倒木` / `树木倒伏` | Service suspended due to fallen trees from strong winds |
 | `service_suspension` | `運転見合わせ` / `運休` | `暂停运行` / `停运` | Train service suspension |
+| `resumed` / `service_resumed` | `再開` / `復旧` | `恢复运行` / `恢复运营` | Services resumed (residual delays may remain) |
 
 ---
 
@@ -1133,12 +1137,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **台风接近时的天气・水上交通安全强化＋首班车应对（v2.39.2・议题#88/#89/#90）**
+- **台风接近时的天气・水上交通安全强化＋首班车应对＋恢复应对（v2.39.3・议题#88/#89/#90）**
   - **天气地区代码解析扩展**: `get_weather` / `search_route` 现在获取千叶・埼玉・神奈川・栃木・群马・静冈及主要车站（此前固定为东京）的预报。`stationToJmaArea()` 从车站名・地区名解析JMA地区代码
   - **强风・大浪・特别警报检测（#89）**: 解析JMA预报的 `winds`/`waves`，检测强风（非常强）・大浪（2.5米以上）・特别警报，将AI建议升级为 typhoon（恶劣天气），并在 `get_weather` 中显示风・浪信息
   - **轮渡・水上巴士的强风・大浪门控（#90）**: `search_ferry` 检测到港口恶劣天气时返回 `SEVERE_WEATHER_ADVISORY`，提示可能停航（在津波门控之外追加强风・大浪）
   - **新增倒木・暂停运行的故障类型**: 在 FAILURE_TYPES 中新增 fallen_tree（倒木）・service_suspension（暂停运行・停运），针对台风后首班车常见的「因倒木暂停运行」等以专用AI建议（🌀倒木・🚨暂停运行）提示
-  - **验证** — build 通过・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 29/29 全部通过
+  - **改进恢复・晚点行为**: 在 FAILURE_TYPES 中新增 service_resumed（恢复运行・已恢复），针对停运后的恢复以专用AI建议提示；改进 LIVE 的恢复检测，仅接受肯定性的恢复表述（排除「再开未定」）
+  - **验证** — build 通过・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 36/36 全部通过
 
 ### 🤖 AI 智能建议
 
@@ -1497,6 +1502,7 @@ Check route from Asakusa to Shibuya -test typhoon
 | `暴雨` / `豪雨` | `heavy_rain` | `豪雨` | 大雨导致视线不良及积水预警 |
 | `倒木` / `树木倒伏` | `fallen_tree` | `倒木` | 因强风倒木・暂停运行 |
 | `暂停运行` / `停运` | `service_suspension` | `運転見合わせ` / `運休` | 列车暂停运行 |
+| `恢复运行` / `恢复运营` | `service_resumed` | `再開` / `復旧` | 已恢复运行（可能仍有残余晚点） |
 
 ---
 
