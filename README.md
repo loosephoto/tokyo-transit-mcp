@@ -33,11 +33,9 @@
 
 ### 🛤️ 直近の更新内容
 
-- **天気の地域コード解決を改善（v2.39.4・イシュー#93）**
-  - **無効な区・市コードを府県予報区コードへ正規化**: JMA forecast API は府県コード（130000等）のみ有効で、区市町村コード（131020等）は404になるため、`JMA_AREA_MAP` の渋谷・新宿・台東・横浜等を有効な府県コードに修正（`get_weather` のネットワークエラーを解消）
-  - **駅名→自治体名の表示を追加**: `PLACE_MUNICIPALITY` で「上野→台東区」「池袋→豊島区」等の東京23区の主要駅を自治体名付きで表示（`get_weather(上野)` → 「上野（台東区）」・`get_weather(渋谷)` → 「渋谷区」）
-  - **一次細分区域の選択**: `PLACE_SUBAREA` で伊豆諸島・小笠原の島（大島・八丈島・父島等）の天気を正しい区域（伊豆諸島北部・南部・小笠原諸島）から取得。応答に `region`（区域名）を追加
-  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 50/50 全PASS
+- **天気の島・地域コード解決を補強（v2.39.5・イシュー#93）**
+  - **「伊豆大島」など島の正式名に対応**: `PLACE_SUBAREA` に「伊豆大島」を追加し、`get_weather("伊豆大島")` が伊豆諸島北部（130020）の区域データから正しい天気を取得（従来は東京地方に解決）
+  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 51/51 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -602,11 +600,9 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Weather regional-code resolution improved (v2.39.4, issue #93)**
-  - **Normalized invalid ward/city codes to prefecture forecast codes**: the JMA forecast API only supports prefecture codes (130000 etc.); ward/municipality codes (131020 etc.) return 404. Fixed `JMA_AREA_MAP` entries (Shibuya, Shinjuku, Taito, Yokohama...) to valid prefecture codes, resolving `get_weather` network errors
-  - **Station→municipality display added**: `PLACE_MUNICIPALITY` shows major Tokyo 23-ward stations with their ward name (`get_weather("上野")` → "上野（台東区）", `get_weather("渋谷")` → "渋谷区")
-  - **Primary sub-area selection**: `PLACE_SUBAREA` fetches weather for the Izu/Ogasawara islands (Ōshima, Hachijō, Chichijima etc.) from the correct region (northern/southern Izu Islands, Ogasawara). Added `region` (sub-area name) to the response
-  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 50/50 all PASS
+- **Weather island / regional-code resolution reinforced (v2.39.5, issue #93)**
+  - **Official island names such as "伊豆大島" supported**: added "伊豆大島" to `PLACE_SUBAREA`, so `get_weather("伊豆大島")` fetches correct weather from the northern Izu Islands (130020) sub-area data (previously resolved to the Tokyo Metropolis region)
+  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 51/51 all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1133,11 +1129,9 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **改进天气地区代码解析（v2.39.4・议题#93）**
-  - **将无效的区・市代码规范化为都道府县预报代码**: JMA 预报API仅支持都道府县代码（130000等），区市町村代码（131020等）返回404。因此将 `JMA_AREA_MAP` 中的涩谷・新宿・台东・横滨等修正为有效的都道府县代码（解决 `get_weather` 的网络错误）
-  - **新增车站→行政区名称显示**: `PLACE_MUNICIPALITY` 以行政区名显示东京23区的主要车站（`get_weather("上野")` → 「上野（台东区）」・`get_weather("渋谷")` → 「涩谷区」）
-  - **一次细分区域选择**: `PLACE_SUBAREA` 从正确的区域（伊豆诸岛北部・南部・小笠原诸岛）获取伊豆・小笠原诸岛（大岛・八丈岛・父岛等）的天气。响应中新增 `region`（区域名）
-  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 50/50 全部通过
+- **加强天气岛屿・地区代码解析（v2.39.5・议题#93）**
+  - **支持「伊豆大岛」等岛屿正式名称**: 在 `PLACE_SUBAREA` 中新增「伊豆大岛」，使 `get_weather("伊豆大岛")` 从伊豆诸岛北部（130020）的区域数据获取正确的天气（此前解析为东京地方）
+  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 51/51 全部通过
 
 ### 🤖 AI 智能建议
 

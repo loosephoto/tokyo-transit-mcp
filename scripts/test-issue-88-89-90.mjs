@@ -71,6 +71,7 @@ assert(placeToMunicipality('池袋').zh === '丰岛区', '#93 池袋→自治体
 assert(placeToMunicipality('御茶ノ水').ja === '文京区', '#93 御茶ノ水→自治体 文京区');
 assert(placeToMunicipality('横浜') === null, '#93 横浜→自治体なし（県表示）');
 assert(placeToSubarea('大島') === '130020', '#93 大島→伊豆諸島北部(130020)');
+assert(placeToSubarea('伊豆大島') === '130020', '#93 伊豆大島→伊豆諸島北部(130020)');
 assert(placeToSubarea('三宅島') === '130030', '#93 三宅島→伊豆諸島南部(130030)');
 assert(placeToSubarea('父島') === '130040', '#93 父島→小笠原諸島(130040)');
 assert(placeToSubarea('上野') === null, '#93 上野→区域なし');
