@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.8 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.9 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -4434,6 +4434,8 @@ async function fetchFerryData() {
   };
   let allStops = [], allRoutes = [], allTrips = [], allStopTimes = [];
   const seenStopIds = new Set(), seenRouteIds = new Set();
+  // イシュー#76 復旧監視: 東海汽船の実GTFS取得可否をトラッキング（最終サマリで明示）
+  let tokaiRealOk = false;
   for (const src of FERRY_GTFS_SOURCES) {
     if (src.hardCoded) {
       // フォールバック: ハードコード港リストを stop として展開（東海汽船 GTFS 取得不可時）
@@ -4472,9 +4474,14 @@ async function fetchFerryData() {
       for (const r of safeParse('routes.txt')) { const rid = src.name + ':' + r.route_id; if (!seenRouteIds.has(rid)) { allRoutes.push({ ...r, route_id: rid, _source: src.name }); seenRouteIds.add(rid); } }
       for (const t of safeParse('trips.txt')) allTrips.push({ ...t, route_id: src.name + ':' + t.route_id, _source: src.name });
       for (const st of safeParse('stop_times.txt')) allStopTimes.push({ ...st, _source: src.name });
+      if (src.name === '東海汽船') tokaiRealOk = true;
+      // イシュー#76 復旧監視: 実GTFSの復旧を検知したら明示（ハードコード併用でも実データが優先される）
+      if (src.name === '東海汽船') console.log(`[Ferry] 東海汽船: real GTFS recovered — merged with hardcoded fallback (stop_name dedupe)`);
       console.log(`[Ferry] ${src.name}: loaded`); odptBreaker.onSuccess();
     } catch (e) {
-      console.log(`[Ferry] ${src.name}: skip (${e.message})`); odptBreaker.onFailure(e);
+      const is404 = /404|ENOTFOUND|ETIMEDOUT|getaddrinfo/i.test(e.message || '');
+      console.warn(`[Ferry] ${src.name}: GTFS fetch failed (${e.message}) — ${is404 ? 'endpoint unavailable (404) ' : ''}using hardcoded fallback. Auto-retry on next cache refresh (TTL 1h).`);
+      odptBreaker.onFailure(e);
     }
   }
   // 水上バス（東京クルーズ）の実 GTFS 取得失敗時のフォールバック。
@@ -4516,6 +4523,10 @@ async function fetchFerryData() {
     const seenNames = new Set();
     const dedupedStops = allStops.filter(s => { if (seenNames.has(s.stop_name)) return false; seenNames.add(s.stop_name); return true; });
     const data = { stops: dedupedStops, routes: allRoutes, trips: allTrips, stopTimes: allStopTimes };
+  // イシュー#76 復旧監視サマリ: 東海汽船の実GTFS状態を起動ログで確認可能にする
+  // （1時間TTLのキャッシュ更新時に自動再試行されるため、復旧すれば次回ロードで実データに切り替わる）
+  if (tokaiRealOk) console.log('[Ferry] 東海汽船: real GTFS OK (hardcoded fallback merged, stop_name dedupe)');
+  else console.warn('[Ferry] 東海汽船: real GTFS unavailable — hardcoded 19-port fallback in use. Auto-retry on next 1h cache refresh.');
   cache.set(cache.ferryGtfs.key, data, cache.ferryGtfs.ttl);
   return data;
 }
@@ -4540,7 +4551,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.8' },
+  { name: 'tokyo-transit-mcp', version: '2.38.9' },
   { capabilities: { tools: {} } }
 );
 
@@ -5656,7 +5667,10 @@ function normalizeStationName(name) {
 }
 
 // ==========================================
-// 🚄 特急・新幹線の乗り換え案内（大規模改修は見送り → 該当駅の窓口案内のみ）
+// 🚄 特急・新幹線の乗り換え案内（経路検索グラフ対応は実装しない → 駅案内の表示のみ）
+//   イシュー#76: 特急・新幹線の経路検索グラフ対応は行わない方針。
+//   運賃体系（特急券・指定席券）と停車駅パターンが一般路線と異なるため、検索グラフには
+//   組み込まず、以下の駅案内（みどりの窓口・指定席券売機）表示で対応する。
 // ==========================================
 // 特急・新幹線の種別名・列車名（ja/en/zh）。これらの単語が from/to に含まれる場合、
 // 経路検索（普通列車ベースのグラフ）では正しく案内できないため、窓口案内を返す。
@@ -5907,10 +5921,10 @@ function buildLimitedExpressGuidance(userLang, fromInput, toInput) {
   // 私鉄系特急の事業者判定（例: ロマンスカー・スカイライナー・りょうもう等）
   const privateOp = detectPrivateExpressOperator(fromInput, toInput);
   const notice = userLang === 'en'
-    ? '🚄 Limited express / Shinkansen transfers are not supported by the route graph yet (scheduled for a future major update).'
+    ? '🚄 Limited express / Shinkansen routes are not included in the route search graph (issue #76: not planned). Please use the station guidance below (Midori-no-Madoguchi / designated-seat ticket machines) for tickets and transfers.'
     : userLang === 'zh'
-      ? '🚄 目前线路图暂不支持特急・新干线换乘（计划在未来的大版本更新中支持）。'
-      : '🚄 特急・新幹線の乗り換えは、現在の経路検索グラフでは未対応です（将来の大規模改修で対応予定）。';
+      ? '🚄 路线搜索图不包含特急・新干线（issue #76：不计划实现）。请通过下方的车站指南（绿色窗口・指定席售票机）确认车票与换乘方式。'
+      : '🚄 特急・新幹線は経路検索グラフに含めない方針です（issue #76: 実装しない）。チケット購入・乗り換えは下記の駅案内（みどりの窓口・指定席券売機）をご利用ください。';
   const howTo = userLang === 'en'
     ? 'Please check ticket availability and connections at the station\'s JR Midori-no-Madoguchi (green window) or designated-seat ticket machines.'
     : userLang === 'zh'
@@ -6476,7 +6490,9 @@ async function getStationInfo(args) {
           // 駅周辺の文化施設（search_route と同じ自動選出ルーチン）
           cultural_facilities: getDestinationCulturalFacilities(stationName, userLang).length
             ? getDestinationCulturalFacilities(stationName, userLang)
-            : undefined
+            : undefined,
+          // 公的機関の検索案内（駅名基準・v2.36.3 と同設計。駅検索でも表示する）
+          gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, displayStation)
         });
       }
       const msg = userLang === 'en' ? `No station info found for ${displayStation}.` : userLang === 'zh' ? `未找到 ${displayStation} 的车站信息。` : '駅情報が見つかりませんでした。';
@@ -6490,7 +6506,9 @@ async function getStationInfo(args) {
       // 駅周辺の文化施設（search_route と同じ自動選出ルーチン: LANDMARK_DEFS + 明示定義）
       cultural_facilities: getDestinationCulturalFacilities(stationName, userLang).length
         ? getDestinationCulturalFacilities(stationName, userLang)
-        : undefined
+        : undefined,
+      // 公的機関の検索案内（駅名基準・v2.36.3 と同設計。駅検索でも表示する）
+      gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, displayStation)
     });
   } catch (error) {
     odptBreaker.onFailure(error);
@@ -9679,7 +9697,10 @@ async function searchBus(args) {
           candidates_raw: candidatesRaw, // #80: 再入力可能な正式キー
           message: promptMsg
         };
-        return jsonResponse(buildErrorResponse('AMBIGUOUS_BUS_STOP', promptMsg, { userLang, from: fromInput, to: toInput, disambiguation }));
+        // 曖昧時も入力名基準で公的機関の検索案内を表示（候補確定前でも「その場所周辺の役所」を探せる）
+        const ambiguousResp = buildErrorResponse('AMBIGUOUS_BUS_STOP', promptMsg, { userLang, from: fromInput, to: toInput, disambiguation });
+        ambiguousResp.gov_facility_search_support = buildGovFacilitySearchSupport(null, userLang, getDisplayStationName(result.input || fromInput || toInput, userLang));
+        return jsonResponse(ambiguousResp);
       }
       if (!result.found) {
         // 🔴 案内改善: 入力量の類似バス停を提示し、見つからない場合は徒歩・現実的アクセスを勧める
@@ -9726,6 +9747,8 @@ async function searchBus(args) {
             return localized.length ? { note: simNote, stops: localized } : undefined;
           })() : undefined,
           walk_suggestion: walkNote,
+          // 公的機関の検索案内（到着地バス停名を基準に表示。乗り継ぎが見つからなくても役所は探せる）
+          gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, getDisplayStationName(toInput || fromInput, userLang)),
           test_mode: testAdv.testMode,
           simulated_failure_type: testAdv.failureType || undefined
             });
@@ -9835,6 +9858,8 @@ async function searchBus(args) {
         better_alternative: betterAlternativeBlock,
         community_bus_access: cbAccess.length ? cbAccess : undefined,
         community_bus_note: communityBusNote,
+        // 公的機関の検索案内（到着地バス停名を基準に表示）
+        gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, getDisplayStationName(result.toNode, userLang)),
         data_source: 'ODPT BusroutePattern + BusTimetable + odpt:Station/odpt:BusstopPole (geo-link) + コミュニティバス駅接続(自治体公式データ)',
         ai_transit_advice: aiAdvice,
         test_mode: testAdv.testMode,

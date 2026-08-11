@@ -91,6 +91,11 @@ search_ferry(from_port: "東京", to_port: "大島")
 search_ferry(from_port: "浅草", to_port: "お台場海浜公園")
 ```
 
+**東海汽船 GTFS 復旧監視（issue #76）**: ODPT 静的 GTFS（`files/odpt/TokaiKisen/AllLines.zip`）は 404 継続中で、ハードコード 19 港フォールバックで稼働。復旧の確認手順:
+1. 起動ログの `[Ferry] 東海汽船: real GTFS ...` 行を確認 — `unavailable — hardcoded 19-port fallback in use` ならフォールバック中、`real GTFS OK` なら実データ復旧
+2. 自動復帰の仕組み: フェリーGTFS キャッシュは TTL 1時間のため、実GTFSが復旧すれば次回ロード（1時間以内）で実データに自動切替（stop_name でハードコードと重複排除）
+3. フォールバック中でも search_ferry・list_ferry_ports は 19 港で利用可能
+
 ### 空港フライト
 ```
 search_flight(airport: "羽田空港", direction: "arrival", destination: "東京駅")
