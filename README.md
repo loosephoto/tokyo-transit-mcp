@@ -17,7 +17,7 @@
 
 ### 🚉 全交通機関を統合
 
-**計119路線・1,417駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
+**計124路線・1,430駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
 
 | 種別 | 対応事業者（対応路線） |
 |:---|:---|
@@ -153,7 +153,7 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 
 ### MCP クライアント設定例（Claude Desktop / Hermes 等）
 
-APIキーはMCPクライアントの設定ファイルには記載せず、リポジトリルートの `.env` **のみ**に保存します。サーバーは `src/index.mjs` の位置を基準に `.env` を読み込むため、MCPクライアントの起動時カレントディレクトリには依存しません。
+APIキーはMCPクライアントの設定ファイルには記載せず、リポジトリルートの `.env` **のみ**に保存します。サーバーは `src/config.mjs` の位置を基準に `.env` を読み込むため、MCPクライアントの起動時カレントディレクトリには依存しません。
 
 ```json
 {
@@ -476,10 +476,10 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 │────────────────────────────────────────┤
 │  search_route   get_weather            │
 │  search_fare    get_timetable          │
-│  search_bus     list_transit_operators  │
-│  get_operator_routes                   │
-│  list_ferry_ports  search_ferry        │
-│  list_community_buses                  │
+│  search_bus     search_flight          │
+│  get_station_info  get_operator_routes │
+│  list_transit_operators  list_ferry_ports │
+│  search_ferry   list_community_buses   │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │
@@ -583,7 +583,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🚉 Integrated Transit Agencies
 
-**Covers 119 lines / 1,417 stations** (route search runs on the built-in graph without an API key):
+**Covers 124 lines / 1,430 stations** (route search runs on the built-in graph without an API key):
 
 | Type | Supported Operators (Lines) |
 |:---|:---|
@@ -683,7 +683,7 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 
 ### MCP Client Configuration Example (Claude Desktop / Hermes, etc.)
 
-Keep API keys **only** in the repository-root `.env`; do not put them in the MCP client's configuration file. The server resolves `.env` relative to `src/index.mjs`, so it does not depend on the MCP client's working directory.
+Keep API keys **only** in the repository-root `.env`; do not put them in the MCP client's configuration file. The server resolves `.env` relative to `src/config.mjs`, so it does not depend on the MCP client's working directory.
 
 ```json
 {
@@ -1004,10 +1004,10 @@ Architecture overview showing context requests from MCP clients routed to open A
 │────────────────────────────────────────┤
 │  search_route   get_weather            │
 │  search_fare    get_timetable          │
-│  search_bus     list_transit_operators  │
-│  get_operator_routes                   │
-│  list_ferry_ports  search_ferry        │
-│  list_community_buses                  │
+│  search_bus     search_flight          │
+│  get_station_info  get_operator_routes │
+│  list_transit_operators  list_ferry_ports │
+│  search_ferry   list_community_buses   │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │
@@ -1053,7 +1053,18 @@ Directory layout and key files of this project.
 ```
 tokyo-transit-mcp/
 ├── src/
-│   └── index.mjs       # Main server script
+│   ├── index.mjs            # Server bootstrap, tool registration, re-exports (slimmed to 155 lines in v2.39.0)
+│   ├── config.mjs           # Shared state (envConfig / cache / CircuitBreaker / API constants)
+│   ├── data/                # Lines/stations/buses/ferries/landmarks/multilingual dictionaries
+│   │   ├── station-names.mjs
+│   │   ├── railway-lines.mjs
+│   │   ├── landmarks.mjs
+│   │   ├── ferry-ports.mjs
+│   │   ├── bus-routes.mjs
+│   │   └── misc.mjs
+│   ├── lib/                 # Pure-function utilities (lang / csv / geo / time / common)
+│   ├── advice/              # AI advice / weather / earthquake safety (transit-advice / weather / earthquake)
+│   └── handlers/            # Tool implementations (search-route / bus / ferry / fare / timetable / flight / station-info)
 ├── scripts/            # Regression probes (multilingual / bus transfer / language detection)
 │   ├── probe-all-lang.mjs
 │   ├── probe-bus-transfer-lang.mjs
@@ -1066,6 +1077,8 @@ tokyo-transit-mcp/
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
 ```
+
+Dependency direction is one-way: `handlers → advice/data/lib → config` (v2.39.0 monolith split, issue #75).
 
 ---
 
@@ -1098,7 +1111,7 @@ MIT License
 
 ### 🚉 整合所有公共交通工具
 
-**共覆盖119条线路/1,417站**（路线搜索由无需 API 密钥的内置图执行）：
+**共覆盖124条线路/1,430站**（路线搜索由无需 API 密钥的内置图执行）：
 
 | 类别 | 支持的运营商（线路） |
 |:---|:---|
@@ -1198,7 +1211,7 @@ echo 'FLIGHT_API_KEY=your_flight_api_key_here' >> .env
 
 ### MCP 客户端配置示例（Claude Desktop / Hermes 等）
 
-API 密钥**仅**保存于仓库根目录的 `.env` 中，不要写入 MCP 客户端配置文件。服务器会以 `src/index.mjs` 的位置为基准读取 `.env`，不依赖 MCP 客户端的工作目录。
+API 密钥**仅**保存于仓库根目录的 `.env` 中，不要写入 MCP 客户端配置文件。服务器会以 `src/config.mjs` 的位置为基准读取 `.env`，不依赖 MCP 客户端的工作目录。
 
 ```json
 {
@@ -1518,10 +1531,10 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 │────────────────────────────────────────┤
 │  search_route   get_weather            │
 │  search_fare    get_timetable          │
-│  search_bus     list_transit_operators  │
-│  get_operator_routes                   │
-│  list_ferry_ports  search_ferry        │
-│  list_community_buses                  │
+│  search_bus     search_flight          │
+│  get_station_info  get_operator_routes │
+│  list_transit_operators  list_ferry_ports │
+│  search_ferry   list_community_buses   │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │
@@ -1567,7 +1580,18 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 ```
 tokyo-transit-mcp/
 ├── src/
-│   └── index.mjs       # 主服务器文件
+│   ├── index.mjs            # 服务器启动・工具注册・导出名重新导出（v2.39.0 精简至155行）
+│   ├── config.mjs           # 共享状态（envConfig / cache / CircuitBreaker / API常量）
+│   ├── data/                # 线路・车站・巴士・轮渡・地标・多语言词典数据
+│   │   ├── station-names.mjs
+│   │   ├── railway-lines.mjs
+│   │   ├── landmarks.mjs
+│   │   ├── ferry-ports.mjs
+│   │   ├── bus-routes.mjs
+│   │   └── misc.mjs
+│   ├── lib/                 # 纯函数工具（lang / csv / geo / time / common）
+│   ├── advice/              # AI建议・天气・地震安全（transit-advice / weather / earthquake）
+│   └── handlers/            # 各工具实现（search-route / bus / ferry / fare / timetable / flight / station-info）
 ├── scripts/            # 回归验证探针（多语言 / 公交换乘 / 语言检测）
 │   ├── probe-all-lang.mjs
 │   ├── probe-bus-transfer-lang.mjs
@@ -1580,6 +1604,8 @@ tokyo-transit-mcp/
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥
 ```
+
+依赖方向为 `handlers → advice/data/lib → config` 单向（v2.39.0 单体拆分・议题#75）。
 
 ---
 
