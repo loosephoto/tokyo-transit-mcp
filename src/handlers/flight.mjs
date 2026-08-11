@@ -2,7 +2,7 @@
  * フライト検索ハンドラ（モノリス分割 Phase 4b-6）
  * 依存: config / data/misc（AIRPORT_*）/ lib / advice
  */
-import { cache, odptBreaker, API_KEY, FLIGHT_API_KEY, FLIGHT_API_BASE } from '../config.mjs';
+import { cache, odptBreaker, API_KEY, API_BASE_URL, FLIGHT_API_KEY, FLIGHT_API_BASE } from '../config.mjs';
 import { AIRPORT_IATA, AIRPORT_WEATHER_AREA, IATA_TO_TERMINAL_STATION, DEFAULT_ACCESS_DESTINATIONS,
          ODPT_FLIGHT_STATUS_MAP, ODPT_AIRLINE_NAMES, MULTILINGUAL_ADVICE } from '../data/misc.mjs';
 import { getParams, jsonResponse, buildErrorResponse, handleApiError } from '../lib/common.mjs';
