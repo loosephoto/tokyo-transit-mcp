@@ -1,7 +1,7 @@
 // 新規駅の英字エイリアスをSTATION_NAME_MAPに追加するスクリプト
 import fs from 'node:fs';
 
-let src = fs.readFileSync('src/index.mjs', 'utf8');
+let src = fs.readFileSync('src/data/station-names.mjs', 'utf8');
 
 const anchor = "  'Hatchonawate': '八丁畷', 'Kawasaki-Shimmachi': '川崎新町', 'KawasakiShimmachi': '川崎新町', 'Hama-Kawasaki': '浜川崎', 'HamaKawasaki': '浜川崎',\n";
 if (!src.includes(anchor)) { console.error('NAME_MAP ANCHOR NOT FOUND'); process.exit(1); }
@@ -128,5 +128,5 @@ const aliases = {
 const lines = Object.entries(aliases).map(([k, v]) => `  '${k}': '${v}',`);
 const insert = '\n  // 2026-08 v2.25 残タスク(#20) 追加237駅 英字エイリアス\n' + lines.join('\n') + '\n';
 src = src.replace(anchor, anchor + insert);
-fs.writeFileSync('src/index.mjs', src);
+fs.writeFileSync('src/data/station-names.mjs', src);
 console.log('STATION_NAME_MAP に', Object.keys(aliases).length, 'エイリアスを追加しました');

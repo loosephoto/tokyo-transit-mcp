@@ -2,7 +2,7 @@
 // 1) データ整合性（路線リストの重複駅・WALK_TRANSFERSの駅存在・AMBIGUOUS候補の存在）
 // 2) ルート回帰（近接異名駅の徒歩連絡・同名別駅の曖昧化・データ修正の確認）
 import * as mod from '../src/index.mjs';
-import fs from 'node:fs';
+import { RAILWAY_NAME_MAP } from '../src/data/station-names.mjs';
 
 const { resolveStation, computeRoutes, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES } = mod;
 
@@ -236,13 +236,9 @@ for (const [alias, expectStn] of [
   assert(res.station === expectStn, `${alias}: ${expectStn}へ解決 (${res.station || '未解決'})`);
 }
 // 路線名の略称/表記揺れエイリアス（RAILWAY_NAME_MAP を直接検証。駅名解決とは別経路）
+// ※ v2.39.0 モノリス分割で src/data/station-names.mjs へ移動（ソーステキスト抽出は廃止）
 {
-  const src = fs.readFileSync(new URL('../src/index.mjs', import.meta.url), 'utf8');
-  const start = src.indexOf('const RAILWAY_NAME_MAP = {');
-  const end = src.indexOf('\n};', start);
-  const body = src.slice(start, end);
-  const rMap = {};
-  for (const m of body.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) rMap[m[1]] = m[2];
+  const rMap = RAILWAY_NAME_MAP;
   for (const [alias, expectLine] of [
     ['MM線', 'みなとみらい線'], ['ブルーライン', '横浜市営地下鉄ブルーライン'],
     ['グリーンライン', '横浜市営地下鉄グリーンライン'], ['TX', 'tsukuba'],

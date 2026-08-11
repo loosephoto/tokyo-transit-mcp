@@ -3,7 +3,7 @@
 // 例: '山手': '山手線', '京葉': 'JR京葉線'
 import fs from 'node:fs';
 
-let src = fs.readFileSync('src/index.mjs', 'utf8');
+let src = fs.readFileSync('src/data/station-names.mjs', 'utf8');
 
 // [追加キー（略称・表記揺れ）, 正式路線名（RAILWAY_LINES のキー）]
 const ADD = [
@@ -135,6 +135,6 @@ const anchor = "  ' JR ': 'jr-east', 'JR東日本': 'jr-east', 'JR西日本': 'j
 if (!src.includes(anchor)) { console.error('ANCHOR NOT FOUND'); process.exit(1); }
 const insert = '\n  // 2026-08 全路線の略称・表記揺れエイリアス（v2.25.3 充実化）\n' + lines.join('\n') + '\n';
 src = src.replace(anchor, anchor + insert);
-fs.writeFileSync('src/index.mjs', src);
+fs.writeFileSync('src/data/station-names.mjs', src);
 console.log('追加したエイリアス数:', added);
 if (skipped.length) console.log('スキップ:', skipped.join(', '));

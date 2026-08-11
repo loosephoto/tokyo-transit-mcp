@@ -1,7 +1,7 @@
 // 横浜・千葉方面＋全路線 駅名表記揺れエイリアスを STATION_NAME_MAP に一括追加
 import fs from 'node:fs';
 
-let src = fs.readFileSync('src/index.mjs', 'utf8');
+let src = fs.readFileSync('src/data/station-names.mjs', 'utf8');
 
 const ADD = [
   ['Shin-Yokohama', '新横浜'], ['ShinYokohama', '新横浜'],
@@ -111,5 +111,5 @@ if (!src.includes(anchor)) { console.error('NAME_MAP ANCHOR NOT FOUND'); process
 const lines = ADD.map(([k, v]) => `  '${k}': '${v}',`).join('\n') + '\n';
 const insert = '\n  // 2026-08 横浜・千葉方面＋全路線 駅名表記揺れエイリアス（v2.25.3）\n' + lines + '\n';
 src = src.replace(anchor, anchor + insert);
-fs.writeFileSync('src/index.mjs', src);
+fs.writeFileSync('src/data/station-names.mjs', src);
 console.log('STATION_NAME_MAP に', ADD.length, 'エイリアス追加');

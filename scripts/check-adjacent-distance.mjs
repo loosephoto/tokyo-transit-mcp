@@ -11,7 +11,7 @@ console.log('STATION_COORDS エクスポート:', typeof STATION_COORDS);
 import fs from 'fs';
 let coords = STATION_COORDS;
 if (!coords) {
-  const src = fs.readFileSync('src/index.mjs', 'utf8');
+  const src = fs.readFileSync('src/data/railway-lines.mjs', 'utf8');
   const start = src.indexOf('const STATION_COORDS = {');
   let depth = 0, end = -1;
   for (let i = start; i < src.length; i++) {
@@ -35,7 +35,7 @@ function haversine(a, b) {
 }
 
 // 全路線の駅リストをソースから抽出
-const src = fs.readFileSync('src/index.mjs', 'utf8');
+const src = fs.readFileSync('src/data/railway-lines.mjs', 'utf8');
 const startRL = src.indexOf('const RAILWAY_LINES = {');
 let depth = 0, end = -1;
 for (let i = startRL; i < src.length; i++) {

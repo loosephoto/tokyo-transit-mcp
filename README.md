@@ -33,10 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
-- **既存の回帰テスト失敗を修正: ハードコードバス直行の検索解決と表示名期待値を是正（v2.38.10）**
-  - **test:bus 19件FAILを解消**: 入力は `normalizeBusStop` で「駅」サフィックスが除去されるため、ハードコードバス直行エッジ（例: 渋谷駅⇔中野駅 = 京王バス 渋64）に到達できず電車ルートが返っていた。`searchBusTransfer` で正規化後名（駅サフィックス除去版）にも直行エッジを張り、バス直通（0乗換）で引けるように修正。あわせて searchBus 成功レスポンスに `found` を追加
-  - **test:walk 3件FAILを解消**: v2.37.0 の上野東京ライン実装で表示名が変化（JR高崎線→JR上野東京ライン（高崎線直通）等）したため期待値を更新。東武野田線の直通検証は大宮→春日部に変更（大宮→船橋は上野東京ライン経由1乗換が最短のため）
-  - **検証** — build PASS・probe-all-lang 26/26・test:walk / test:bus / test:issue 全PASS
+- **src/index.mjs のモノリス分割リファクタリング（v2.39.0・イシュー#75）**
+  - **10,524行の単一ファイルをモジュール構成へ分割**: `config.mjs`（共有状態）/ `data/`（路線・駅・バス・フェリー・ランドマーク・多言語辞書）/ `lib/`（純関数ユーティリティ）/ `advice/`（AIアドバイス・天気・地震安全）/ `handlers/`（各ツール実装7モジュール）
+  - **index.mjs は155行にスリム化**: サーバー起動・ツール登録・エクスポート再公開（30名）のみ。依存方向は `handlers → advice/data/lib → config` の一方通行（循環依存なし）
+  - **挙動不変**: API レスポンス・エクスポート30名互換・開発支援ツール（add-*系）の対象パス更新
+  - **検証** — build PASS・probe-all-lang 26/26・test:walk / test:bus / test:issue / check-railway-integrity / regressions 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -524,7 +525,18 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 ```
 tokyo-transit-mcp/
 ├── src/
-│   └── index.mjs       # メインサーバー（全ロジック）
+│   ├── index.mjs            # サーバー起動・ツール登録・エクスポート再公開（v2.39.0 で155行にスリム化）
+│   ├── config.mjs           # 共有状態（envConfig / cache / CircuitBreaker / API定数）
+│   ├── data/                # 路線・駅・バス・フェリー・ランドマーク・多言語辞書データ
+│   │   ├── station-names.mjs
+│   │   ├── railway-lines.mjs
+│   │   ├── landmarks.mjs
+│   │   ├── ferry-ports.mjs
+│   │   ├── bus-routes.mjs
+│   │   └── misc.mjs
+│   ├── lib/                 # 純関数ユーティリティ（lang / csv / geo / time / common）
+│   ├── advice/              # AIアドバイス・天気・地震安全（transit-advice / weather / earthquake）
+│   └── handlers/            # 各ツール実装（search-route / bus / ferry / fare / timetable / flight / station-info）
 ├── scripts/            # 回帰検証プローブ（多言語・バス乗り継ぎ・言語検出）
 │   ├── probe-all-lang.mjs
 │   ├── probe-bus-transfer-lang.mjs
@@ -537,6 +549,8 @@ tokyo-transit-mcp/
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
 ```
+
+依存方向は `handlers → advice/data/lib → config` の一方通行（v2.39.0 モノリス分割・イシュー#75）。
 
 ---
 
@@ -585,13 +599,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Improve get_timetable accuracy: calendar separation, time sorting, avoid the 1000-record truncation (v2.38.8, issues #82 #83)**
-  - **#82 Weekday/SaturdayHoliday separation**: added the `calendar` argument (Weekday / SaturdayHoliday / 平日 / 土休日); when omitted it is auto-detected from the search date (`date` YYYY-MM-DD) or the current weekday. Weekday searches no longer mix in SaturdayHoliday trains
-  - **#82 Ascending time sort**: records are grouped by direction (odpt:railDirection) and sorted by the departure time at the requested station. Times past midnight use a next-day-aware sort key (timeToSortMinutes)
-  - **#83 Avoid 1000-record truncation**: fetches per railway × calendar (Ginza Line: unfiltered 1000 records → Weekday 658 + SaturdayHoliday 560 = 1,218 records fully retrieved). Responses at/over 1000 records set `truncated: true` instead of a complete SUCCESS
-  - Response now includes `calendar`, `service_date` and per-row `departure_next_day` / `arrival_next_day` (past-midnight flags) so clients can distinguish service days
-  - inputSchema extended with calendar / date arguments
-  - **Verification** — probe-all-lang 26/26 PASS, check-railway-integrity PASS, test:issue (4 regression suites incl. #82 #83) all PASS
+- **Monolith split refactoring of src/index.mjs (v2.39.0, issue #75)**
+  - **Split the 10,524-line single file into modules**: `config.mjs` (shared state) / `data/` (lines, stations, buses, ferries, landmarks, multilingual dictionaries) / `lib/` (pure-function utilities) / `advice/` (AI advice, weather, earthquake safety) / `handlers/` (7 tool implementations)
+  - **index.mjs slimmed to 155 lines**: server bootstrap, tool registration, and re-export of the 30 public names only. Dependency direction is one-way — `handlers → advice/data/lib → config` (no circular imports)
+  - **Behavior unchanged**: API responses, 30-name export compatibility, and dev-tool path updates (add-* scripts)
+  - **Verification** — build PASS, probe-all-lang 26/26, test:walk / test:bus / test:issue / check-railway-integrity / regressions all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1102,10 +1114,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复既有的回归测试失败：修正硬编码巴士直行的搜索解析与显示名称预期值（v2.38.10）**
-  - **解决 test:bus 的 19 个失败**：由于输入经 `normalizeBusStop` 会去除「駅」后缀，导致无法到达硬编码巴士直行边（例：渋谷駅⇔中野駅 = 京王巴士 渋64），返回了电车路线。在 `searchBusTransfer` 中为正则化后的名称（去除车站后缀版）也添加直行边，使巴士直通（0换乘）可被检索。同时为 searchBus 成功响应添加 `found`
-  - **解决 test:walk 的 3 个失败**：v2.37.0 上野东京线实装后显示名称发生变化（JR高崎线→JR上野东京线（高崎线直通）等），已更新预期值。东武野田线的直通验证改为大宫→春日部（大宫→船桥以上野东京线经1次换乘为最短）
-  - **验证** — build 通过・probe-all-lang 26/26・test:walk / test:bus / test:issue 全部通过
+- **src/index.mjs 单体文件拆分重构（v2.39.0・议题#75）**
+  - **将 10,524 行的单一文件拆分为模块结构**: `config.mjs`（共享状态）/ `data/`（线路・车站・巴士・轮渡・地标・多语言词典）/ `lib/`（纯函数工具）/ `advice/`（AI建议・天气・地震安全）/ `handlers/`（各工具实现7个模块）
+  - **index.mjs 精简至155行**: 仅保留服务器启动・工具注册・30个导出名的重新导出。依赖方向为 `handlers → advice/data/lib → config` 单向（无循环依赖）
+  - **行为不变**: API 响应・30个导出名兼容・开发辅助工具（add-*系）的目标路径更新
+  - **验证** — build 通过・probe-all-lang 26/26・test:walk / test:bus / test:issue / check-railway-integrity / regressions 全部通过
 
 ### 🤖 AI 智能建议
 
