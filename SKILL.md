@@ -132,17 +132,11 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.38.7（2026-08-11）— 通信障害のエラー化・天気キャッシュ地域別化・バス停曖昧化・データ是正（issues #73 #74 #77 #78 #79 #80 #81 #84 #85 #86 #87）
+### v2.38.8（2026-08-11）— get_timetable の時刻表正確性改善（issues #82 #83）
 
-- **#84 search_fare 通信障害のエラー化**: `resolveFareStations()` は全クエリ通信失敗時に throw し（成功0件のみ 5分 negative TTL `FARE_STATION_NEGATIVE_TTL` でキャッシュ）、`fetchFaresByFromStation()` も通信例外を throw。searchFare の既存 catch → handleApiError が NETWORK_ERROR / API_TIMEOUT を返す。ECONNRESET/timeout を「対象外・運賃なし」の SUCCESS/fare:null に変換しない
-- **#79 天気キャッシュの地域別化**: `getWeatherAdvice()` のキャッシュキーを `jma_weather:${areaCode}` に分離（searchRoute の東京固定キャッシュも `:130000` に）。ブレーカーOPEN・API失敗時は throw し、getWeather は CIRCUIT_BREAKER_OPEN / NETWORK_ERROR / API_TIMEOUT を返す（SUCCESS/null を返さない）。`JMA_AREA_LABELS`（エリアコード→ja/en/zh ラベル辞書）を新設し、横浜指定でも Tokyo/东京 固定にならない
-- **#80 search_bus の曖昧化**: `searchBusTransfer()` 内 `resolve()` を「完全一致 → 前方一致のみ → 双方向包含フォールバック」に変更し、一意のときだけ解決。複数候補は `{ ambiguous: true, side, input, candidates }` を返し、searchBus が `AMBIGUOUS_BUS_STOP` + disambiguation（candidates/candidates_raw・ja/en/zh）で検索を中断。候補から「系統名:ID」ノイズ（`/[：:〜→|]/`）を除外
-- **#85 駅名サフィックス正規化**: `normalizeStationName()` が辞書・ローマ字変換後に「駅/站/station」サフィックスを除去して解決（例: 新宿駅 → 新宿）
-- **#86 ローマ字の曖昧性チェック**: `resolveStation()` のローマ字・英語別名正規化後にも `AMBIGUOUS_STATION_NAMES` を再評価（Ryogoku / Ogawamachi / Iriya 等で候補提示を迂回しない）
-- **#73/#74 常磐線データ是正**: JR常磐線各停から東武野田線の駅（逆井・高柳）を除外し、快速27駅・各停14駅の区間定義を実態に是正。`check-railway-integrity.mjs` の known 期待値も更新
-- **#77 運休路線名解決**: searchRoute が ODPT TrainInformation の運休路線IDを `resolveSuspendedLineNames()` で内蔵路線名へ変換して `suspendedLineNames` に追加（除外リストが空にならないよう修正）
-- **#87 幻エッジ削除**: 存在しない短絡エッジ（柴又⇔金町 徒歩3分）を WALK_TRANSFERS から削除。京成金町⇔金町 は維持。test-walk の期待値も更新
-- **#81 リポジトリ衛生**: `git rm -r --cached node_modules`（1,189ファイル）で追跡解除し、.gitignore を拡充（node_modules/・_tmp*・scripts/_tmp-*・coverage/・*.log）
-- **#78 probe-all-lang の偽陽性排除**: 引数名を実装に合わせ修正（station/operator → station_name/railway、location → area_name）、`__expectedStatuses` による status 検証を追加し ERROR 応答を PASS 扱いしない
-- **get_timetable 言語表示**: railway フィールドを `getDisplayLineName()` で言語別表示に（en: JR Yamanote Line / zh: JR山手线）
-- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・`check-railway-integrity` PASS・`test:issue`（test-issue-84/79/80.mjs）全PASS
+- **#82 平日・土休日の分離**: `calendar` 引数（Weekday / SaturdayHoliday / 平日 / 土休日）と `date` 引数（YYYY-MM-DD）を追加。`resolveTimetableCalendar()` が引数最優先 → 検索日/当日の曜日で自動判定（土日=SaturdayHoliday）。マージ後のフィルタで `odpt:calendar`（`odpt.Calendar:Weekday` 形式・`/[.:]/` で区切り）を照合し、平日検索に土休日列車を混入させない
+- **#82 時刻の昇順ソート**: `timeToSortMinutes()`（24時超 → `{ minutes, nextDay }` 化）を新設。方面（odpt:railDirection）ごとにグループ化し、指定駅での最初の departure 時刻（`firstDepartureMinutes()`）で昇順ソートしてから `slice(0, 20)`。行単位に `departure_next_day` / `arrival_next_day` フラグを付与
+- **#83 1000件上限の切り捨て回避**: 路線単位 × calendar 別（Weekday / SaturdayHoliday）に分割取得。銀座線は無フィルタ1000件 → 平日658 + 土休日560 = 1,218件を全件取得できることを実データで確認。レスポンスが1000件ちょうど/超過の場合は `truncated: true` を付与（完全な SUCCESS 扱いを回避）。キャッシュキーは `train_timetable:merged`（{ merged, truncated } を保持）に変更
+- 応答に `calendar`・`service_date`・`truncated` を追加し、クライアント側で運行日・切り捨てを判別可能に
+- inputSchema: calendar / date を追加
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・`check-railway-integrity` PASS・`test:issue`（test-issue-82-83.mjs 追加・計4本）全PASS
