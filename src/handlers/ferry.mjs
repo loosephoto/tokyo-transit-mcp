@@ -11,7 +11,7 @@ import { gtfsFetchDates, normalizeOvernightTime } from '../lib/time.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName, translateWeather } from '../lib/lang.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse, buildEarthquakeTransportSafety, getGroundEmergencyShelters } from '../advice/earthquake.mjs';
-import { getWeatherAdvice, stationToJmaArea } from '../advice/weather.mjs';
+import { getWeatherAdvice, stationToJmaArea, placeToSubarea } from '../advice/weather.mjs';
 import axios from 'axios';
 
 export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
@@ -302,8 +302,12 @@ export async function buildTsunamiWaterSafetyResponse(userLang, tsunami, context
 
 // #90: 港の予報（winds/waves）から強風・高波を検出。暴風・高波レベルなら航路を返さず運航見合わせの可能性を案内する
 export async function checkSevereWaterWeather(fromPort, toPort, userLang) {
-  const areas = [...new Set([stationToJmaArea(fromPort), stationToJmaArea(toPort)])];
-  const results = await Promise.all(areas.map(a => getWeatherAdvice(userLang, a).catch(() => null)));
+  // 🔴 #93: 島港（大島・八丈島・父島等）は PLACE_SUBAREA で一次細分区域を選択しないと、
+  // 府県の先頭区域（東京地方）の天気を見てしまい島の強風・高波を検出できない（実測で波3mを検出漏れ）。
+  const ports = [...new Set([fromPort, toPort])];
+  const results = await Promise.all(ports.map(p =>
+    getWeatherAdvice(userLang, stationToJmaArea(p), placeToSubarea(p)).catch(() => null)
+  ));
   const ok = results.filter(r => r && r.weather);
   if (ok.length === 0) return null;
   let isSevereWind = false, isHighWave = false, wind = '', wave = '';

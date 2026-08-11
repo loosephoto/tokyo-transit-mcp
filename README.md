@@ -33,8 +33,8 @@
 
 ### 🛤️ 直近の更新内容
 
-- **天気の島・地域コード解決を補強（v2.39.5・イシュー#93）**
-  - **「伊豆大島」など島の正式名に対応**: `PLACE_SUBAREA` に「伊豆大島」を追加し、`get_weather("伊豆大島")` が伊豆諸島北部（130020）の区域データから正しい天気を取得（従来は東京地方に解決）
+- **フェリーの島航路で強風・高波ゲートを修正（v2.39.6・イシュー#90/#93）**
+  - **島港の区域天気を強風・高波ゲートに適用**: `search_ferry` の強風・高波ゲートが、伊豆諸島・小笠原の島港（大島・八丈島・父島等）の区域天気（伊豆諸島北部・南部・小笠原諸島）を参照するよう修正。従来は東京地方の天気しか見ず島の高波（波3m等）を検出できず、台風接近時に島航路の運航見合わせ案内が発動しなかった
   - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 51/51 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
@@ -600,8 +600,8 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Weather island / regional-code resolution reinforced (v2.39.5, issue #93)**
-  - **Official island names such as "伊豆大島" supported**: added "伊豆大島" to `PLACE_SUBAREA`, so `get_weather("伊豆大島")` fetches correct weather from the northern Izu Islands (130020) sub-area data (previously resolved to the Tokyo Metropolis region)
+- **Ferry island-route severe-weather gate fixed (v2.39.6, issues #90/#93)**
+  - **Island-port sub-area weather now applied to the severe-wind/high-wave gate**: `search_ferry`'s severe-wind/high-wave gate now references the island ports' sub-area weather (northern/southern Izu Islands, Ogasawara) for Ōshima, Hachijō, Chichijima, etc. Previously it only saw the Tokyo Metropolis region, so it missed the islands' high waves (e.g. 3 m) and the suspension advisory did not fire during an approaching typhoon
   - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 51/51 all PASS
 
 ### 🤖 AI Intelligent Advice
@@ -1129,8 +1129,8 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **加强天气岛屿・地区代码解析（v2.39.5・议题#93）**
-  - **支持「伊豆大岛」等岛屿正式名称**: 在 `PLACE_SUBAREA` 中新增「伊豆大岛」，使 `get_weather("伊豆大岛")` 从伊豆诸岛北部（130020）的区域数据获取正确的天气（此前解析为东京地方）
+- **修复轮渡岛屿航线强风・大浪门控（v2.39.6・议题#90/#93）**
+  - **将岛屿港口的分区天气应用于强风・大浪门控**: `search_ferry` 的强风・大浪门控现在引用伊豆・小笠原诸岛港口（大岛・八丈岛・父岛等）的分区天气（伊豆诸岛北部・南部・小笠原诸岛）。此前仅查看东京地方的天气，无法检测岛屿的大浪（如3米），导致台风接近时岛屿航线的停航提示未触发
   - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 51/51 全部通过
 
 ### 🤖 AI 智能建议
