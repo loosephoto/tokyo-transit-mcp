@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.38.9 (Production Ready)
+ * Tokyo Transit MCP Server v2.38.10 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  * 
  * 強化機能:
@@ -4551,7 +4551,7 @@ function normalizeFerryPortName(name) {
 }
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.38.9' },
+  { name: 'tokyo-transit-mcp', version: '2.38.10' },
   { capabilities: { tools: {} } }
 );
 
@@ -9427,6 +9427,15 @@ async function searchBusTransfer(fromInput, toInput, vehiclePref) {
     for (const [from, to] of src.routes) {
       addEdge(from, to, 'bus');
       addEdge(to, from, 'bus');
+      // 🔴 入力は normalizeBusStop で「駅」サフィックスが除去されるため（例: 渋谷駅→渋谷）、
+      // ハードコードバス停名（例: 渋谷駅）のままの直行エッジには到達できない。
+      // 正規化後名でも直行エッジを張り、「渋谷駅→中野駅」等が鉄道ノードに解決されても
+      // バス直行（京王 渋64 等）を引けるようにする（回帰テスト test-bus-routes-expansion 対応）。
+      const fNorm = normalizeBusStop(from), tNorm = normalizeBusStop(to);
+      if (fNorm !== from || tNorm !== to) {
+        addEdge(fNorm, tNorm, 'bus');
+        addEdge(tNorm, fNorm, 'bus');
+      }
     }
   }
   // 電車内エッジ
@@ -9844,6 +9853,7 @@ async function searchBus(args) {
       return jsonResponse({
         status: 'SUCCESS', detected_language: userLang,
         transfer: true,
+        found: true,
         cross_modal: result.isCrossModal || false,
         from: getDisplayStationName(result.fromNode, userLang), to: getDisplayStationName(result.toNode, userLang),
         transfers: segments.length - 1,
