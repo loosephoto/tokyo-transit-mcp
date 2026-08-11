@@ -28,6 +28,7 @@ import { parseCsvRecords, parseCsvLine } from './lib/csv.mjs';
 import { getParams, buildErrorResponse, jsonResponse, isRateLimitError, handleApiError, buildGovFacilitySearchSupport } from './lib/common.mjs';
 import { searchRoute, resolveStation, computeRoutes, findShortestPath, STATION_TO_LINES, getStationRomanToJa, normalizeStationName, resolveSuspendedLineNames, normalizeLineHint, buildRouteSegments, commonLines, findNearestBikeStations, fetchBikeShareData, getDestinationCulturalFacilities, resolveLandmark, detectPrivateExpressOperator, detectLimitedExpressRequest, findLimitedExpressStation, buildLimitedExpressGuidance, findCommunityBusAccess, buildCommunityBusAccessBlock } from './handlers/search-route.mjs';
 import { searchFerry, listFerryPorts } from './handlers/ferry.mjs';
+import { getStationInfo, listCommunityBuses, listTransitOperators, getOperatorRoutes } from './handlers/station-info.mjs';
 import { searchFare } from './handlers/fare.mjs';
 import { getTimetable } from './handlers/timetable.mjs';
 import { parseTestMode, extractStationsFromNaturalLanguage, detectFailureType, buildTestAdvice, getTransitAdvice } from './advice/transit-advice.mjs';
@@ -368,77 +369,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // ==========================================
 // 🚉 駅情報取得
 // ==========================================
-async function getStationInfo(args) {
-  const rawStation = args.station_name || '';
-  const stationName = normalizeStationName(rawStation);
-  const operator = args.operator ? OPERATOR_MAP[args.operator] : null;
-  const userLang = resolveLang(args) || detectLanguage(rawStation) || 'ja';
-  if (!rawStation) {
-    const msg = userLang === 'en' ? 'Please specify a station name.' : userLang === 'zh' ? '请指定车站名称。' : '駅名を指定してください。';
-    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
-  }
-  if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, station: stationName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
-  try {
-    const response = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(operator, { 'dc:title': stationName }), timeout: 15000 });
-    const stations = response.data;
-    odptBreaker.onSuccess();
-    const displayStation = getDisplayStationName(stationName, userLang);
-    if (!stations || stations.length === 0) {
-      // #53: ODPTに無い駅（JR・私鉄の多く）は内蔵グラフからフォールバックする。
-      // ODPTは東京メトロ・都営・横浜市営・TX等の公式データのみで、JR東日本・京急・京王等は
-      // 駅データが存在しない（odpt:Station で取得できない）。内蔵 RAILWAY_LINES から
-      // 所属路線と駅コード（路線内インデックス）を補完して返す。
-      const localLines = STATION_TO_LINES[stationName] || [];
-      if (localLines.length > 0) {
-        const fallbackResults = localLines.map(entry => {
-          const lineName = entry.line;
-          // 路線内の駅コード（例: JI 01 形式にはしない。インデックスは0始まりのため1始まりで表示）
-          const code = `${entry.index + 1}`;
-          return {
-            id: `local:${lineName}:${stationName}`,
-            name: getDisplayStationName(stationName, userLang),
-            code,
-            line: getLineDisplayName(lineName, userLang),
-            source: 'internal_graph'
-          };
-        });
-        return jsonResponse({
-          status: "SUCCESS",
-          detected_language: userLang,
-          station: displayStation,
-          source: "internal_graph_fallback",
-          results: fallbackResults,
-          note: userLang === 'en' ? "This station is not in the ODPT dataset; shown from the built-in route graph." :
-                userLang === 'zh' ? "该车站不在ODPT数据集中，已从内置路线图显示。" :
-                "この駅はODPTデータに無いため、内蔵路線グラフから表示しています。",
-          // 駅周辺の文化施設（search_route と同じ自動選出ルーチン）
-          cultural_facilities: getDestinationCulturalFacilities(stationName, userLang).length
-            ? getDestinationCulturalFacilities(stationName, userLang)
-            : undefined,
-          // 公的機関の検索案内（駅名基準・v2.36.3 と同設計。駅検索でも表示する）
-          gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, displayStation)
-        });
-      }
-      const msg = userLang === 'en' ? `No station info found for ${displayStation}.` : userLang === 'zh' ? `未找到 ${displayStation} 的车站信息。` : '駅情報が見つかりませんでした。';
-      return jsonResponse(buildErrorResponse('PARSE_ERROR', msg, { userLang, station: displayStation }));
-    }
-    return jsonResponse({
-      status: "SUCCESS",
-      detected_language: userLang,
-      station: displayStation,
-      results: stations.map(s => ({ id: s['@id'].replace('odpt:Station:', ''), name: s['dc:title'], code: s['odpt:stationCode'] })),
-      // 駅周辺の文化施設（search_route と同じ自動選出ルーチン: LANDMARK_DEFS + 明示定義）
-      cultural_facilities: getDestinationCulturalFacilities(stationName, userLang).length
-        ? getDestinationCulturalFacilities(stationName, userLang)
-        : undefined,
-      // 公的機関の検索案内（駅名基準・v2.36.3 と同設計。駅検索でも表示する）
-      gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, displayStation)
-    });
-  } catch (error) {
-    odptBreaker.onFailure(error);
-    return handleApiError(error, { userLang, station: stationName, api: 'ODPT' });
-  }
-}
 
 // ==========================================
 // ☀️ 天気情報（高温・降水検出対応）
@@ -454,21 +384,6 @@ async function getStationInfo(args) {
 // ============================================================
 // 🚌 東京都コミュニティバス一覧（tokyobus.or.jp ディレクトリ）
 // ============================================================
-async function listCommunityBuses(args) {
-  const userLang = resolveLang(args) || 'ja';
-  const sorted = [...TOKYO_COMMUNITY_BUSES].sort((a, b) => a.municipality.localeCompare(b.municipality, 'ja'));
-  return jsonResponse({
-    status: "SUCCESS",
-    detected_language: userLang,
-    title: userLang === 'en' ? "🚌 Tokyo Community Buses" : userLang === 'zh' ? "🚌 东京都社区公交一览" : "🚌 東京都コミュニティバス一覧",
-    note: userLang === 'en' ? "41 community buses across Tokyo wards/cities (source: Tokyo Bus Association tokyobus.or.jp). Timetables & routes are available on each municipality's official site." :
-          userLang === 'zh' ? "东京都23区及多摩地区的41条社区公交（来源：东京巴士协会 tokyobus.or.jp）。时刻表与路线请参见各自治体官网。" :
-          "東京都23区・多摩地域の41コミュニティバス（出典: 東京バス協会 tokyobus.or.jp）。時刻表・路線は各自治体公式サイトでご確認ください。",
-    total: sorted.length,
-    community_buses: sorted.map(b => ({ municipality: b.municipality, name: b.name, url: b.url })),
-    source: "https://www.tokyobus.or.jp/sp/"
-  });
-}
 
 // ============================================================
 // 🚢 フェリー港一覧
@@ -493,102 +408,10 @@ async function listCommunityBuses(args) {
 // ==========================================
 // 🚃 交通事業者一覧
 // ==========================================
-async function listTransitOperators(args) {
-  const userLang = resolveLang(args) || 'ja';
-  const typeFilter = args?.type_filter || 'all';
-  const tl = { ja: { rail: '鉄道', agt: 'AGT', monorail: 'モノレール', tram: '路面電車', bus: '路線バス', ferry: '水上バス・フェリー' }, en: { rail: 'Railway', agt: 'AGT', monorail: 'Monorail', tram: 'Tram', bus: 'Bus', ferry: 'Water bus / Ferry' }, zh: { rail: '铁路', agt: 'AGT', monorail: '单轨电车', tram: '路面电车', bus: '路线巴士', ferry: '水上巴士、渡轮' } }[userLang] || {};
-  const seenIds = new Set();
-  const railOps = Object.entries(OPERATOR_MAP).map(([k, id]) => ({ key: k, id, type: 'rail', typeLabel: tl.rail, label: id })).filter(o => !seenIds.has(o.id) && seenIds.add(o.id));
-  const nonRail = Object.entries(NON_RAIL_OPERATORS).map(([k, op]) => ({ key: k, id: op.id, type: op.type, typeLabel: tl[op.type] || op.type, label: userLang === 'en' ? op.labelEn : userLang === 'zh' ? op.labelZh : op.label, description: userLang === 'en' ? (op.descEn || op.description) : userLang === 'zh' ? (op.descZh || op.description) : op.description, website: op.website }));
-  let all = [...railOps, ...nonRail];
-  if (typeFilter !== 'all') all = all.filter(op => op.type === typeFilter);
-  return jsonResponse({ status: "SUCCESS", detected_language: userLang, type_filter: typeFilter, total_operators: all.length, operators: all });
-}
 
 // ==========================================
 // 🚃 事業者別路線一覧
 // ==========================================
-async function getOperatorRoutes(args) {
-  const userLang = resolveLang(args) || 'ja'; const opKey = args.operator_name;
-  if (!opKey) return jsonResponse(buildErrorResponse('INVALID_INPUT', 'operator_name を指定。', { userLang }));
-  let opId, opMeta;
-  const normKey = RAILWAY_NAME_MAP[opKey] || opKey;
-  if (NON_RAIL_OPERATORS[opKey]) { opMeta = NON_RAIL_OPERATORS[opKey]; opId = opMeta.id; }
-  else if (OPERATOR_MAP[opKey]) { opId = OPERATOR_MAP[opKey]; opMeta = { type: 'rail' }; }
-  else if (OPERATOR_MAP[normKey]) { opId = OPERATOR_MAP[normKey]; opMeta = { type: 'rail' }; }
-  else if (RAILWAY_NAME_MAP[opKey]) { const nk = RAILWAY_NAME_MAP[opKey]; if (OPERATOR_MAP[nk]) { opId = OPERATOR_MAP[nk]; opMeta = { type: 'rail' }; } }
-  // list_transit_operators が表示する id（例: MIR, TWR, TokyoMonorail, TsukubaExpress）でも解決可能に
-  else if (Object.values(NON_RAIL_OPERATORS).some(op => (op.id || '').toLowerCase() === opKey.toLowerCase())) {
-    opMeta = Object.values(NON_RAIL_OPERATORS).find(op => (op.id || '').toLowerCase() === opKey.toLowerCase());
-    opId = opMeta.id;
-  }
-  else if (Object.values(OPERATOR_MAP).some(id => (id || '').toLowerCase() === opKey.toLowerCase())) {
-    opId = Object.values(OPERATOR_MAP).find(id => (id || '').toLowerCase() === opKey.toLowerCase());
-    opMeta = { type: 'rail' };
-  }
-  else return jsonResponse(buildErrorResponse('INVALID_INPUT', `不明: ${opKey}。list_transit_operators で確認。`, { userLang }));
-  if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
-  try {
-    let railways = (await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: { 'acl:consumerKey': API_KEY, 'odpt:operator': `odpt.Operator:${opId}` }, timeout: 15000 })).data;
-    if (opMeta.railwayId) { const tid = `odpt.Railway:${opMeta.railwayId}`; railways = railways.filter(r => r['owl:sameAs'] === tid); }
-    odptBreaker.onSuccess();
-    const routes = railways.map(r => ({
-      railway: getDisplayLineName(r['dc:title'], userLang), id: r['owl:sameAs'],
-      stations: (r['odpt:stationOrder'] || []).map((so, idx) => {
-        const title = so['odpt:stationTitle'] || {};
-        return { index: idx, name: title[userLang === 'zh' ? 'zh-Hans' : userLang] || title.ja || title.en || Object.values(title)[0] || `駅${idx}` };
-      }),
-      station_count: r['odpt:stationOrder']?.length || 0
-    }));
-    // #53: ODPTに駅データが無い事業者（JR東日本等）は、内蔵 RAILWAY_LINES から補完する。
-    // ODPT の odpt:Railway は路線定義を返すが、odpt:stationOrder が空（0駅）の路線が多い。
-    // 内蔵グラフに同名路線（表記ゆれ吸収）があれば駅一覧を埋め、ODPT に無い路線
-    // （例: 鶴見線）は事業者プレフィックスで追加する。
-    const ODTP_TITLE_SET = new Set(railways.map(r => (r['dc:title'] || '').replace(/[・\s]/g, '')));
-    const LOCAL_LINE_PREFIX = {
-      'JR-East': 'JR', 'TokyoMetro': '東京メトロ', 'Toei': '都営',
-      'Odakyu': '小田急', 'Keio': '京王', 'Seibu': '西武', 'Tobu': '東武',
-      'Keikyu': '京急', 'Keisei': '京成', 'Sotetsu': '相鉄', 'Tokyu': '東急',
-      'YokohamaMunicipal': '横浜市営地下鉄', 'MIR': 'ゆりかもめ', 'TWR': 'りんかい線',
-      'Minatomirai': 'みなとみらい線', 'TsukubaExpress': 'つくばエクスプレス',
-      'KantoRailway': '関東鉄道', 'SaitamaRailway': '埼玉高速鉄道', 'ToyoRapid': '東葉高速鉄道'
-    };
-    const prefix = LOCAL_LINE_PREFIX[opId];
-    const odptLineNorm = (name) => (name || '').replace(/[・\s]/g, '');
-    const routesWithFallback = [...routes];
-    if (prefix) {
-      for (const [lineName, stationsArr] of Object.entries(RAILWAY_LINES)) {
-        // 内蔵路線がこの事業者に属するか（プレフィックス一致）
-        if (!lineName.startsWith(prefix)) continue;
-        const normLocal = odptLineNorm(lineName.replace(prefix, ''));
-        // ODPT に既に同名路線（表記ゆれ吸収後）がある場合は、駅が空なら埋める
-        const existing = routesWithFallback.find(rt => {
-          const normRt = odptLineNorm(rt.railway);
-          return normRt.includes(normLocal) || normLocal.includes(normRt);
-        });
-        if (existing) {
-          if (!existing.station_count) {
-            existing.stations = stationsArr.map((st, idx) => ({ index: idx, name: getDisplayStationName(st, userLang) }));
-            existing.station_count = stationsArr.length;
-          }
-          continue;
-        }
-        // ODPT に無い内蔵路線（例: 鶴見線）を追加
-        routesWithFallback.push({
-          railway: getLineDisplayName(lineName, userLang),
-          id: `local:${lineName}`,
-          stations: stationsArr.map((st, idx) => ({ index: idx, name: getDisplayStationName(st, userLang) })),
-          station_count: stationsArr.length,
-          source: 'internal_graph'
-        });
-      }
-    }
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, operator_name: opKey, type: opMeta.type, routes: routesWithFallback, total_routes: routesWithFallback.length, website: opMeta.website || null });
-  } catch (error) {
-    odptBreaker.onFailure(error);
-    return handleApiError(error, { userLang });
-  }
-}
 
 // ==========================================
 // 🚃 運賃検索
