@@ -5,7 +5,7 @@
 // 4. 環状線のチェック（先頭=末尾なら正常扱い）
 import fs from 'fs';
 
-const src = fs.readFileSync('src/index.mjs', 'utf8');
+const src = fs.readFileSync('src/data/railway-lines.mjs', 'utf8');
 const start = src.indexOf('const RAILWAY_LINES = {');
 let depth = 0, end = -1;
 for (let i = start; i < src.length; i++) {
