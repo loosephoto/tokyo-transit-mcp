@@ -2,6 +2,7 @@
 // node scripts/test-issue-88-89-90.mjs（API不要・決定的）
 import { stationToJmaArea, parseSevereWeather, placeToMunicipality, placeToSubarea } from '../src/advice/weather.mjs';
 import { detectFailureType } from '../src/advice/transit-advice.mjs';
+import { getTsunamiAreasForPorts, isTsunamiRelevantToPorts } from '../src/handlers/ferry.mjs';
 
 let pass = 0, fail = 0;
 const assert = (cond, name) => {
@@ -75,6 +76,17 @@ assert(placeToSubarea('伊豆大島') === '130020', '#93 伊豆大島→伊豆�
 assert(placeToSubarea('三宅島') === '130030', '#93 三宅島→伊豆諸島南部(130030)');
 assert(placeToSubarea('父島') === '130040', '#93 父島→小笠原諸島(130040)');
 assert(placeToSubarea('上野') === null, '#93 上野→区域なし');
+
+// #90/#93: 港→津波予報区（正規化港名が未登録だと、東京湾内湾の津波警報で東京発の航路が停止されない）
+assert(getTsunamiAreasForPorts('東京・竹芝').includes('東京湾内湾'), '津波: 東京・竹芝→東京湾内湾');
+assert(getTsunamiAreasForPorts('横浜・大さん橋').includes('東京湾内湾'), '津波: 横浜・大さん橋→東京湾内湾');
+assert(getTsunamiAreasForPorts('大島').includes('伊豆諸島'), '津波: 大島→伊豆諸島');
+assert(getTsunamiAreasForPorts('父島').includes('小笠原諸島'), '津波: 父島→小笠原諸島');
+const tokyoBayOnly = { active: true, areas: [{ name: '東京湾内湾' }] };
+assert(isTsunamiRelevantToPorts(tokyoBayOnly, '東京・竹芝', '大島') === true, '津波: 東京湾内湾警報で東京・竹芝発が停止');
+const izuOnly = { active: true, areas: [{ name: '伊豆諸島' }] };
+assert(isTsunamiRelevantToPorts(izuOnly, '浅草', 'お台場海浜公園') === false, '津波: 伊豆諸島警報で水上バスは停止しない');
+assert(isTsunamiRelevantToPorts({ active: false, areas: [] }, '東京・竹芝', '大島') === false, '津波: 警報なしは停止しない');
 
 console.log(`\n結果: PASS=${pass} FAIL=${fail}`);
 process.exit(fail ? 1 : 0);

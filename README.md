@@ -33,9 +33,9 @@
 
 ### 🛤️ 直近の更新内容
 
-- **フェリーの島航路で強風・高波ゲートを修正（v2.39.6・イシュー#90/#93）**
-  - **島港の区域天気を強風・高波ゲートに適用**: `search_ferry` の強風・高波ゲートが、伊豆諸島・小笠原の島港（大島・八丈島・父島等）の区域天気（伊豆諸島北部・南部・小笠原諸島）を参照するよう修正。従来は東京地方の天気しか見ず島の高波（波3m等）を検出できず、台風接近時に島航路の運航見合わせ案内が発動しなかった
-  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 51/51 全PASS
+- **フェリーの津波ゲートで港の津波予報区を補完（v2.39.7・イシュー#90）**
+  - **正規化港名の津波予報区を追加**: `search_ferry` の津波ゲートで `東京・竹芝`・`横浜・大さん橋`・`久里浜`・`館山`・`稲取` の津波予報区が未登録だったため、**東京湾内湾の津波警報で東京発の航路が停止されない**不都合を修正。各港の津波予報区（東京湾内湾・内房・静岡県）を追加
+  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 58/58 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -600,9 +600,9 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Ferry island-route severe-weather gate fixed (v2.39.6, issues #90/#93)**
-  - **Island-port sub-area weather now applied to the severe-wind/high-wave gate**: `search_ferry`'s severe-wind/high-wave gate now references the island ports' sub-area weather (northern/southern Izu Islands, Ogasawara) for Ōshima, Hachijō, Chichijima, etc. Previously it only saw the Tokyo Metropolis region, so it missed the islands' high waves (e.g. 3 m) and the suspension advisory did not fire during an approaching typhoon
-  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 51/51 all PASS
+- **Ferry tsunami gate port forecast areas completed (v2.39.7, issue #90)**
+  - **Forecast areas added for normalized port names**: the `search_ferry` tsunami gate did not have forecast areas registered for `東京・竹芝`, `横浜・大さん橋`, `久里浜`, `館山`, `稲取`, so **a Tokyo Bay Inner tsunami warning did not stop Tokyo-departing routes**. Fixed by adding each port's tsunami forecast area (Tokyo Bay Inner / Uchibo / Shizuoka)
+  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 58/58 all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1129,9 +1129,9 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复轮渡岛屿航线强风・大浪门控（v2.39.6・议题#90/#93）**
-  - **将岛屿港口的分区天气应用于强风・大浪门控**: `search_ferry` 的强风・大浪门控现在引用伊豆・小笠原诸岛港口（大岛・八丈岛・父岛等）的分区天气（伊豆诸岛北部・南部・小笠原诸岛）。此前仅查看东京地方的天气，无法检测岛屿的大浪（如3米），导致台风接近时岛屿航线的停航提示未触发
-  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 51/51 全部通过
+- **修复轮渡海啸门控的港口海啸预报区（v2.39.7・议题#90）**
+  - **为规范化港口名称添加海啸预报区**: `search_ferry` 的海啸门控中 `东京・竹芝`・`横滨・大山桥`・`久里滨`・`馆山`・`稻取` 的海啸预报区未登记，导致**东京湾内湾的海啸警报未停止东京出发的航线**。已为各港添加海啸预报区（东京湾内湾・内房・静冈县）
+  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 58/58 全部通过
 
 ### 🤖 AI 智能建议
 
