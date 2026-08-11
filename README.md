@@ -33,11 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
-- **src/index.mjs のモノリス分割リファクタリング（v2.39.0・イシュー#75）**
-  - **10,524行の単一ファイルをモジュール構成へ分割**: `config.mjs`（共有状態）/ `data/`（路線・駅・バス・フェリー・ランドマーク・多言語辞書）/ `lib/`（純関数ユーティリティ）/ `advice/`（AIアドバイス・天気・地震安全）/ `handlers/`（各ツール実装7モジュール）
-  - **index.mjs は155行にスリム化**: サーバー起動・ツール登録・エクスポート再公開（30名）のみ。依存方向は `handlers → advice/data/lib → config` の一方通行（循環依存なし）
-  - **挙動不変**: API レスポンス・エクスポート30名互換・開発支援ツール（add-*系）の対象パス更新
-  - **検証** — build PASS・probe-all-lang 26/26・test:walk / test:bus / test:issue / check-railway-integrity / regressions 全PASS
+- **台風接近時の天気・水上交通の安全強化（v2.39.1・イシュー#88/#89/#90）**
+  - **天気の地域コード解決を拡張**: `get_weather` / `search_route` が千葉・埼玉・神奈川・栃木・群馬・静岡・主要駅（従来は東京固定）の予報を取得。`stationToJmaArea()` で駅名・地域名からJMA地域コードを解決
+  - **強風・高波・特別警報の検出（#89）**: JMA予報の `winds`/`waves` をパースし、強風（非常に強く）・高波（2.5m以上）・特別警報を検出。AIアドバイスを typhoon（荒天）へ昇格し、風・波情報を `get_weather` 応答に表示
+  - **フェリー・水上バスの強風・高波ゲート追加（#90）**: `search_ferry` が港の荒天を検出すると `SEVERE_WEATHER_ADVISORY` を返し、運航見合わせの可能性を案内（津波ゲートに加え強風・高波も抑止）
+  - **検証** — build PASS・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / 新規 test-issue-88-89-90 23/23 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -599,11 +599,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Monolith split refactoring of src/index.mjs (v2.39.0, issue #75)**
-  - **Split the 10,524-line single file into modules**: `config.mjs` (shared state) / `data/` (lines, stations, buses, ferries, landmarks, multilingual dictionaries) / `lib/` (pure-function utilities) / `advice/` (AI advice, weather, earthquake safety) / `handlers/` (7 tool implementations)
-  - **index.mjs slimmed to 155 lines**: server bootstrap, tool registration, and re-export of the 30 public names only. Dependency direction is one-way — `handlers → advice/data/lib → config` (no circular imports)
-  - **Behavior unchanged**: API responses, 30-name export compatibility, and dev-tool path updates (add-* scripts)
-  - **Verification** — build PASS, probe-all-lang 26/26, test:walk / test:bus / test:issue / check-railway-integrity / regressions all PASS
+- **Weather & water-transport safety for approaching typhoons (v2.39.1, issues #88/#89/#90)**
+  - **Regional weather-code resolution expanded**: `get_weather` / `search_route` now fetch forecasts for Chiba, Saitama, Kanagawa, Tochigi, Gunma, Shizuoka and major stations (previously fixed to Tokyo). `stationToJmaArea()` resolves JMA area codes from station/region names
+  - **Severe wind / high wave / special warning detection (#89)**: parse `winds`/`waves` from JMA forecasts; detect severe wind ("very strong"), high waves (≥2.5 m) and special warnings; escalate AI advice to typhoon (storm) and surface wind/wave info in `get_weather`
+  - **Severe-weather gate for ferries & water buses (#90)**: `search_ferry` returns `SEVERE_WEATHER_ADVISORY` and warns of possible suspension when its ports are in stormy/high-wave conditions (added to the tsunami gate)
+  - **Verification** — build PASS, probe-all-lang 26/26, test:issue / test:walk / test:bus / check-railway-integrity / new test-issue-88-89-90 23/23 all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1127,11 +1127,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **src/index.mjs 单体文件拆分重构（v2.39.0・议题#75）**
-  - **将 10,524 行的单一文件拆分为模块结构**: `config.mjs`（共享状态）/ `data/`（线路・车站・巴士・轮渡・地标・多语言词典）/ `lib/`（纯函数工具）/ `advice/`（AI建议・天气・地震安全）/ `handlers/`（各工具实现7个模块）
-  - **index.mjs 精简至155行**: 仅保留服务器启动・工具注册・30个导出名的重新导出。依赖方向为 `handlers → advice/data/lib → config` 单向（无循环依赖）
-  - **行为不变**: API 响应・30个导出名兼容・开发辅助工具（add-*系）的目标路径更新
-  - **验证** — build 通过・probe-all-lang 26/26・test:walk / test:bus / test:issue / check-railway-integrity / regressions 全部通过
+- **台风接近时的天气・水上交通安全强化（v2.39.1・议题#88/#89/#90）**
+  - **天气地区代码解析扩展**: `get_weather` / `search_route` 现在获取千叶・埼玉・神奈川・栃木・群马・静冈及主要车站（此前固定为东京）的预报。`stationToJmaArea()` 从车站名・地区名解析JMA地区代码
+  - **强风・大浪・特别警报检测（#89）**: 解析JMA预报的 `winds`/`waves`，检测强风（非常强）・大浪（2.5米以上）・特别警报，将AI建议升级为 typhoon（恶劣天气），并在 `get_weather` 中显示风・浪信息
+  - **轮渡・水上巴士的强风・大浪门控（#90）**: `search_ferry` 检测到港口恶劣天气时返回 `SEVERE_WEATHER_ADVISORY`，提示可能停航（在津波门控之外追加强风・大浪）
+  - **验证** — build 通过・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / 新 test-issue-88-89-90 23/23 全部通过
 
 ### 🤖 AI 智能建议
 

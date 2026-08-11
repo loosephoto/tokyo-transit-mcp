@@ -90,8 +90,8 @@ await run('get_operator_routes', 'en', { operator_name: 'tokyometro', language: 
 await run('get_operator_routes', 'zh', { operator_name: 'tokyometro', language: 'zh' }, getOperatorRoutes);
 await run('list_ferry_ports', 'en', { language: 'en' }, listFerryPorts);
 await run('list_ferry_ports', 'zh', { language: 'zh' }, listFerryPorts);
-await run('search_ferry', 'en', { from_port: 'Tokyo', to_port: 'Oshima', language: 'en' }, searchFerry);
-await run('search_ferry', 'zh', { from_port: '东京', to_port: '大岛', language: 'zh' }, searchFerry);
+await run('search_ferry', 'en', { from_port: 'Tokyo', to_port: 'Oshima', language: 'en', __expectedStatuses: ['SUCCESS', 'NO_DATA', 'SEVERE_WEATHER_ADVISORY'] }, searchFerry);
+await run('search_ferry', 'zh', { from_port: '东京', to_port: '大岛', language: 'zh', __expectedStatuses: ['SUCCESS', 'NO_DATA', 'SEVERE_WEATHER_ADVISORY'] }, searchFerry);
 await run('search_flight', 'en', { airport: 'Haneda', direction: 'arrival', language: 'en' }, searchFlight);
 await run('search_flight', 'zh', { airport: '羽田机场', direction: 'arrival', language: 'zh' }, searchFlight);
 

@@ -12,13 +12,14 @@ import { LANDMARK_DEFS, LANDMARK_LOOKUP, DESTINATION_CULTURAL_FACILITIES,
          CULTURAL_CATEGORY_NAMES, DERIVED_CULTURAL_FACILITIES } from '../data/landmarks.mjs';
 import { COMMUNITY_BUS_STATION_ACCESS } from '../data/bus-routes.mjs';
 import { MULTILINGUAL_ADVICE, NON_RAIL_OPERATORS, EMERGENCY_EVACUATION_SEARCH_URL, GBFS_BASE,
-         LIMITED_EXPRESS_KEYWORDS, LIMITED_EXPRESS_STATION_GUIDE, PRIVATE_EXPRESS_GUIDE } from '../data/misc.mjs';
+         LIMITED_EXPRESS_KEYWORDS, LIMITED_EXPRESS_STATION_GUIDE, PRIVATE_EXPRESS_GUIDE, JMA_AREA_LABELS } from '../data/misc.mjs';
 import { FERRY_PORT_MAP } from '../data/ferry-ports.mjs';
 import { getDisplayStationName, getDisplayLineName, getLineDisplayName, getCommunityBusDisplayName,
          getCommunityBusStopDisplayName, detectLanguage, resolveLang, translateWeather, translateTrainInfoDetail } from '../lib/lang.mjs';
 import { jsonResponse, buildErrorResponse, getParams, buildGovFacilitySearchSupport } from '../lib/common.mjs';
 import { haversineDistance } from '../lib/geo.mjs';
 import { parseTestMode, detectFailureType } from '../advice/transit-advice.mjs';
+import { getWeatherAdvice, stationToJmaArea } from '../advice/weather.mjs';
 import { buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import axios from 'axios';
 
@@ -730,7 +731,7 @@ export async function searchRoute(args) {
   const toName = normalizeStationName(toInput);
   const webSearchUrl = `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}`;
 
-  let isRainy = false, isSevereWeather = false, weatherText = "未取得", isTrainSuspended = false, delayMessage = "";
+  let isRainy = false, isSevereWeather = false, isSevereWind = false, weatherText = "未取得", isTrainSuspended = false, delayMessage = "";
   let busTransferDetected = false, busTransferDetail = "", isHot = false;
   let failureType = null, failureAdviceKey = null; // -test で指定された障害種別
   const suspendedLineNames = new Set();
@@ -756,24 +757,22 @@ export async function searchRoute(args) {
       (async () => {
         if (!jmaBreaker.canExecute()) return { error: 'CIRCUIT_OPEN' };
         try {
-          const cached = cache.get(`${cache.jmaWeather.key}:130000`);
-          if (cached) { isHot = cached.isHot; return cached; }
-          const res = await axios.get("https://www.jma.go.jp/bosai/forecast/data/forecast/130000.json", { timeout: 15000 });
-          const text = res.data[0].timeSeries[0].areas[0].weathers[0];
-          const r = text.includes("雨") || text.includes("雪") || text.includes("雷");
-          const s = text.includes("特別警報") || text.includes("大雨特別") || text.includes("大雪特別") || text.includes("津波");
-          let h = false;
-          for (const ts of res.data[0]?.timeSeries || []) {
-            if (ts.areas?.[0]?.temps) {
-              const maxTemp = Math.max(...ts.areas[0].temps.map(t => parseInt(t) || 0));
-              if (maxTemp >= 33) h = true;
-            }
+          // #88/#89: 出発・到着駅の県から地域コードを解決（従来の 130000 固定を廃止）
+          const areas = [...new Set([stationToJmaArea(fromName), stationToJmaArea(toName)])];
+          const results = await Promise.all(areas.map(a =>
+            getWeatherAdvice(userLang, a).then(w => ({ code: a, ...w })).catch(() => null)
+          ));
+          const ok = results.filter(r => r && r.weather);
+          if (ok.length === 0) return { error: 'WEATHER_FETCH_FAILED' };
+          let text = '', isRainy = false, isSevere = false, isHot = false;
+          for (const r of ok) {
+            const lbl = (JMA_AREA_LABELS[r.code] && JMA_AREA_LABELS[r.code][userLang]) || r.code;
+            text += (text ? ' ／ ' : '') + `${lbl}: ${r.weather}`;
+            isRainy = isRainy || r.isRainy;
+            isSevere = isSevere || r.isSevere;
+            isHot = isHot || r.isHot;
           }
-          isHot = h;
-          jmaBreaker.onSuccess();
-          const result = { weather: text, isRainy: r, isSevere: s, isHot: h };
-          cache.set(`${cache.jmaWeather.key}:130000`, result, cache.jmaWeather.ttl);
-          return result;
+          return { weather: text, isRainy, isSevere, isHot };
         } catch (e) { jmaBreaker.onFailure(e); return { error: e.message }; }
       })(),
       (async () => {
@@ -808,7 +807,11 @@ export async function searchRoute(args) {
 
     if (weatherResult.status === 'fulfilled' && weatherResult.value && !weatherResult.value.error) {
       const w = weatherResult.value;
-      weatherText = w.weather; isRainy = w.isRainy; isSevereWeather = w.isSevere; isHot = w.isHot || false;
+      weatherText = w.weather; isRainy = w.isRainy;
+      // #88/#89: EMERGENCY（経路抑止）は特別警報・津波のみ。強風・高波は荒天注意（自転車非表示・typhoonアドバイス）
+      isSevereWeather = w.isSpecial || false;
+      isSevereWind = w.isSevereWind || w.isHighWave || false;
+      isHot = w.isHot || false;
     } else if (weatherResult.status === 'fulfilled' && weatherResult.value?.error === 'CIRCUIT_OPEN') {
       return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, from: fromName, to: toName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
     } else { apiDegraded = true; } // 天気API取得失敗
@@ -829,6 +832,9 @@ export async function searchRoute(args) {
     adviceKey = failureAdviceKey;
   } else if (isEmergencyActive) {
     adviceKey = 'emergency';
+  } else if (isSevereWind) {
+    // #89: 強風・高波は typhoon（荒天）アドバイスに昇格（経路は抑止しない）
+    adviceKey = 'typhoon';
   } else if (isHot) {
     adviceKey = 'hot';
   } else if (isRainy) {
@@ -843,12 +849,12 @@ export async function searchRoute(args) {
   const isSnowRisk = failureAdviceKey === 'snow' || /雪|積雪|凍結/i.test(weatherText || '');
   let bikeShareInfo = null;
   let destinationBikeShareInfo = null;
-  if (isTrainSuspended && !isSevereWeather && !isSnowRisk) {
+  if (isTrainSuspended && !isSevereWeather && !isSevereWind && !isSnowRisk) {
     bikeShareInfo = await findNearestBikeStations(fromName, userLocation);
   }
   // 荒天・降雪・凍結時を除き、到着地点周辺のラストワンマイル用ポートを案内する。
   // リアルタイムAPIが取得できない場合は推測せず、案内ブロック自体を省略する。
-  if (!isSevereWeather && !isSnowRisk) {
+  if (!isSevereWeather && !isSevereWind && !isSnowRisk) {
     destinationBikeShareInfo = await findNearestBikeStations(toName, null);
   }
 
@@ -995,7 +1001,8 @@ export async function searchRoute(args) {
     route_note: userLang === 'en' ? "Route computed by the built-in route engine." :
                 userLang === 'zh' ? "路线由内置路线引擎计算。" :
                 "経路は自己完結型エンジンで算出。",
-    weather_text: userLang === 'en' ? `Tokyo Area: ${translateWeather(weatherText, 'en')}` : userLang === 'zh' ? `东京地区: ${translateWeather(weatherText, 'zh')}` : `東京地方: ${weatherText}`,
+    // #88: weatherText は出発・到着駅の県コードから組み立て済み（「地域名: 予報」形式）。地域プレフィックスは weatherText 側に含まれる
+    weather_text: translateWeather(weatherText, userLang),
     // 路線情報の外部検索URLはフォールバックとして維持
     direct_search_url: (isRainy || isEmergencyActive) ? `${webSearchUrl}&useLocalBus=true&walkSpeed=slow` : webSearchUrl,
     // 運賃情報はsearch_fareツールで取得可能

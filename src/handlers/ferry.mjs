@@ -8,9 +8,10 @@ import { MULTILINGUAL_ADVICE } from '../data/misc.mjs';
 import { getParams, jsonResponse, buildErrorResponse } from '../lib/common.mjs';
 import { parseCsvRecords } from '../lib/csv.mjs';
 import { gtfsFetchDates, normalizeOvernightTime } from '../lib/time.mjs';
-import { resolveLang, detectLanguage, getDisplayStationName } from '../lib/lang.mjs';
+import { resolveLang, detectLanguage, getDisplayStationName, translateWeather } from '../lib/lang.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
-import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
+import { isEarthquakeSimulation, buildEarthquakeSafetyResponse, buildEarthquakeTransportSafety, getGroundEmergencyShelters } from '../advice/earthquake.mjs';
+import { getWeatherAdvice, stationToJmaArea } from '../advice/weather.mjs';
 import axios from 'axios';
 
 export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
@@ -299,6 +300,48 @@ export async function buildTsunamiWaterSafetyResponse(userLang, tsunami, context
   });
 }
 
+// #90: 港の予報（winds/waves）から強風・高波を検出。暴風・高波レベルなら航路を返さず運航見合わせの可能性を案内する
+export async function checkSevereWaterWeather(fromPort, toPort, userLang) {
+  const areas = [...new Set([stationToJmaArea(fromPort), stationToJmaArea(toPort)])];
+  const results = await Promise.all(areas.map(a => getWeatherAdvice(userLang, a).catch(() => null)));
+  const ok = results.filter(r => r && r.weather);
+  if (ok.length === 0) return null;
+  let isSevereWind = false, isHighWave = false, wind = '', wave = '';
+  for (const r of ok) {
+    isSevereWind = isSevereWind || r.isSevereWind;
+    isHighWave = isHighWave || r.isHighWave;
+    if (r.isSevereWind && !wind) wind = r.windText || '';
+    if (r.isHighWave && !wave) wave = r.waveText || '';
+  }
+  if (!isSevereWind && !isHighWave) return null;
+  return { isSevereWind, isHighWave, wind, wave };
+}
+
+export async function buildSevereWeatherWaterSafetyResponse(userLang, wind, wave, context = {}) {
+  const advisory = userLang === 'en'
+    ? 'Strong winds or high waves may suspend ferry operations. Do not board until the operator confirms safety.'
+    : userLang === 'zh'
+      ? '强风或大浪可能导致停航。请停止乘船，待航运公司确认安全后再出行。'
+      : '強風・高波により運航見合わせの可能性があります。乗船は安全確認が取れるまでお控えください。';
+  return jsonResponse({
+    status: 'SEVERE_WEATHER_ADVISORY',
+    detected_language: userLang,
+    emergency_type: 'severe_weather',
+    transport_mode: 'water',
+    route_guidance_suspended: true,
+    message: advisory,
+    maritime_safety_status: {
+      tsunami_warning_active: false,
+      wind_wave_warning_active: true,
+      wind: wind ? translateWeather(wind, userLang) : undefined,
+      wave: wave ? translateWeather(wave, userLang) : undefined,
+      official_info_url: 'https://www.jma.go.jp/bosai/'
+    },
+    ai_transit_advice: MULTILINGUAL_ADVICE.typhoon?.[userLang] || MULTILINGUAL_ADVICE.typhoon?.ja || '',
+    ...context
+  });
+}
+
 export async function searchFerry(args) {
   const rawFrom = args.from_port || '';
   const rawTo = args.to_port || '';
@@ -337,6 +380,11 @@ export async function searchFerry(args) {
   const tsunamiSafety = await fetchJmaTsunamiSafety();
   if (isTsunamiRelevantToPorts(tsunamiSafety, fromPort, toPort)) {
     return await buildTsunamiWaterSafetyResponse(userLang, tsunamiSafety, { from_port: rawFrom, to_port: rawTo });
+  }
+  // #90: 強風・高波ゲート（津波がなくても、荒天・高波で運航見合わせの可能性がある場合は抑止）
+  const severeWaterWeather = await checkSevereWaterWeather(fromPort, toPort, userLang);
+  if (severeWaterWeather) {
+    return await buildSevereWeatherWaterSafetyResponse(userLang, severeWaterWeather.wind, severeWaterWeather.wave, { from_port: rawFrom, to_port: rawTo });
   }
   try {
     const data = await fetchFerryData();

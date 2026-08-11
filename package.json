@@ -1,6 +1,6 @@
 {
   "name": "tokyo-transit-mcp",
-  "version": "2.39.0",
+  "version": "2.39.1",
   "description": "Tokyo public transportation API MCP server - ODPT, Tokyo Metro, Toei, JR East",
   "type": "module",
   "main": "src/index.mjs",
@@ -12,7 +12,7 @@
     "test": "node scripts/probe-all-lang.mjs",
     "test:walk": "node scripts/test-walk-transfer-stations.mjs",
     "test:bus": "node scripts/probe-bus-transfer-lang.mjs && node scripts/test-bus-routes-expansion.mjs",
-    "test:issue": "node scripts/test-issue-84.mjs && node scripts/test-issue-79.mjs && node scripts/test-issue-80.mjs && node scripts/test-issue-82-83.mjs",
+    "test:issue": "node scripts/test-issue-84.mjs && node scripts/test-issue-79.mjs && node scripts/test-issue-80.mjs && node scripts/test-issue-82-83.mjs && node scripts/test-issue-88-89-90.mjs",
     "test:vehicle": "node scripts/probe-bus-vehicle-mock.mjs",
     "start": "node src/index.mjs",
     "dev": "node src/index.mjs"
