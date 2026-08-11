@@ -126,7 +126,7 @@ odpt:Railway:TokyoMetro.{路線名}
 2. **サーキットブレイカー**: ODPT 3回連続失敗で60秒クールダウン。障害時もハードコードデータ（コミュニティバス等）で部分稼働を継続します。
 3. **荒天時安全ロジック**: 台風・浸水・降雪・凍結時は自転車案内を自動非表示にし、必要に応じて避難所リンクを表示します。荒天以外は、到着地点の座標を解決でき、GBFSリアルタイム情報を取得できた場合に限り、到着地点周辺のドコモ・バイクシェアを案内します。利用可能台数・返却可否は変動するため公式アプリで確認してください。
 4. **コミュニティバス**: 41自治体ディレクトリ＋主要10件の駅接続データ（バリアフリー案内）。時刻表・路線の詳細は各自治体公式サイトで確認してください。
-5. **コード変更後の検証**: `node --check src/index.mjs` → 検証プローブ（全ツール×3言語）→ `npm run build` の順で確認してください。MCPツール経由の確認にはサーバー再起動が必要です（詳細は mcp-transit-server スキル参照）。
+5. **コード変更後の検証**: `node --check` を src 配下の全モジュール（`src/index.mjs` `src/config.mjs` `src/data/*.mjs` `src/lib/*.mjs` `src/advice/*.mjs` `src/handlers/*.mjs`）に実行 → 検証プローブ（全ツール×3言語）→ `npm run build` の順で確認してください。MCPツール経由の確認にはサーバー再起動が必要です（詳細は mcp-transit-server スキル参照）。
 
 ## 参考リンク
 
@@ -137,11 +137,9 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.38.8（2026-08-11）— get_timetable の時刻表正確性改善（issues #82 #83）
+### v2.39.0（2026-08-11）— src/index.mjs のモノリス分割リファクタリング（イシュー#75）
 
-- **#82 平日・土休日の分離**: `calendar` 引数（Weekday / SaturdayHoliday / 平日 / 土休日）と `date` 引数（YYYY-MM-DD）を追加。`resolveTimetableCalendar()` が引数最優先 → 検索日/当日の曜日で自動判定（土日=SaturdayHoliday）。マージ後のフィルタで `odpt:calendar`（`odpt.Calendar:Weekday` 形式・`/[.:]/` で区切り）を照合し、平日検索に土休日列車を混入させない
-- **#82 時刻の昇順ソート**: `timeToSortMinutes()`（24時超 → `{ minutes, nextDay }` 化）を新設。方面（odpt:railDirection）ごとにグループ化し、指定駅での最初の departure 時刻（`firstDepartureMinutes()`）で昇順ソートしてから `slice(0, 20)`。行単位に `departure_next_day` / `arrival_next_day` フラグを付与
-- **#83 1000件上限の切り捨て回避**: 路線単位 × calendar 別（Weekday / SaturdayHoliday）に分割取得。銀座線は無フィルタ1000件 → 平日658 + 土休日560 = 1,218件を全件取得できることを実データで確認。レスポンスが1000件ちょうど/超過の場合は `truncated: true` を付与（完全な SUCCESS 扱いを回避）。キャッシュキーは `train_timetable:merged`（{ merged, truncated } を保持）に変更
-- 応答に `calendar`・`service_date`・`truncated` を追加し、クライアント側で運行日・切り捨てを判別可能に
-- inputSchema: calendar / date を追加
-- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・`check-railway-integrity` PASS・`test:issue`（test-issue-82-83.mjs 追加・計4本）全PASS
+- **10,524行の単一ファイルをモジュール構成へ分割**: `config.mjs`（共有状態: envConfig / cache / CircuitBreaker / API定数）/ `data/`（station-names / railway-lines / landmarks / ferry-ports / bus-routes / misc）/ `lib/`（lang / csv / geo / time / common）/ `advice/`（transit-advice / weather / earthquake）/ `handlers/`（search-route / bus / ferry / fare / timetable / flight / station-info）
+- **index.mjs は155行にスリム化**: サーバー起動・ツール登録・エクスポート再公開（30名）のみ。依存方向は `handlers → advice/data/lib → config` の一方通行（循環依存なし）
+- **挙動不変**: APIレスポンス・エクスポート30名互換・開発支援ツール（add-*系）の読み書き対象を移動先モジュールへ更新
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・`test:walk` / `test:bus` / `test:issue` / `check-railway-integrity` / `test-regressions` 全PASS

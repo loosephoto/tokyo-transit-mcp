@@ -131,3 +131,45 @@ export function handleApiError(error, details = {}) {
   const errType = error.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'NETWORK_ERROR';
   return jsonResponse(buildErrorResponse(errType, error.message || 'APIエラー', details));
 }
+
+
+export function buildGovFacilitySearchSupport(userLocation, userLang = 'ja', placeName = '') {
+  const disclaimer = userLang === 'en' ? "Location-based map search only; verify opening hours and services with each authority."
+    : userLang === 'zh' ? "仅为基于位置的地图搜索；请向各机构确认开放时间和服务内容。"
+    : "位置情報に基づく地図検索です。開庁時間・取扱業務は各機関にご確認ください。";
+  // 1) GPS共有がある場合は現在地を基準にする（従来動作）
+  if (userLocation && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lon)) {
+    const query = `役所 出張所 公民館 市民センター @${userLocation.lat},${userLocation.lon}`;
+    return {
+      note: userLang === 'en' ? "🏛️ [Public Facilities Near Your Shared Location]"
+            : userLang === 'zh' ? "🏛️ 【您共享位置周边的公共设施】"
+            : "🏛️ 【共有いただいた現在地周辺の公的機関】",
+      based_on: 'user_location',
+      location: { lat: userLocation.lat, lon: userLocation.lon },
+      link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+      link_label: userLang === 'en' ? "📍 Show public facilities near your shared location on Google Maps"
+                  : userLang === 'zh' ? "📍 在地图上查看您共享位置周边的公共设施"
+                  : "📍 共有いただいた現在地周辺の公的機関を地図で確認",
+      disclaimer
+    };
+  }
+  // 2) 駅名・バス停名が指定されている場合は、その場所を基準に案内する
+  //   （ご老人等が「駅名・バス停名」で公的機関を探すケースに対応。v2.36.3）
+  if (placeName && String(placeName).trim()) {
+    const name = String(placeName).trim();
+    const query = `役所 出張所 公民館 市民センター ${name} 周辺`;
+    return {
+      note: userLang === 'en' ? `🏛️ [Public Facilities Near ${name}]`
+            : userLang === 'zh' ? `🏛️ 【${name} 周边的公共设施】`
+            : `🏛️ 【${name} 周辺の公的機関】`,
+      based_on: 'place_name',
+      place_name: name,
+      link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+      link_label: userLang === 'en' ? `📍 Show public facilities near ${name} on Google Maps`
+                  : userLang === 'zh' ? `📍 在地图上查看 ${name} 周边的公共设施`
+                  : `📍 ${name} 周辺の公的機関を地図で確認`,
+      disclaimer
+    };
+  }
+  return undefined;
+}
