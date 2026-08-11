@@ -35,7 +35,9 @@ const IGNORE_PATHS = [/error/i, /message$/, /note$/, /data_source/, /official_we
   /airport$/, /route_id/, /trip_id/, /stop_id/, /id$/, /_source/, /operator$/, /municipality/, /website/,
   /route$/, /flight_iata/, /airport_iata/, /other_airport/, /status$/, /status_text/,
   /^name$/, /\.name$/, /resolved_busstop/, /^busstop$/, /\.number$/, /\.frequency$/, /\.ships_id$/,
-  /\.terminal$/, /\.gate$/, /\.baggage$/];
+  /\.terminal$/, /\.gate$/, /\.baggage$/,
+  // 🔴 #93: region は JMA 一次細分区域名（東京地方・伊豆諸島北部等）の日本語表記を補助的に返す。area（翻訳済み）が主表示のため検査対象外。
+  /region$/];
 
 const isIgnored = (p) => {
   const path = p.split(':')[0].trim();

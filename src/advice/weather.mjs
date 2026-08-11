@@ -3,24 +3,27 @@
  * 依存: config / data/misc / lib/lang / lib/common
  */
 import { jmaBreaker, cache } from '../config.mjs';
-import { MULTILINGUAL_ADVICE, JMA_AREA_MAP, JMA_AREA_LABELS } from '../data/misc.mjs';
+import { MULTILINGUAL_ADVICE, JMA_AREA_MAP, JMA_AREA_LABELS, PLACE_MUNICIPALITY, PLACE_SUBAREA } from '../data/misc.mjs';
 import { resolveLang, detectLanguage, translateWeather } from '../lib/lang.mjs';
 import { jsonResponse, buildErrorResponse } from '../lib/common.mjs';
 import axios from 'axios';
 
-export async function getWeatherAdvice(userLang, areaCode = '130000') {
+export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCode = null) {
   if (!jmaBreaker.canExecute()) {
     const err = new Error('JMA_API_UNAVAILABLE');
     err.code = 'JMA_UNAVAILABLE';
     throw err;
   }
-  const cacheKey = `${cache.jmaWeather.key}:${areaCode}`;
+  const cacheKey = `${cache.jmaWeather.key}:${areaCode}:${subAreaCode || 'default'}`;
   const cached = cache.get(cacheKey);
-  let weather, windText = '', waveText = '', isRainy = false, isHot = false, isSevere = false, isSpecial = false, isSevereWind = false, isHighWave = false, maxTemp = 0;
-  if (cached) { weather = cached.weather; windText = cached.windText || ''; waveText = cached.waveText || ''; isRainy = cached.isRainy; isHot = cached.isHot; isSevere = cached.isSevere || false; isSpecial = cached.isSpecial || false; isSevereWind = cached.isSevereWind || false; isHighWave = cached.isHighWave || false; }
+  let weather, windText = '', waveText = '', isRainy = false, isHot = false, isSevere = false, isSpecial = false, isSevereWind = false, isHighWave = false, maxTemp = 0, areaRegionName = '';
+  if (cached) { weather = cached.weather; windText = cached.windText || ''; waveText = cached.waveText || ''; isRainy = cached.isRainy; isHot = cached.isHot; isSevere = cached.isSevere || false; isSpecial = cached.isSpecial || false; isSevereWind = cached.isSevereWind || false; isHighWave = cached.isHighWave || false; areaRegionName = cached.areaRegionName || ''; }
   else {
     const response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
-    const area = response.data[0].timeSeries[0].areas[0];
+    // 🔴 #93: 府県 JSON 内の一次細分区域（伊豆諸島北部等）を subAreaCode で選択。無ければ先頭区域（東京地方等）を使用。
+    const allAreas = response.data[0].timeSeries[0].areas || [];
+    const area = (subAreaCode && allAreas.find(a => a.area?.code === subAreaCode)) || allAreas[0];
+    areaRegionName = area?.area?.name || '';
     weather = area.weathers[0];
     windText = area.winds?.[0] || '';
     waveText = area.waves?.[0] || '';
@@ -34,13 +37,13 @@ export async function getWeatherAdvice(userLang, areaCode = '130000') {
     for (const ts of response.data[0]?.timeSeries || []) {
       if (ts.areas?.[0]?.temps) { maxTemp = Math.max(...ts.areas[0].temps.map(t => parseInt(t) || 0)); if (maxTemp >= 33) isHot = true; }
     }
-    cache.set(cacheKey, { weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave }, cache.jmaWeather.ttl);
+    cache.set(cacheKey, { weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave, areaRegionName }, cache.jmaWeather.ttl);
     jmaBreaker.onSuccess();
   }
   // #89: 荒天（強風・高波・特別警報）は typhoon 系アドバイスに昇格
   const adviceKey = isSevere ? 'typhoon' : (isHot ? 'hot' : (isRainy ? 'rainy' : 'fair'));
   const advice = (MULTILINGUAL_ADVICE[adviceKey] && (MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja)) || '';
-  return { advice, weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave, maxTemp: maxTemp || undefined };
+  return { advice, weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave, areaRegionName, maxTemp: maxTemp || undefined };
 }
 
 // #89: 予報文（weather/winds/waves）から強風・高波・特別警報を検出
@@ -55,26 +58,62 @@ export function parseSevereWeather(weatherText = '', windText = '', waveText = '
   return { isSevereWind, maxWave, isHighWave, isSpecial, isSevere: isSpecial || isSevereWind || isHighWave };
 }
 
-// #88: 駅名・地域名 → JMA 地域コード（JMA_AREA_MAP に主要駅・県を登録済み）
+// #88: 駅名・地域名 → JMA 予報区コード（府県コード。JMA_AREA_MAP に主要駅・県を登録済み）
 export function stationToJmaArea(name) {
   const raw = (name || '').trim();
   if (raw && JMA_AREA_MAP[raw]) return JMA_AREA_MAP[raw];
   const norm = raw.replace(/駅$/, '');
   if (norm !== raw && JMA_AREA_MAP[norm]) return JMA_AREA_MAP[norm];
+  // 🔴 #93: PLACE_MUNICIPALITY に駅名があれば、その自治体名（例: 上野→台東区）から県コードを解決。
+  // これにより「上野」などの都内駅が東京（130000）に正しく解決される。
+  const muniEntry = PLACE_MUNICIPALITY[raw] || PLACE_MUNICIPALITY[norm];
+  if (muniEntry) {
+    const muniKey = muniEntry.ja.replace(/区$/, '');
+    if (JMA_AREA_MAP[muniKey]) return JMA_AREA_MAP[muniKey];
+  }
   return '130000'; // デフォルト: 東京
+}
+
+// #93: 駅名・場所 → 自治体名ラベル（3言語）。該当なしは null
+export function placeToMunicipality(name) {
+  const raw = (name || '').trim();
+  const norm = raw.replace(/駅$/, '');
+  const key = PLACE_MUNICIPALITY[raw] ? raw : (PLACE_MUNICIPALITY[norm] ? norm : null);
+  return key ? PLACE_MUNICIPALITY[key] : null;
+}
+
+// #93: 駅名・場所 → JMA 一次細分区域コード（伊豆諸島・小笠原の島）。該当なしは null
+export function placeToSubarea(name) {
+  const raw = (name || '').trim();
+  return PLACE_SUBAREA[raw] || PLACE_SUBAREA[raw.replace(/駅$/, '')] || null;
 }
 
 export async function getWeather(args) {
   const rawArea = args.area_name || '';
   const userLang = resolveLang(args) || detectLanguage(rawArea) || 'ja';
-  let areaCode = '130000', areaName = rawArea || "東京";
-  if (rawArea && JMA_AREA_MAP[rawArea]) areaCode = JMA_AREA_MAP[rawArea];
+  // 🔴 #93: stationToJmaArea 経由で府県予報区コードを解決（無効な区・市コードを使わない）
+  const areaCode = stationToJmaArea(rawArea);
+  const areaName = rawArea || "東京";
   if (!jmaBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, area: areaName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
   try {
-    const { advice, weather, windText, waveText, isHot, isSevere, maxTemp } = await getWeatherAdvice(userLang, areaCode);
-    // 🔴 #79: 地域表示を東京固定にしない。エリアコード → 3言語ラベル辞書で表示する。
-    const areaLabel = JMA_AREA_LABELS[areaCode];
-    const displayArea = (areaLabel && areaLabel[userLang]) || areaName;
+    // 🔴 #93: 一次細分区域（伊豆諸島・小笠原の島）を選択。区域名（東京地方等）も取得。
+    const subArea = placeToSubarea(rawArea);
+    const { advice, weather, windText, waveText, isHot, isSevere, maxTemp, areaRegionName } = await getWeatherAdvice(userLang, areaCode, subArea);
+    // #93: 駅名指定時は「上野（台東区）」のように自治体名を併記。「渋谷」→「渋谷区」等は自治体名のみ表示。
+    const muni = placeToMunicipality(rawArea);
+    const muniLabel = muni ? (muni[userLang] || muni.ja) : null;
+    let displayArea;
+    if (muniLabel) {
+      const inputShort = rawArea.replace(/駅$/, '').replace(/区$/, '');
+      const muniShort = muniLabel.replace(/区$/, '');
+      displayArea = inputShort === muniShort ? muniLabel : `${inputShort}（${muniLabel}）`;
+    } else {
+      // 🔴 #79: 地域表示を東京固定にしない。エリアコード 3言語ラベルを基本に表示。
+      // 🔴 #93: 島（PLACE_SUBAREA 指定）は区域名（伊豆諸島北部等）を表示。それ以外は県ラベルを表示し、区域名は region フィールドで提供。
+      const areaLabel = JMA_AREA_LABELS[areaCode];
+      const label = (areaLabel && areaLabel[userLang]) || areaName;
+      displayArea = subArea ? (areaRegionName || label) : label;
+    }
     return jsonResponse({
       status: "SUCCESS",
       // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
@@ -82,6 +121,7 @@ export async function getWeather(args) {
       detected_language: userLang,
       area: displayArea,
       area_code: areaCode,
+      region: areaRegionName || undefined,
       weather: translateWeather(weather, userLang),
       // #89: 風・波・荒天情報を明示（強風・高波・特別警報の検出結果）
       wind: windText ? translateWeather(windText, userLang) : undefined,

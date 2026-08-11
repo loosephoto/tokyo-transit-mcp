@@ -33,13 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
-- **台風接近時の天気・水上交通の安全強化＋始発対応＋復旧対応（v2.39.3・イシュー#88/#89/#90）**
-  - **天気の地域コード解決を拡張**: `get_weather` / `search_route` が千葉・埼玉・神奈川・栃木・群馬・静岡・主要駅（従来は東京固定）の予報を取得。`stationToJmaArea()` で駅名・地域名からJMA地域コードを解決
-  - **強風・高波・特別警報の検出（#89）**: JMA予報の `winds`/`waves` をパースし、強風（非常に強く）・高波（2.5m以上）・特別警報を検出。AIアドバイスを typhoon（荒天）へ昇格し、風・波情報を `get_weather` 応答に表示
-  - **フェリー・水上バスの強風・高波ゲート追加（#90）**: `search_ferry` が港の荒天を検出すると `SEVERE_WEATHER_ADVISORY` を返し、運航見合わせの可能性を案内（津波ゲートに加え強風・高波も抑止）
-  - **倒木・運転見合わせの障害種別を追加**: FAILURE_TYPES に fallen_tree（倒木）・service_suspension（運転見合わせ・運休）を追加し、台風後の始発で典型的な「倒木による見合わせ」「原因不明の見合わせ」を専用AIアドバイス（🌀倒木・🚨運転見合わせ）で案内
-  - **復旧・遅延の挙動を改善**: FAILURE_TYPES に service_resumed（運転再開・復旧）を追加し、運転見合わせからの復旧を専用AIアドバイスで案内。LIVE の復旧判定を「再開は未定」を除外する肯定的表現に改善
-  - **検証** — build PASS・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 36/36 全PASS
+- **天気の地域コード解決を改善（v2.39.4・イシュー#93）**
+  - **無効な区・市コードを府県予報区コードへ正規化**: JMA forecast API は府県コード（130000等）のみ有効で、区市町村コード（131020等）は404になるため、`JMA_AREA_MAP` の渋谷・新宿・台東・横浜等を有効な府県コードに修正（`get_weather` のネットワークエラーを解消）
+  - **駅名→自治体名の表示を追加**: `PLACE_MUNICIPALITY` で「上野→台東区」「池袋→豊島区」等の東京23区の主要駅を自治体名付きで表示（`get_weather(上野)` → 「上野（台東区）」・`get_weather(渋谷)` → 「渋谷区」）
+  - **一次細分区域の選択**: `PLACE_SUBAREA` で伊豆諸島・小笠原の島（大島・八丈島・父島等）の天気を正しい区域（伊豆諸島北部・南部・小笠原諸島）から取得。応答に `region`（区域名）を追加
+  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 50/50 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -604,13 +602,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Weather & water-transport safety for approaching typhoons + first-train & recovery support (v2.39.3, issues #88/#89/#90)**
-  - **Regional weather-code resolution expanded**: `get_weather` / `search_route` now fetch forecasts for Chiba, Saitama, Kanagawa, Tochigi, Gunma, Shizuoka and major stations (previously fixed to Tokyo). `stationToJmaArea()` resolves JMA area codes from station/region names
-  - **Severe wind / high wave / special warning detection (#89)**: parse `winds`/`waves` from JMA forecasts; detect severe wind ("very strong"), high waves (≥2.5 m) and special warnings; escalate AI advice to typhoon (storm) and surface wind/wave info in `get_weather`
-  - **Severe-weather gate for ferries & water buses (#90)**: `search_ferry` returns `SEVERE_WEATHER_ADVISORY` and warns of possible suspension when its ports are in stormy/high-wave conditions (added to the tsunami gate)
-  - **Added fallen-tree / service-suspension disruption types**: added `fallen_tree` (倒木) and `service_suspension` (運転見合わせ・運休) to FAILURE_TYPES, giving dedicated AI advice (🌀 fallen trees, 🚨 service suspension) for the typical post-typhoon morning-first-train situation
-  - **Improved recovery & delay behavior**: added `service_resumed` (運転再開・復旧) to FAILURE_TYPES so recovery from suspension gets dedicated AI advice; improved the LIVE resume detection to only accept positive resume phrases (excluding "再開は未定")
-  - **Verification** — build PASS, probe-all-lang 26/26, test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 36/36 all PASS
+- **Weather regional-code resolution improved (v2.39.4, issue #93)**
+  - **Normalized invalid ward/city codes to prefecture forecast codes**: the JMA forecast API only supports prefecture codes (130000 etc.); ward/municipality codes (131020 etc.) return 404. Fixed `JMA_AREA_MAP` entries (Shibuya, Shinjuku, Taito, Yokohama...) to valid prefecture codes, resolving `get_weather` network errors
+  - **Station→municipality display added**: `PLACE_MUNICIPALITY` shows major Tokyo 23-ward stations with their ward name (`get_weather("上野")` → "上野（台東区）", `get_weather("渋谷")` → "渋谷区")
+  - **Primary sub-area selection**: `PLACE_SUBAREA` fetches weather for the Izu/Ogasawara islands (Ōshima, Hachijō, Chichijima etc.) from the correct region (northern/southern Izu Islands, Ogasawara). Added `region` (sub-area name) to the response
+  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 50/50 all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1137,13 +1133,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **台风接近时的天气・水上交通安全强化＋首班车应对＋恢复应对（v2.39.3・议题#88/#89/#90）**
-  - **天气地区代码解析扩展**: `get_weather` / `search_route` 现在获取千叶・埼玉・神奈川・栃木・群马・静冈及主要车站（此前固定为东京）的预报。`stationToJmaArea()` 从车站名・地区名解析JMA地区代码
-  - **强风・大浪・特别警报检测（#89）**: 解析JMA预报的 `winds`/`waves`，检测强风（非常强）・大浪（2.5米以上）・特别警报，将AI建议升级为 typhoon（恶劣天气），并在 `get_weather` 中显示风・浪信息
-  - **轮渡・水上巴士的强风・大浪门控（#90）**: `search_ferry` 检测到港口恶劣天气时返回 `SEVERE_WEATHER_ADVISORY`，提示可能停航（在津波门控之外追加强风・大浪）
-  - **新增倒木・暂停运行的故障类型**: 在 FAILURE_TYPES 中新增 fallen_tree（倒木）・service_suspension（暂停运行・停运），针对台风后首班车常见的「因倒木暂停运行」等以专用AI建议（🌀倒木・🚨暂停运行）提示
-  - **改进恢复・晚点行为**: 在 FAILURE_TYPES 中新增 service_resumed（恢复运行・已恢复），针对停运后的恢复以专用AI建议提示；改进 LIVE 的恢复检测，仅接受肯定性的恢复表述（排除「再开未定」）
-  - **验证** — build 通过・probe-all-lang 26/26・test:issue / test:walk / test:bus / check-railway-integrity / test-issue-88-89-90 36/36 全部通过
+- **改进天气地区代码解析（v2.39.4・议题#93）**
+  - **将无效的区・市代码规范化为都道府县预报代码**: JMA 预报API仅支持都道府县代码（130000等），区市町村代码（131020等）返回404。因此将 `JMA_AREA_MAP` 中的涩谷・新宿・台东・横滨等修正为有效的都道府县代码（解决 `get_weather` 的网络错误）
+  - **新增车站→行政区名称显示**: `PLACE_MUNICIPALITY` 以行政区名显示东京23区的主要车站（`get_weather("上野")` → 「上野（台东区）」・`get_weather("渋谷")` → 「涩谷区」）
+  - **一次细分区域选择**: `PLACE_SUBAREA` 从正确的区域（伊豆诸岛北部・南部・小笠原诸岛）获取伊豆・小笠原诸岛（大岛・八丈岛・父岛等）的天气。响应中新增 `region`（区域名）
+  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 50/50 全部通过
 
 ### 🤖 AI 智能建议
 

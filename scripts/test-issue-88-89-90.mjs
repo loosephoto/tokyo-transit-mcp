@@ -1,6 +1,6 @@
 // イシュー#88/#89/#90 回帰テスト（weather 地域解決・風波・全角波高）
 // node scripts/test-issue-88-89-90.mjs（API不要・決定的）
-import { stationToJmaArea, parseSevereWeather } from '../src/advice/weather.mjs';
+import { stationToJmaArea, parseSevereWeather, placeToMunicipality, placeToSubarea } from '../src/advice/weather.mjs';
 import { detectFailureType } from '../src/advice/transit-advice.mjs';
 
 let pass = 0, fail = 0;
@@ -14,10 +14,10 @@ assert(stationToJmaArea('千葉') === '120000', '#88 千葉→120000');
 assert(stationToJmaArea('千葉県') === '120000', '#88 千葉県→120000');
 assert(stationToJmaArea('東京') === '130000', '#88 東京→130000');
 assert(stationToJmaArea('東京都') === '130000', '#88 東京都→130000');
-assert(stationToJmaArea('渋谷') === '131020', '#88 渋谷→131020');
+assert(stationToJmaArea('渋谷') === '130000', '#93 渋谷→130000（区コード無効→府県正規化）');
 assert(stationToJmaArea('埼玉') === '110000', '#88 埼玉→110000');
 assert(stationToJmaArea('神奈川') === '140000', '#88 神奈川→140000');
-assert(stationToJmaArea('横浜') === '140010', '#88 横浜→140010');
+assert(stationToJmaArea('横浜') === '140000', '#93 横浜→140000（市コード無効→府県正規化）');
 assert(stationToJmaArea('大宮') === '110000', '#88 大宮→110000');
 assert(stationToJmaArea('川崎') === '140000', '#88 川崎→140000');
 // フェリー港名→県コード（#90）
@@ -58,6 +58,22 @@ assert(detectFailureType('再開', 'ja').isTrainSuspended === false, '再開は�
 assert(detectFailureType('復旧しました', 'ja').isTrainSuspended === false, '復旧しました→見合わせではない');
 assert(detectFailureType('遅延', 'ja').adviceKey === 'vehicle_delay', '遅延→vehicle_delay（運転継続）');
 assert(detectFailureType('遅延', 'ja').isTrainSuspended === false, '遅延は運転継続（見合わせではない）');
+
+// #93: 駅名→自治体表示・一次細分区域（JMA forecast は区市町村コードが無効→府県正規化＋自治体名表示）
+assert(stationToJmaArea('上野') === '130000', '#93 上野→130000');
+assert(stationToJmaArea('上野駅') === '130000', '#93 上野駅→130000');
+assert(stationToJmaArea('新宿駅') === '130000', '#93 新宿駅→130000');
+assert(stationToJmaArea('池袋') === '130000', '#93 池袋→130000');
+assert(stationToJmaArea('品川駅') === '130000', '#93 品川駅→130000');
+assert(placeToMunicipality('上野').ja === '台東区', '#93 上野→自治体 台東区');
+assert(placeToMunicipality('渋谷駅').ja === '渋谷区', '#93 渋谷駅→自治体 渋谷区');
+assert(placeToMunicipality('池袋').zh === '丰岛区', '#93 池袋→自治体 zh 丰岛区');
+assert(placeToMunicipality('御茶ノ水').ja === '文京区', '#93 御茶ノ水→自治体 文京区');
+assert(placeToMunicipality('横浜') === null, '#93 横浜→自治体なし（県表示）');
+assert(placeToSubarea('大島') === '130020', '#93 大島→伊豆諸島北部(130020)');
+assert(placeToSubarea('三宅島') === '130030', '#93 三宅島→伊豆諸島南部(130030)');
+assert(placeToSubarea('父島') === '130040', '#93 父島→小笠原諸島(130040)');
+assert(placeToSubarea('上野') === null, '#93 上野→区域なし');
 
 console.log(`\n結果: PASS=${pass} FAIL=${fail}`);
 process.exit(fail ? 1 : 0);
