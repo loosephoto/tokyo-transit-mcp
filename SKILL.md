@@ -137,9 +137,9 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.39.0（2026-08-11）— src/index.mjs のモノリス分割リファクタリング（イシュー#75）
+### v2.40.0（2026-08-12）— コード監査で発見した潜在バグを修正（初期接続・APIシーケンス・キャッシュ・JSONデータ方式・イシュー#94）
 
-- **10,524行の単一ファイルをモジュール構成へ分割**: `config.mjs`（共有状態: envConfig / cache / CircuitBreaker / API定数）/ `data/`（station-names / railway-lines / landmarks / ferry-ports / bus-routes / misc）/ `lib/`（lang / csv / geo / time / common）/ `advice/`（transit-advice / weather / earthquake）/ `handlers/`（search-route / bus / ferry / fare / timetable / flight / station-info）
-- **index.mjs は155行にスリム化**: サーバー起動・ツール登録・エクスポート再公開（30名）のみ。依存方向は `handlers → advice/data/lib → config` の一方通行（循環依存なし）
-- **挙動不変**: APIレスポンス・エクスポート30名互換・開発支援ツール（add-*系）の読み書き対象を移動先モジュールへ更新
-- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・`test:walk` / `test:bus` / `test:issue` / `check-railway-integrity` / `test-regressions` 全PASS
+- **`structuredContent` に AIインテリジェントアドバイスを包含（#94）**: `jsonResponse` は従来 `ai_transit_advice` を `content[0]` のテキストブロックにのみ置き、`structuredContent` から除外していた。`structuredContent` のみを参照するMCPクライアントでAIアドバイスが失われる問題を修正（`structuredContent` にも `ai_transit_advice` を公開）
+- **統一キャッシュに期限切れ削除・上限ガードを追加（#94）**: 期限切れエントリが削除されず長期稼働でメモリが増大する問題を修正。`get` で期限切れ時に削除、`set` で上限2000件を超えたら最古エントリを削除（LRU近似）
+- **時刻表・駅名ローマ字マップの永続キャッシュをTTL付きに一本化（#94）**: `_timetableRailways` / `_stationRomanToJa` のモジュール変数がTTLなしで永続しODPT障害中の古いデータを返し続ける問題を修正。`cache`（TTL付き）に一本化
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・jsonResponse structuredContent 実測確認

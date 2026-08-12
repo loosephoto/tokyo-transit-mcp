@@ -105,9 +105,10 @@ export function jsonResponse(data) {
         { type: 'text', text: ai_transit_advice },
         { type: 'text', text: JSON.stringify(rest, null, 2) }
       ],
-      // 構造化データはMCPクライアントがcontentの順序に依存せず取得できるよう、
-      // 後方互換のcontentブロックと並行してstructuredContentにも公開する。
-      structuredContent: rest
+      // 🔴 #94: structuredContent には ai_transit_advice も含めて公開する。
+      // MCPクライアントが structuredContent のみを参照する実装でも
+      // AIインテリジェントアドバイスが失われないようにする（従来は除外されていた）。
+      structuredContent: data
     };
   }
   return {

@@ -92,10 +92,26 @@ const jmaBreaker = new CircuitBreaker('JMA_API_BREAKER', 2, 120000);
 // ==========================================
 // 📦 統一キャッシュ管理
 // ==========================================
+const CACHE_MAX_ENTRIES = 2000; // メモリリーク防止: 上限を超えたら最も古いエントリを削除
 const cache = {
   _store: {},
-  get(key) { const c = this._store[key]; return (c && Date.now() - c.ts < c.ttl) ? c.data : null; },
-  set(key, data, ttlMs) { this._store[key] = { data, ts: Date.now(), ttl: ttlMs }; },
+  get(key) {
+    const c = this._store[key];
+    if (!c) return null;
+    if (Date.now() - c.ts >= c.ttl) { delete this._store[key]; return null; }
+    return c.data;
+  },
+  set(key, data, ttlMs) {
+    // 上限超過時は最も古いエントリを1つ削除（LRU近似）
+    if (!(key in this._store) && Object.keys(this._store).length >= CACHE_MAX_ENTRIES) {
+      let oldestKey = null, oldestTs = Infinity;
+      for (const [k, v] of Object.entries(this._store)) {
+        if (v.ts < oldestTs) { oldestTs = v.ts; oldestKey = k; }
+      }
+      if (oldestKey !== null) delete this._store[oldestKey];
+    }
+    this._store[key] = { data, ts: Date.now(), ttl: ttlMs };
+  },
   // 個別キャッシュ定義
   bikeShare: { key: 'bike_share', ttl: 30000 },
   ferryGtfs: { key: 'ferry_gtfs', ttl: 3600000 },

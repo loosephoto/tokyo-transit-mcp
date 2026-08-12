@@ -23,11 +23,11 @@ import { getWeatherAdvice, stationToJmaArea } from '../advice/weather.mjs';
 import { buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import axios from 'axios';
 
-let _stationRomanToJa = null;
 export async function getStationRomanToJa() {
-  if (_stationRomanToJa) return _stationRomanToJa;
+  // 🔴 #94: モジュール変数の無期限保持をやめ、cache（TTL付き）に一本化。
+  // キャッシュ期限切れ後は再取得する（ODPTデータ更新を反映し、古いマップを返し続けない）。
   const cached = cache.get(cache.stationRomanToJa.key);
-  if (cached) { _stationRomanToJa = cached; return cached; }
+  if (cached) return cached;
   const map = {};
   // 手動フォールバック: STATION_DISPLAY_NAMES の en 値（ローマ字）→ 日本語
   for (const [ja, trans] of Object.entries(STATION_DISPLAY_NAMES)) {
@@ -49,7 +49,6 @@ export async function getStationRomanToJa() {
     }
   } catch (_) { /* フォールバックのみで続行 */ }
   cache.set(cache.stationRomanToJa.key, map, cache.stationRomanToJa.ttl);
-  _stationRomanToJa = map;
   return map;
 };
 

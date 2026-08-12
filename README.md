@@ -33,10 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
-- **ODPT静的GTFS取得と駅情報フォールバックの import 不具合を修正（v2.39.9・イシュー#91/#92）**
-  - **get_station_info の内蔵グラフフォールバックを有効化（#91）**: `STATION_TO_LINES` の import 漏れによる ReferenceError を修正。ODPT未収録駅（JR・私鉄の大部分）は `source: internal_graph_fallback` で所属路線を返し、実在しない駅名は STATION_NOT_FOUND（従来は内部エラーが NETWORK_ERROR に化けて再試行を促した）
-  - **search_bus の ODPT静的GTFS 5社を有効化（#92）**: `fetchGtfsZipBuffer` を `lib/gtfs.mjs` へ切り出し import 漏れを解消。川崎市バス・川崎鶴見臨港バス・関東バス・西東京バス・京成バス千葉ウエストの実GTFSが検索・乗り継ぎグラフに反映される。GTFS取得失敗時はHTTPステータスをログに明示
-  - **検証** — build PASS・probe-all-lang 26/26・test-issue-91-92 23/23・test:walk・test:bus 全PASS
+- **初期接続・APIシーケンス・キャッシュ・JSONデータ方式のコード監査を実施し潜在バグを修正（v2.40.0・イシュー#94）**
+  - **`structuredContent` に AIインテリジェントアドバイスを包含（#94）**: `jsonResponse` は従来 `ai_transit_advice` を `content[0]` のテキストブロックにのみ置き、`structuredContent` から除外していた。MCPクライアントが `structuredContent` のみを参照する実装ではAIアドバイスが失われる問題を修正。`structuredContent` にも `ai_transit_advice` を公開
+  - **統一キャッシュに期限切れ削除・上限ガードを追加（#94）**: 従来は期限切れエントリを返却しないだけで削除せず、長期稼働でメモリが増大し続けた。`get` で期限切れ時に削除し、`set` で上限2000件を超えたら最古エントリを削除（LRU近似）
+  - **時刻表・駅名ローマ字マップの永続キャッシュをTTL付きに一本化（#94）**: `_timetableRailways` / `_stationRomanToJa` のモジュール変数はTTLなしで永続し、ODPT障害中の古いデータを復旧後も返し続けた。`cache`（TTL付き）に一本化し、期限切れ後は再取得
+  - **検証** — build PASS・probe-all-lang 26/26・jsonResponse structuredContent 実測確認（AIアドバイス包含）
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -546,7 +547,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # プロジェクトスキル定義（v2.25.4）
+├── SKILL.md             # プロジェクトスキル定義
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
 └── .env                 # APIキー（gitignore推奨）
@@ -601,10 +602,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Fixed ODPT static GTFS fetch and station-info fallback import issues (v2.39.9, issues #91/#92)**
-  - **Enabled get_station_info internal-graph fallback (#91)**: Fixed a ReferenceError from a missing `STATION_TO_LINES` import. Stations not in the ODPT dataset (most JR/private-railway stations) now return their lines via `source: internal_graph_fallback`; non-existent station names return STATION_NOT_FOUND (previously an internal error masqueraded as NETWORK_ERROR and prompted pointless retries)
-  - **Enabled 5 ODPT static-GTFS bus operators in search_bus (#92)**: Extracted `fetchGtfsZipBuffer` into `lib/gtfs.mjs` to fix the missing import. The live GTFS of Kawasaki City Bus, Kawasaki Tsurumi Rinko Bus, Kanto Bus, Nishi-Tokyo Bus and Keisei Bus Chiba-West now feed the bus-stop search and transfer graph. GTFS fetch failures now log the HTTP status explicitly
-  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-91-92 23/23, test:walk and test:bus all PASS
+- **Ran a code audit of initial connection, API sequence, cache and JSON data format and fixed potential bugs (v2.40.0, issue #94)**
+  - **Included AI Intelligent Advice in `structuredContent` (#94)**: `jsonResponse` previously placed `ai_transit_advice` only in the `content[0]` text block and excluded it from `structuredContent`. Clients that read only `structuredContent` lost the advice. Now `ai_transit_advice` is also exposed in `structuredContent`
+  - **Added expiry deletion and a size cap to the unified cache (#94)**: expired entries were returned as `null` but never deleted, so long-running instances grew memory unboundedly. `get` now deletes on expiry and `set` evicts the oldest entry above a 2000-entry cap (LRU approximation)
+  - **Consolidated the persistent timetable / station-roman-to-Ja maps into TTL-backed cache (#94)**: the `_timetableRailways` / `_stationRomanToJa` module variables persisted indefinitely and kept serving stale data after an ODPT outage. They now use TTL-backed `cache` and re-fetch after expiry
+  - **Verification** — build PASS, probe-all-lang 26/26, confirmed `structuredContent` carries the AI advice at runtime
 
 ### 🤖 AI Intelligent Advice
 
@@ -1131,10 +1133,11 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复 ODPT 静态GTFS获取与车站信息回退的 import 缺陷（v2.39.9・议题#91/#92）**
-  - **启用 get_station_info 内置路线图回退（#91）**: 修复 `STATION_TO_LINES` 未导入导致的 ReferenceError。ODPT 未收录的车站（JR・大部分私铁）通过 `source: internal_graph_fallback` 返回所属路线；不存在的站名返回 STATION_NOT_FOUND（此前内部错误被误判为 NETWORK_ERROR 并促使无谓重试）
-  - **启用 search_bus 的 5 家 ODPT 静态GTFS巴士运营商（#92）**: 将 `fetchGtfsZipBuffer` 抽取到 `lib/gtfs.mjs` 以修复未导入问题。川崎市巴士・川崎鹤见临港巴士・关东巴士・西东京巴士・京成巴士千叶西的实时GTFS已纳入巴士站搜索与换乘图。GTFS 获取失败时会在日志中明确显示 HTTP 状态
-  - **验证** — build 通过・probe-all-lang 26/26・test-issue-91-92 23/23・test:walk・test:bus 全部通过
+- **对初始连接、API时序、缓存与JSON数据格式进行了代码审计，并修复潜在缺陷（v2.40.0・议题#94）**
+  - **`structuredContent` 中纳入AI智能出行建议（#94）**: `jsonResponse` 此前仅将 `ai_transit_advice` 放入 `content[0]` 文本块，未纳入 `structuredContent`。仅读取 `structuredContent` 的MCP客户端会丢失AI建议。现于 `structuredContent` 中也公开 `ai_transit_advice`
+  - **统一缓存增加过期删除与上限保护（#94）**: 过期条目此前仅返回 `null` 而不删除，长期运行导致内存持续增长。`get` 现在过期即删除，`set` 将2000条上限外的最旧条目逐出（近似LRU）
+  - **将时刻表/站名罗马字映射的持久缓存统一为带TTL的缓存（#94）**: `_timetableRailways` / `_stationRomanToJa` 模块变量无TTL长期保留，ODPT故障后仍返回旧数据。现统一为带TTL的 `cache`，过期后重新获取
+  - **验证** — build 通过・probe-all-lang 26/26・运行时实测确认 `structuredContent` 包含AI建议
 
 ### 🤖 AI 智能建议
 
@@ -1605,7 +1608,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── SKILL.md             # 项目技能定义（v2.25.4）
+├── SKILL.md             # 项目技能定义
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例
 └── .env                 # API 密钥

@@ -32,10 +32,12 @@ export function stationIdTail(stationId) {
 
 export const TIMETABLE_OPERATORS = ['TokyoMetro', 'Toei', 'YokohamaMunicipal', 'TWR', 'MIR', 'TamaMonorail'];
 
-export let _timetableRailways = null;
-
 export async function getTimetableRailways() {
-  if (_timetableRailways) return _timetableRailways;
+  // 🔴 #94: モジュール変数の無期限保持をやめ、cache（TTL付き）に一本化。
+  // 障害中に取得した古い路線リストを復旧後も返し続ける問題を防ぐ。
+  const cacheKey = `${cache.trainTimetable.key}:railways`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
   try {
     const res = await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: getParams(), timeout: 20000 });
     const lines = (res.data || [])
@@ -45,12 +47,12 @@ export async function getTimetableRailways() {
       })
       .map(r => r['owl:sameAs'] || r['@id'])
       .filter(Boolean);
-    _timetableRailways = lines;
+    if (lines.length > 0) cache.set(cacheKey, lines, cache.trainTimetable.ttl);
+    return lines;
   } catch (_) {
     // 🔴 取得失敗時は空リストを永続キャッシュしない（次回呼び出しで再取得を試みる）
     return [];
   }
-  return _timetableRailways;
 }
 
 export async function getTimetable(args) {
