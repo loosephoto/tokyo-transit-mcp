@@ -137,9 +137,13 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.40.0（2026-08-12）— コード監査で発見した潜在バグを修正（初期接続・APIシーケンス・キャッシュ・JSONデータ方式・イシュー#94）
+### v2.41.0（2026-08-13）— コード監査イシュー#93の潜在バグ・堅牢性・パフォーマンスを改善
 
-- **`structuredContent` に AIインテリジェントアドバイスを包含（#94）**: `jsonResponse` は従来 `ai_transit_advice` を `content[0]` のテキストブロックにのみ置き、`structuredContent` から除外していた。`structuredContent` のみを参照するMCPクライアントでAIアドバイスが失われる問題を修正（`structuredContent` にも `ai_transit_advice` を公開）
-- **統一キャッシュに期限切れ削除・上限ガードを追加（#94）**: 期限切れエントリが削除されず長期稼働でメモリが増大する問題を修正。`get` で期限切れ時に削除、`set` で上限2000件を超えたら最古エントリを削除（LRU近似）
-- **時刻表・駅名ローマ字マップの永続キャッシュをTTL付きに一本化（#94）**: `_timetableRailways` / `_stationRomanToJa` のモジュール変数がTTLなしで永続しODPT障害中の古いデータを返し続ける問題を修正。`cache`（TTL付き）に一本化
-- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・jsonResponse structuredContent 実測確認
+- **サーキットブレイカーの段階クールダウンを修正（#93）**: 従来は失敗回数ベースのため `threshold>1`（ODPT=3）では 60/120秒がオープン直前に上書きされ一度も参照されなかった。開放エピソード回数（tripCount）に応じて 60秒→120秒→180秒と単調延長する方式に修正。成功で tripCount をリセット
+- **天気取得失敗を `jmaBreaker.onFailure` に通知（#93）**: JMA API エラー時に失敗カウントが増えず `jmaBreaker` が機能しなかった問題を修正。`getWeatherAdvice` の取得失敗で必ず通知（getWeather / search-route 双方の呼び出し経路をカバー）
+- **search_route の Graceful Degradation 実装（#93）**: 気象庁・ODPT運行情報APIが遮断（サーキットブレイカー OPEN）されても、内蔵経路エンジンでルートを算出し `degraded_mode: true` で返却（従来は即 `CIRCUIT_BREAKER_OPEN` エラーで全体を中断）
+- **ダイクストラの優先度キューをMinHeap化（#93）**: 毎ループの配列ソート（O(N log N)）を二分ヒープ（O(log N)）に置換。挿入順の FIFO タイブレーク（seq）で等コスト並列ルートの選択を従来と同一に維持（「北千住→綾瀬」の経路選択を回帰テストで担保）
+- **キャッシュ上限逐出を O(1) 化（#93）**: `Object.entries` の O(N) 全走査を、Map の挿入順先頭からの O(1) 逐出（LRU近似）に変更
+- **GTFS ZIP/CSVパースをワーカースレッド化（#93）**: 最大95万行の `stop_times.txt` を含むパースを `lib/gtfs-bus-worker.mjs`（専用スレッド）で実行し、イベントループのブロックを回避
+- **強風・特別警報検出の強化（#93）**: 強風表現（「風が強く」「強い風」「強風」等）を追加し、特別警報・津波を警報・注意報の概況文（府県 JSON の text）とも突合して検出。`gtfs.mjs` の `src.date()` に関数チェックを追加
+- **検証**: `npm run build` 成功・`probe-all-lang` 26/26 PASS・`test:walk` ALL PASS・`test:bus` ALL PASS・`test:issue`（84/80/82-83/88-89-90/91-92）全PASS・新ロジック単体検証 23項目 ALL PASS

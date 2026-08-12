@@ -33,11 +33,15 @@
 
 ### 🛤️ 直近の更新内容
 
-- **初期接続・APIシーケンス・キャッシュ・JSONデータ方式のコード監査を実施し潜在バグを修正（v2.40.0・イシュー#94）**
-  - **`structuredContent` に AIインテリジェントアドバイスを包含（#94）**: `jsonResponse` は従来 `ai_transit_advice` を `content[0]` のテキストブロックにのみ置き、`structuredContent` から除外していた。MCPクライアントが `structuredContent` のみを参照する実装ではAIアドバイスが失われる問題を修正。`structuredContent` にも `ai_transit_advice` を公開
-  - **統一キャッシュに期限切れ削除・上限ガードを追加（#94）**: 従来は期限切れエントリを返却しないだけで削除せず、長期稼働でメモリが増大し続けた。`get` で期限切れ時に削除し、`set` で上限2000件を超えたら最古エントリを削除（LRU近似）
-  - **時刻表・駅名ローマ字マップの永続キャッシュをTTL付きに一本化（#94）**: `_timetableRailways` / `_stationRomanToJa` のモジュール変数はTTLなしで永続し、ODPT障害中の古いデータを復旧後も返し続けた。`cache`（TTL付き）に一本化し、期限切れ後は再取得
-  - **検証** — build PASS・probe-all-lang 26/26・jsonResponse structuredContent 実測確認（AIアドバイス包含）
+- **コード監査イシュー#93の潜在バグ・堅牢性・パフォーマンスを改善（v2.41.0）**
+  - **サーキットブレイカーの段階クールダウンを修正（#93）**: 従来は失敗回数ベースのため `threshold>1` では 60/120秒がオープン直前に上書きされ一度も参照されなかった。開放エピソード回数に応じて 60秒→120秒→180秒と単調延長する方式に修正
+  - **天気取得失敗を `jmaBreaker.onFailure` に通知（#93）**: JMA API エラー時に失敗カウントが増えず `jmaBreaker` が機能しなかった問題を修正。`getWeatherAdvice` の取得失敗で必ず通知
+  - **search_route の Graceful Degradation 実装（#93）**: 外部API（気象庁・ODPT運行情報）が遮断されても内蔵経路エンジンでルートを算出し `degraded_mode: true` で返却（従来は即エラー中断）
+  - **ダイクストラの優先度キューをMinHeap化（#93）**: 毎ループの配列ソート（O(N log N)）を二分ヒープ（O(log N)）に置換。挿入順の FIFO タイブレークで従来の経路選択と同一挙動を維持
+  - **キャッシュ上限逐出を O(1) 化（#93）**: `Object.entries` の O(N) 全走査を Map の挿入順先頭から O(1) で逐出（LRU近似）に変更
+  - **GTFS ZIP/CSVパースをワーカースレッド化（#93）**: 最大95万行の `stop_times.txt` を専用ワーカーで処理し、イベントループのブロックを回避
+  - **強風・特別警報検出の強化（#93）**: 強風表現（「風が強く」「強い風」等）を追加し、特別警報を警報・注意報の概況文とも突合。`gtfs.mjs` の `src.date()` に関数チェックを追加
+  - **検証** — build PASS・probe-all-lang 26/26・test:walk ALL PASS・test:bus ALL PASS・test:issue（84/80/82-83/88-89-90/91-92）全PASS・新ロジック単体検証 23項目 ALL PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -602,11 +606,15 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Ran a code audit of initial connection, API sequence, cache and JSON data format and fixed potential bugs (v2.40.0, issue #94)**
-  - **Included AI Intelligent Advice in `structuredContent` (#94)**: `jsonResponse` previously placed `ai_transit_advice` only in the `content[0]` text block and excluded it from `structuredContent`. Clients that read only `structuredContent` lost the advice. Now `ai_transit_advice` is also exposed in `structuredContent`
-  - **Added expiry deletion and a size cap to the unified cache (#94)**: expired entries were returned as `null` but never deleted, so long-running instances grew memory unboundedly. `get` now deletes on expiry and `set` evicts the oldest entry above a 2000-entry cap (LRU approximation)
-  - **Consolidated the persistent timetable / station-roman-to-Ja maps into TTL-backed cache (#94)**: the `_timetableRailways` / `_stationRomanToJa` module variables persisted indefinitely and kept serving stale data after an ODPT outage. They now use TTL-backed `cache` and re-fetch after expiry
-  - **Verification** — build PASS, probe-all-lang 26/26, confirmed `structuredContent` carries the AI advice at runtime
+- **Improved potential bugs, robustness and performance from code-audit issue #93 (v2.41.0)**
+  - **Fixed the circuit breaker's progressive cooldown (#93)**: previously keyed off the failure count, so with `threshold > 1` the 60s/120s values were overwritten just before opening and never used. Now the cooldown escalates monotonically (60s → 120s → 180s) by how many times the circuit has tripped (episode count)
+  - **Notify `jmaBreaker.onFailure` on weather fetch failure (#93)**: JMA API errors never increased the failure count, so `jmaBreaker` never tripped. Failures inside `getWeatherAdvice` are now always reported
+  - **Implemented graceful degradation in search_route (#93)**: when external APIs (JMA / ODPT train info) are cut off, the route is still computed by the built-in engine and returned with `degraded_mode: true` (previously the whole search errored out)
+  - **Replaced Dijkstra's priority queue with a MinHeap (#93)**: the per-iteration array sort (O(N log N)) is now a binary heap (O(log N)). An insertion-order FIFO tie-break keeps the exact same route selection as before
+  - **Made cache-cap eviction O(1) (#93)**: the O(N) scan over `Object.entries` is now an O(1) eviction of the oldest entry via Map insertion order (LRU approximation)
+  - **Moved GTFS ZIP/CSV parsing to a worker thread (#93)**: the up-to-950k-row `stop_times.txt` is processed on a dedicated worker so the event loop is no longer blocked
+  - **Strengthened strong-wind and special-warning detection (#93)**: added strong-wind phrases (「風が強く」「強い風」etc.) and cross-checked special warnings against the warning/advisory overview text. Added a function check for `src.date()` in `gtfs.mjs`
+  - **Verification** — build PASS, probe-all-lang 26/26, test:walk ALL PASS, test:bus ALL PASS, test:issue (84/80/82-83/88-89-90/91-92) all PASS, 23-item unit verification of the new logic ALL PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1133,11 +1141,15 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **对初始连接、API时序、缓存与JSON数据格式进行了代码审计，并修复潜在缺陷（v2.40.0・议题#94）**
-  - **`structuredContent` 中纳入AI智能出行建议（#94）**: `jsonResponse` 此前仅将 `ai_transit_advice` 放入 `content[0]` 文本块，未纳入 `structuredContent`。仅读取 `structuredContent` 的MCP客户端会丢失AI建议。现于 `structuredContent` 中也公开 `ai_transit_advice`
-  - **统一缓存增加过期删除与上限保护（#94）**: 过期条目此前仅返回 `null` 而不删除，长期运行导致内存持续增长。`get` 现在过期即删除，`set` 将2000条上限外的最旧条目逐出（近似LRU）
-  - **将时刻表/站名罗马字映射的持久缓存统一为带TTL的缓存（#94）**: `_timetableRailways` / `_stationRomanToJa` 模块变量无TTL长期保留，ODPT故障后仍返回旧数据。现统一为带TTL的 `cache`，过期后重新获取
-  - **验证** — build 通过・probe-all-lang 26/26・运行时实测确认 `structuredContent` 包含AI建议
+- **改善代码审计议题#93中的潜在缺陷、稳健性与性能（v2.41.0）**
+  - **修正断路器分级冷却（#93）**: 原先按失败次数计算，`threshold>1` 时 60/120 秒会在开启前被覆盖、从未生效。现按开启（trip）次数单调延长 60秒→120秒→180秒
+  - **天气获取失败时通知 `jmaBreaker.onFailure`（#93）**: JMA API 错误不会增加失败计数，导致 `jmaBreaker` 一直不生效。现 `getWeatherAdvice` 获取失败必通知
+  - **实现 search_route 的优雅降级（#93）**: 外部API（气象厅/ODPT运行信息）被切断时，仍由内置路线引擎计算路线并以 `degraded_mode: true` 返回（原先直接报错中断）
+  - **将迪杰斯特拉的优先队列改为最小堆（#93）**: 将每次循环的数组排序（O(N log N)）改为二叉堆（O(log N)），并以插入顺序的 FIFO 打破平局，保持原有路线选择一致
+  - **缓存上限逐出改为 O(1)（#93）**: 将 `Object.entries` 的 O(N) 全遍历改为按 Map 插入顺序 O(1) 逐出最旧条目（近似LRU）
+  - **将 GTFS ZIP/CSV 解析移至工作线程（#93）**: 高达95万行的 `stop_times.txt` 在专用线程处理，避免阻塞事件循环
+  - **强化强风与特别警报检测（#93）**: 增加强风表述（「风が强く」「強い风」等），特别警报与警报・注意报概況文交叉核对。`gtfs.mjs` 的 `src.date()` 增加函数检查
+  - **验证** — build 通过・probe-all-lang 26/26・test:walk ALL PASS・test:bus ALL PASS・test:issue（84/80/82-83/88-89-90/91-92）全PASS・新逻辑单测 23项 ALL PASS
 
 ### 🤖 AI 智能建议
 

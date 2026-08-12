@@ -10,7 +10,10 @@ import axios from 'axios';
 
 export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
   let lastError = null;
-  for (const d of gtfsFetchDates(src.date())) {
+  // #93: src.date が関数でない不正なオブジェクトでもクラッシュしないよう関数チェックを追加。
+  // 関数でなければ gtfsFetchDates(undefined) により「今日」の日付で取得する。
+  const fixedDate = (src && typeof src.date === 'function') ? src.date() : undefined;
+  for (const d of gtfsFetchDates(fixedDate)) {
     try {
       const res = await axios.get(src.url, { params: { date: d, 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: timeoutMs });
       return res.data;

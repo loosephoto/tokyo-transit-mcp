@@ -19,7 +19,16 @@ export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCod
   let weather, windText = '', waveText = '', isRainy = false, isHot = false, isSevere = false, isSpecial = false, isSevereWind = false, isHighWave = false, maxTemp = 0, areaRegionName = '';
   if (cached) { weather = cached.weather; windText = cached.windText || ''; waveText = cached.waveText || ''; isRainy = cached.isRainy; isHot = cached.isHot; isSevere = cached.isSevere || false; isSpecial = cached.isSpecial || false; isSevereWind = cached.isSevereWind || false; isHighWave = cached.isHighWave || false; areaRegionName = cached.areaRegionName || ''; }
   else {
-    const response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
+    // #93: JMA API 呼び出しの失敗を jmaBreaker に必ず通知する。
+    // 従来は getWeatherAdvice / search-route のどちらの呼び出し元でも例外が
+    // 握り潰されるか無視され、失敗カウントが増えず jmaBreaker が機能しなかった。
+    let response;
+    try {
+      response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
+    } catch (error) {
+      jmaBreaker.onFailure(error);
+      throw error;
+    }
     // 🔴 #93: 府県 JSON 内の一次細分区域（伊豆諸島北部等）を subAreaCode で選択。無ければ先頭区域（東京地方等）を使用。
     const allAreas = response.data[0].timeSeries[0].areas || [];
     const area = (subAreaCode && allAreas.find(a => a.area?.code === subAreaCode)) || allAreas[0];
@@ -28,8 +37,9 @@ export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCod
     windText = area.winds?.[0] || '';
     waveText = area.waves?.[0] || '';
     isRainy = weather.includes("雨") || weather.includes("雪");
-    // #89: 強風・高波・特別警報を予報文（winds/waves）から検出
-    const sev = parseSevereWeather(weather, windText, waveText);
+    // #89: 強風・高波・特別警報を予報文（winds/waves）から検出。
+    // #93: 警報・注意報の概況文（response.data[0].text）も突合して特別警報検出を強化。
+    const sev = parseSevereWeather(weather, windText, waveText, response.data[0]?.text || '');
     isSevere = sev.isSevere;      // 荒天全体（アドバイス昇格用）
     isSpecial = sev.isSpecial;    // 特別警報・津波（経路抑止用）
     isSevereWind = sev.isSevereWind;
@@ -47,14 +57,18 @@ export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCod
 }
 
 // #89: 予報文（weather/winds/waves）から強風・高波・特別警報を検出
-export function parseSevereWeather(weatherText = '', windText = '', waveText = '') {
-  const isSevereWind = /非常に強く|猛烈/.test(windText || '');
+// #93: 概況文（overviewText = 府県 JSON の text フィールド）も受け取り、特別警報・津波検出を警報・注意報情報と突合して強化。
+export function parseSevereWeather(weatherText = '', windText = '', waveText = '', overviewText = '') {
+  // #93: 強風検出表現を拡張（「風が強く」「強い風」「強風」等）。JMA 予報文で風が強まる表現を捕捉する。
+  const isSevereWind = /非常に強く|猛烈|風が強く|強い風|強風|非常に強い/.test(windText || '');
   // 🔴 JMA の waves は全角数字（「２．５メートル」）のため、半角化してから波高をパースする
   const waveNorm = (waveText || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/．/g, '.');
   const m = waveNorm.match(/(\d+(?:\.\d+)?)\s*(?:メートル|m)/g);
   const maxWave = m ? Math.max(...m.map(x => parseFloat(x))) : 0;
   const isHighWave = maxWave >= 2.5;
-  const isSpecial = /特別警報|大雨特別|大雪特別|津波/.test(weatherText || '');
+  // #93: 概況文（警報・注意報の文章）とも突合して特別警報・津波・記録的短時間大雨を検出
+  const combined = `${weatherText || ''} ${overviewText || ''}`;
+  const isSpecial = /特別警報|大雨特別|大雪特別|津波|記録的短時間大雨|暴風特別|高潮特別/.test(combined);
   return { isSevereWind, maxWave, isHighWave, isSpecial, isSevere: isSpecial || isSevereWind || isHighWave };
 }
 

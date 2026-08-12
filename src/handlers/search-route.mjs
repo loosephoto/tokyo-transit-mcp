@@ -288,6 +288,47 @@ export function resolveStation(rawName) {
   return { station: null, candidates: [], ambiguous: false, exact: false, landmark: null };
 }
 
+// #93: 二分ヒープ（MinHeap）— ダイクストラ法の優先度付きキューを配列の毎回ソート（O(N log N)）から
+// push/pop とも O(log N) に改善する。同コストなら乗換数が少ない方を優先する comparator を受け取る。
+class MinHeap {
+  constructor(compare) {
+    this.compare = compare;
+    this.a = [];
+  }
+  get length() { return this.a.length; }
+  push(v) {
+    const a = this.a;
+    a.push(v);
+    let i = a.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this.compare(a[i], a[p]) >= 0) break;
+      [a[i], a[p]] = [a[p], a[i]];
+      i = p;
+    }
+  }
+  pop() {
+    const a = this.a;
+    if (!a.length) return undefined;
+    const top = a[0];
+    const last = a.pop();
+    if (a.length) {
+      a[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = i * 2 + 1, r = l + 1;
+        let m = i;
+        if (l < a.length && this.compare(a[l], a[m]) < 0) m = l;
+        if (r < a.length && this.compare(a[r], a[m]) < 0) m = r;
+        if (m === i) break;
+        [a[i], a[m]] = [a[m], a[i]];
+        i = m;
+      }
+    }
+    return top;
+  }
+}
+
 export function findShortestPath(start, goal, options = {}) {
   const blockedLines = options.blockedLines instanceof Set ? options.blockedLines : new Set(options.blockedLines || []);
   const startNodes = (STATION_TO_LINES[start] || []).map(e => `${start}@${e.line}`);
@@ -309,17 +350,21 @@ const betterThan = (a, b) => {
   const best = {};
   const prev = {};
   const visited = new Set();
-  const pq = [];
+  // #93: 配列の全体ソート（O(N log N)）を二分ヒープ（MinHeap）で置換し、ダイクストラを高速化。
+  // 元の安定ソート＋shift（FIFO）と同一のタイブレークを再現するため、挿入順序 seq で
+  // コスト・乗換数が完全に等しいエントリは挿入の古い順（FIFO）に pop する。
+  // （これにより「北千住→綾瀬」のような等コスト並列ルートの選択が従来どおりになる）
+  let seq = 0;
+  const pq = new MinHeap((a, b) => costOf(a) - costOf(b) || a.transfers - b.transfers || a.seq - b.seq);
   for (const n of startNodes) {
     if (!blockedLines.has(n.split('@')[1])) {
       best[n] = { transfers: 0, dist: 0 };
-      pq.push({ node: n, transfers: 0, dist: 0 });
+      pq.push({ node: n, transfers: 0, dist: 0, seq: seq++ });
     }
   }
   let bestGoal = null; // { transfers, dist, node }
   while (pq.length) {
-    pq.sort((a, b) => costOf(a) - costOf(b) || a.transfers - b.transfers);
-    const { node, transfers, dist } = pq.shift();
+    const { node, transfers, dist } = pq.pop();
     // 確定的打ち切り: 既に見つけたゴール解が、これから pop する全ノードより優秀なら終了
     if (bestGoal && !betterThan({ transfers, dist }, bestGoal)) break;
     if (visited.has(node)) continue;
@@ -339,7 +384,7 @@ const betterThan = (a, b) => {
       if (!cur || betterThan({ transfers: nTransfers, dist: nDist }, cur)) {
         best[next] = { transfers: nTransfers, dist: nDist };
         prev[next] = node;
-        pq.push({ node: next, transfers: nTransfers, dist: nDist });
+        pq.push({ node: next, transfers: nTransfers, dist: nDist, seq: seq++ });
       }
     }
   }
@@ -813,7 +858,15 @@ export async function searchRoute(args) {
       isSevereWind = w.isSevereWind || w.isHighWave || false;
       isHot = w.isHot || false;
     } else if (weatherResult.status === 'fulfilled' && weatherResult.value?.error === 'CIRCUIT_OPEN') {
-      return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, from: fromName, to: toName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
+      // #93: 気象庁APIが遮断（OPEN）されても内蔵経路エンジンでルート算出を継続する（Graceful Degradation）。
+      // 従来は即座にエラー応答で全体を中断していたが、自己完結型グラフ探索の強みを活かし
+      // degraded_mode フラグ付きで結果を返し、天気情報のみ取得不可であることを明示する。
+      apiDegraded = true;
+      weatherText = userLang === 'en'
+        ? 'Weather info unavailable (JMA API offline).'
+        : userLang === 'zh'
+          ? '天气信息不可用（气象厅API离线）。'
+          : '天気情報を取得できませんでした（気象庁API利用不可）。';
     } else { apiDegraded = true; } // 天気API取得失敗
     if (trainResult.status === 'fulfilled' && trainResult.value && !trainResult.value.error) {
       const t = trainResult.value;
@@ -821,7 +874,9 @@ export async function searchRoute(args) {
       if (t.delays.length > 0) { isTrainSuspended = true; delayMessage = `🚨 ${t.delays[0].railway.replace('odpt:Railway:', '')}: ${translateTrainInfoDetail(t.delays[0].text, userLang)}`; }
       if (t.busTransfer && !delayMessage) delayMessage = `🚨 ${translateTrainInfoDetail(t.busTransferDetail, userLang)}`;
     } else if (trainResult.status === 'fulfilled' && trainResult.value?.error === 'CIRCUIT_OPEN') {
-      return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, from: fromName, to: toName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
+      // #93: 運行情報APIが遮断（OPEN）されても内蔵経路エンジンでルート算出を継続する（Graceful Degradation）。
+      // 従来は即座にエラー応答で全体を中断していたが、degraded_mode フラグ付きで結果を返す。
+      apiDegraded = true;
     } else { apiDegraded = true; } // 運行情報API取得失敗
   }
 

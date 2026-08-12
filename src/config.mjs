@@ -43,6 +43,7 @@ class CircuitBreaker {
     this.cooldownPeriod = cooldownPeriod;
     this.state = 'CLOSED';
     this.failureCount = 0;
+    this.tripCount = 0; // サーキットを開放した累積エピソード数（#93: 段階的クールダウン用）
     this.lastStateChanged = Date.now();
   }
 
@@ -59,6 +60,7 @@ class CircuitBreaker {
 
   onSuccess() {
     this.failureCount = 0;
+    this.tripCount = 0; // 完全回復で段階クールダウンをリセット
     this.cooldownPeriod = this.baseCooldown;
     this.setState('CLOSED');
   }
@@ -66,12 +68,16 @@ class CircuitBreaker {
   onFailure(error) {
     this.failureCount++;
     if (this.state === 'HALF-OPEN' || this.failureCount >= this.failureThreshold) {
+      // #93 修正: 段階的クールダウンは「サーキットを開放したエピソード回数」に応じて
+      // 60秒→120秒→180秒と単調に延長する。従来は failureCount ベースだったため、
+      // threshold>1 ではオープン直前に 60/120秒の値が上書きされ一度も参照されなかった。
+      // エピソード方式にすることで全段階の値が実際に利用される。
+      this.tripCount++;
+      if (this.tripCount === 1) this.cooldownPeriod = 60000;
+      else if (this.tripCount === 2) this.cooldownPeriod = 120000;
+      else this.cooldownPeriod = 180000;
       this.setState('OPEN');
     }
-    // 段階的クールダウン: 1回目60秒、2回目120秒、3回目以降180秒
-    if (this.failureCount === 1) this.cooldownPeriod = 60000;
-    else if (this.failureCount === 2) this.cooldownPeriod = 120000;
-    else this.cooldownPeriod = 180000;
   }
 
   setState(newState) {
@@ -94,23 +100,21 @@ const jmaBreaker = new CircuitBreaker('JMA_API_BREAKER', 2, 120000);
 // ==========================================
 const CACHE_MAX_ENTRIES = 2000; // メモリリーク防止: 上限を超えたら最も古いエントリを削除
 const cache = {
-  _store: {},
+  _store: new Map(),
   get(key) {
-    const c = this._store[key];
-    if (!c) return null;
-    if (Date.now() - c.ts >= c.ttl) { delete this._store[key]; return null; }
+    const c = this._store.get(key);
+    if (c === undefined) return null;
+    if (Date.now() - c.ts >= c.ttl) { this._store.delete(key); return null; }
     return c.data;
   },
   set(key, data, ttlMs) {
-    // 上限超過時は最も古いエントリを1つ削除（LRU近似）
-    if (!(key in this._store) && Object.keys(this._store).length >= CACHE_MAX_ENTRIES) {
-      let oldestKey = null, oldestTs = Infinity;
-      for (const [k, v] of Object.entries(this._store)) {
-        if (v.ts < oldestTs) { oldestTs = v.ts; oldestKey = k; }
-      }
-      if (oldestKey !== null) delete this._store[oldestKey];
+    // #93: 上限超過時は最古エントリ（挿入順の先頭）を O(1) で逐出（LRU近似）。
+    // 従来は Object.entries の O(N) 全走査で最古を探していた。
+    if (!this._store.has(key) && this._store.size >= CACHE_MAX_ENTRIES) {
+      const oldestKey = this._store.keys().next().value;
+      if (oldestKey !== undefined) this._store.delete(oldestKey);
     }
-    this._store[key] = { data, ts: Date.now(), ttl: ttlMs };
+    this._store.set(key, { data, ts: Date.now(), ttl: ttlMs });
   },
   // 個別キャッシュ定義
   bikeShare: { key: 'bike_share', ttl: 30000 },

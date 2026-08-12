@@ -14,7 +14,6 @@ import { getParams, jsonResponse, buildErrorResponse, handleApiError, buildGovFa
 import { getDisplayStationName, getCommunityBusDisplayName, getCommunityBusStopDisplayName,
          resolveLang, detectLanguage, translateTrainInfoDetail } from '../lib/lang.mjs';
 import { haversineDistance, haversineM } from '../lib/geo.mjs';
-import { parseCsvRecords } from '../lib/csv.mjs';
 import { fetchGtfsZipBuffer } from '../lib/gtfs.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
@@ -181,98 +180,26 @@ export async function fetchAllBuses(userLang) {
     //    起終点（先頭/末尾の stop_sequence）だけを取得する（searchBus は停名/系統検索が主目的）。
     try {
       const zipBuf = await fetchGtfsZipBuffer(src, 20000);
-      const AdmZip = (await import('adm-zip')).default;
-      const zip = new AdmZip(Buffer.from(zipBuf));
-      const parseCsv = (entryName) => {
-        const e = zip.getEntry(entryName);
-        if (!e) return [];
-        const records = parseCsvRecords(e.getData().toString('utf8'));
-        if (!records.length) return [];
-        const headers = records[0];
-        return records.slice(1).map(values => {
-          const obj = {};
-          headers.forEach((h, i) => { obj[h] = values[i] || ''; });
-          return obj;
-        });
-      };
-      // 1) stops.txt → stop_id → stop_name（1回だけパース）
-      const stopRows = parseCsv('stops.txt');
-      const stopNameById = new Map();
-      for (const s of stopRows) if (s.stop_id) stopNameById.set(s.stop_id, s.stop_name || s.stop_id);
-      // 2) trips.txt → route_id の代表 trip_id（先頭1件のみ・1回だけパース）
-      const tripRows = parseCsv('trips.txt');
-      const firstTripByRoute = new Map();
-      for (const t of tripRows) {
-        if (t.route_id && !firstTripByRoute.has(t.route_id)) firstTripByRoute.set(t.route_id, t.trip_id);
-      }
-      // 3) stop_times.txt → 代表 trip の起終点 stop（先頭/末尾の stop_sequence のみ抽出・1回だけパース）
-      const endpointByTrip = new Map(); // trip_id -> { first: stop_id, last: stop_id }
-      {
-        const wanted = new Set(firstTripByRoute.values());
-        let seq = new Map(); // trip_id -> [stop_id, maxSeq]
-        const e = zip.getEntry('stop_times.txt');
-        if (e) {
-          const records = parseCsvRecords(e.getData().toString('utf8'));
-          if (records.length) {
-            const headers = records[0] || [];
-            const ti = headers.indexOf('trip_id'), si = headers.indexOf('stop_id'), qi = headers.indexOf('stop_sequence');
-            for (const vals of records.slice(1)) {
-              const tid = vals[ti], sid = vals[si], q = Number(vals[qi] || 0);
-              if (!wanted.has(tid)) continue;
-              const cur = seq.get(tid);
-              if (!cur) seq.set(tid, [sid, sid, q, q]);
-              else {
-                if (q < cur[2]) cur[0] = sid, cur[2] = q;
-                if (q > cur[3]) cur[1] = sid, cur[3] = q;
-              }
-            }
+      // #93: GTFS ZIP 解凍＋CSV パース（stop_times.txt は最大95万行）は専用ワーカースレッドで実行し、
+      // メインスレッド（イベントループ）のブロックを回避する。従来は同期パースの間、
+      // 他の MCP リクエストに応答できない状態だった。
+      const { Worker } = await import('node:worker_threads');
+      const workerRecords = await new Promise((resolve, reject) => {
+        const worker = new Worker(new URL('../lib/gtfs-bus-worker.mjs', import.meta.url), {
+          workerData: {
+            zipBuf,
+            src: { operatorId: src.operatorId, label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website, name: src.name }
           }
-        }
-        for (const [tid, v] of seq) endpointByTrip.set(tid, { first: v[0], last: v[1] });
-      }
-      const seen = new Set();
-      // 4) 停名レコード（stops.txt）
-      for (const s of stopRows) {
-        const name = s.stop_name || s.stop_id || '';
-        if (!name || seen.has(name)) continue;
-        seen.add(name);
-        merged.push({
-          'odpt:note': name,
-          'odpt:busroute': `${src.operatorId}:stop:${s.stop_id}`,
-          'odpt:busNumber': '',
-          'odpt:frequency': '',
-          'odpt:operator': `odpt.Operator:${src.operatorId}`,
-          _operatorId: src.operatorId,
-          _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
-          _searchKeys: [name],
-          _displayNote: name,
-          _gtfsSource: src.name
         });
-      }
-      // 5) 系統レコード（routes.txt）: 起終点を「起点 → 終点」形式で合成
-      for (const r of parseCsv('routes.txt')) {
-        const shortName = r.route_short_name || r.route_long_name || r.route_id || '';
-        const tripId = firstTripByRoute.get(r.route_id);
-        const ep = tripId ? endpointByTrip.get(tripId) : null;
-        const origin = ep ? (stopNameById.get(ep.first) || ep.first) : '';
-        const dest = ep ? (stopNameById.get(ep.last) || ep.last) : '';
-        const note = (origin && dest) ? `${origin} → ${dest}` : shortName;
-        if (seen.has(note)) continue;
-        seen.add(note);
-        merged.push({
-          'odpt:note': note,
-          'odpt:busroute': `${src.operatorId}:route:${r.route_id}`,
-          'odpt:busNumber': shortName,
-          'odpt:frequency': '',
-          'odpt:operator': `odpt.Operator:${src.operatorId}`,
-          _operatorId: src.operatorId,
-          _operatorLabel: { label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website },
-          _searchKeys: [shortName, note, origin, dest].filter(Boolean),
-          _displayNote: note,
-          _gtfsSource: src.name
+        worker.once('message', (m) => {
+          worker.terminate();
+          if (m && m.error) reject(new Error(m.error));
+          else resolve((m && m.records) || []);
         });
-      }
-      console.log(`[Bus] ${src.name}: GTFS loaded (${seen.size} 停名・系統)`);
+        worker.once('error', (e) => { worker.terminate(); reject(e); });
+      });
+      for (const r of workerRecords) merged.push(r);
+      console.log(`[Bus] ${src.name}: GTFS loaded (${workerRecords.length} 停名・系統)`);
       odptBreaker.onSuccess();
       hcCount++;
     } catch (e) {
