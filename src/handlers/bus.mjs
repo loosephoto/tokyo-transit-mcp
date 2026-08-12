@@ -15,6 +15,7 @@ import { getDisplayStationName, getCommunityBusDisplayName, getCommunityBusStopD
          resolveLang, detectLanguage, translateTrainInfoDetail } from '../lib/lang.mjs';
 import { haversineDistance, haversineM } from '../lib/geo.mjs';
 import { parseCsvRecords } from '../lib/csv.mjs';
+import { fetchGtfsZipBuffer } from '../lib/gtfs.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import { getWeatherAdvice } from '../advice/weather.mjs';
@@ -275,7 +276,8 @@ export async function fetchAllBuses(userLang) {
       odptBreaker.onSuccess();
       hcCount++;
     } catch (e) {
-      console.log(`[Bus] ${src.name}: GTFS skip (${e.message})`);
+      const httpStatus = e?.response?.status ?? (e?.code || '');
+      console.log(`[Bus] ${src.name}: GTFS skip (${e.message})${httpStatus ? ` [HTTP ${httpStatus}]` : ''}`);
       odptBreaker.onFailure(e);
     }
   }

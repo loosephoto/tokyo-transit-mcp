@@ -33,9 +33,10 @@
 
 ### 🛤️ 直近の更新内容
 
-- **フェリーの -test 荒天シミュレーションを修正（v2.39.8・イシュー#90）**
-  - **-test 台風・高波・荒天で強風・高波ゲートを強制発動**: `search_ferry` の `-test 台風/高波/荒天/強風`（typhoon / ferry_rough_seas）は、実天気が平穏でも強風・高波ゲートをシミュレーションして運航見合わせを返すよう修正（従来は実天気が平穏だと水上バス等が通常航路を返した）
-  - **検証** — build PASS・probe-all-lang 26/26・test-issue-88-89-90 62/62 全PASS
+- **ODPT静的GTFS取得と駅情報フォールバックの import 不具合を修正（v2.39.9・イシュー#91/#92）**
+  - **get_station_info の内蔵グラフフォールバックを有効化（#91）**: `STATION_TO_LINES` の import 漏れによる ReferenceError を修正。ODPT未収録駅（JR・私鉄の大部分）は `source: internal_graph_fallback` で所属路線を返し、実在しない駅名は STATION_NOT_FOUND（従来は内部エラーが NETWORK_ERROR に化けて再試行を促した）
+  - **search_bus の ODPT静的GTFS 5社を有効化（#92）**: `fetchGtfsZipBuffer` を `lib/gtfs.mjs` へ切り出し import 漏れを解消。川崎市バス・川崎鶴見臨港バス・関東バス・西東京バス・京成バス千葉ウエストの実GTFSが検索・乗り継ぎグラフに反映される。GTFS取得失敗時はHTTPステータスをログに明示
+  - **検証** — build PASS・probe-all-lang 26/26・test-issue-91-92 23/23・test:walk・test:bus 全PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -600,9 +601,10 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Ferry -test severe-weather simulation fixed (v2.39.8, issue #90)**
-  - **Forced severe-weather gate on -test typhoon/high-wave/storm**: `search_ferry`'s `-test 台風/高波/荒天/強風` (typhoon / ferry_rough_seas) now simulates the severe-wind/high-wave gate and returns a suspension advisory even when the live weather is calm (previously a calm live weather returned a normal route for water buses, etc.)
-  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-88-89-90 62/62 all PASS
+- **Fixed ODPT static GTFS fetch and station-info fallback import issues (v2.39.9, issues #91/#92)**
+  - **Enabled get_station_info internal-graph fallback (#91)**: Fixed a ReferenceError from a missing `STATION_TO_LINES` import. Stations not in the ODPT dataset (most JR/private-railway stations) now return their lines via `source: internal_graph_fallback`; non-existent station names return STATION_NOT_FOUND (previously an internal error masqueraded as NETWORK_ERROR and prompted pointless retries)
+  - **Enabled 5 ODPT static-GTFS bus operators in search_bus (#92)**: Extracted `fetchGtfsZipBuffer` into `lib/gtfs.mjs` to fix the missing import. The live GTFS of Kawasaki City Bus, Kawasaki Tsurumi Rinko Bus, Kanto Bus, Nishi-Tokyo Bus and Keisei Bus Chiba-West now feed the bus-stop search and transfer graph. GTFS fetch failures now log the HTTP status explicitly
+  - **Verification** — build PASS, probe-all-lang 26/26, test-issue-91-92 23/23, test:walk and test:bus all PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1129,9 +1131,10 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复轮渡 -test 恶劣天气模拟（v2.39.8・议题#90）**
-  - **在 -test 台风・大浪・恶劣天气时强制触发强风・大浪门控**: `search_ferry` 的 `-test 台风/大浪/恶劣天气/强风`（typhoon / ferry_rough_seas）现在即使实际天气平稳也模拟强风・大浪门控并返回停航提示（此前实际天气平稳时水上巴士等会返回正常航线）
-  - **验证** — build 通过・probe-all-lang 26/26・test-issue-88-89-90 62/62 全部通过
+- **修复 ODPT 静态GTFS获取与车站信息回退的 import 缺陷（v2.39.9・议题#91/#92）**
+  - **启用 get_station_info 内置路线图回退（#91）**: 修复 `STATION_TO_LINES` 未导入导致的 ReferenceError。ODPT 未收录的车站（JR・大部分私铁）通过 `source: internal_graph_fallback` 返回所属路线；不存在的站名返回 STATION_NOT_FOUND（此前内部错误被误判为 NETWORK_ERROR 并促使无谓重试）
+  - **启用 search_bus 的 5 家 ODPT 静态GTFS巴士运营商（#92）**: 将 `fetchGtfsZipBuffer` 抽取到 `lib/gtfs.mjs` 以修复未导入问题。川崎市巴士・川崎鹤见临港巴士・关东巴士・西东京巴士・京成巴士千叶西的实时GTFS已纳入巴士站搜索与换乘图。GTFS 获取失败时会在日志中明确显示 HTTP 状态
+  - **验证** — build 通过・probe-all-lang 26/26・test-issue-91-92 23/23・test:walk・test:bus 全部通过
 
 ### 🤖 AI 智能建议
 

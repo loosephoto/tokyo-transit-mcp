@@ -9,7 +9,7 @@ import { RAILWAY_LINES } from '../data/railway-lines.mjs';
 import { TOKYO_COMMUNITY_BUSES } from '../data/bus-routes.mjs';
 import { getParams, jsonResponse, buildErrorResponse, handleApiError, buildGovFacilitySearchSupport } from '../lib/common.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName, getLineDisplayName, getDisplayLineName } from '../lib/lang.mjs';
-import { normalizeStationName, resolveStation, getStationRomanToJa, getDestinationCulturalFacilities } from './search-route.mjs';
+import { normalizeStationName, resolveStation, getStationRomanToJa, getDestinationCulturalFacilities, STATION_TO_LINES } from './search-route.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import axios from 'axios';
@@ -66,7 +66,7 @@ export async function getStationInfo(args) {
         });
       }
       const msg = userLang === 'en' ? `No station info found for ${displayStation}.` : userLang === 'zh' ? `未找到 ${displayStation} 的车站信息。` : '駅情報が見つかりませんでした。';
-      return jsonResponse(buildErrorResponse('PARSE_ERROR', msg, { userLang, station: displayStation }));
+      return jsonResponse(buildErrorResponse('STATION_NOT_FOUND', msg, { userLang, station: displayStation }));
     }
     return jsonResponse({
       status: "SUCCESS",

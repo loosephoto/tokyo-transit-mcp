@@ -8,22 +8,12 @@ import { MULTILINGUAL_ADVICE } from '../data/misc.mjs';
 import { getParams, jsonResponse, buildErrorResponse } from '../lib/common.mjs';
 import { parseCsvRecords } from '../lib/csv.mjs';
 import { gtfsFetchDates, normalizeOvernightTime } from '../lib/time.mjs';
+import { fetchGtfsZipBuffer } from '../lib/gtfs.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName, translateWeather } from '../lib/lang.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse, buildEarthquakeTransportSafety, getGroundEmergencyShelters } from '../advice/earthquake.mjs';
 import { getWeatherAdvice, stationToJmaArea, placeToSubarea } from '../advice/weather.mjs';
 import axios from 'axios';
-
-export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
-  let lastError = null;
-  for (const d of gtfsFetchDates(src.date())) {
-    try {
-      const res = await axios.get(src.url, { params: { date: d, 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: timeoutMs });
-      return res.data;
-    } catch (e) { lastError = e; }
-  }
-  throw lastError;
-}
 
 export async function fetchFerryData() {
   const cached = cache.get(cache.ferryGtfs.key);

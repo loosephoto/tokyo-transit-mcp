@@ -128,8 +128,15 @@ export function handleApiError(error, details = {}) {
   if (isRateLimitError(error)) {
     return jsonResponse(buildErrorResponse('API_TIMEOUT', 'APIレート制限に達しました。しばらく待ってから再試行してください。', { ...details, retryable: true }));
   }
-  const errType = error.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'NETWORK_ERROR';
-  return jsonResponse(buildErrorResponse(errType, error.message || 'APIエラー', details));
+  // プログラム内部エラー（ReferenceError/TypeError/RangeError/SyntaxError 等）は、ネットワーク起因の
+  // 一時障害ではなく実装バグの可能性が高いため、NETWORK_ERROR に化けさせず UNKNOWN_ERROR
+  // （retryable:false）として分類する。再試行を促す誤診断（#91）を防ぐ。
+  const isInternal = error instanceof ReferenceError || error instanceof TypeError
+    || error instanceof RangeError || error instanceof SyntaxError
+    || (error instanceof Error && /is not (defined|a function)|undefined is not an object/.test(error.message));
+  const errType = isInternal ? 'UNKNOWN_ERROR'
+    : error.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'NETWORK_ERROR';
+  return jsonResponse(buildErrorResponse(errType, error.message || 'APIエラー', { ...details, internal: isInternal }));
 }
 
 
