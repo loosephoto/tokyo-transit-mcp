@@ -63,6 +63,18 @@ export function buildErrorResponse(errorType, errorMessage, details = {}) {
         en: ["Multiple bus stops matched, so the search was paused.", "Please pick the correct bus stop from the candidates and retry."],
         zh: ["匹配到多个公交站，已暂停搜索。", "请从候补中选择正确的公交站后重试。"] },
       suggestionKey: "AMBIGUOUS_BUS_STOP" },
+    API_AUTH_ERROR: { httpCode: 502, retryable: false,
+      suggestions: {
+        ja: ["交通APIの認証に失敗しました。APIキーを確認してください。"],
+        en: ["Transit API authentication failed. Please check the API key."],
+        zh: ["交通API认证失败，请检查API密钥。"] },
+      suggestionKey: "API_AUTH" },
+    API_SERVER_ERROR: { httpCode: 502, retryable: true,
+      suggestions: {
+        ja: ["交通APIサーバーで障害が発生しています。しばらくして再試行してください。"],
+        en: ["The transit API server is unavailable. Please try again later."],
+        zh: ["交通API服务器发生故障，请稍后重试。"] },
+      suggestionKey: "API_SERVER" },
     UNKNOWN_ERROR: { httpCode: 500, retryable: false,
       suggestions: {
         ja: ["予期しないエラーが発生しました。", "もう一度お試しいただくか、管理者にお問い合わせください。"],
@@ -91,6 +103,8 @@ export function buildErrorResponse(errorType, errorMessage, details = {}) {
   if (details.area) response.area = details.area;
   if (details.breakerName) response.breaker_name = details.breakerName;
   if (details.breakerState) response.breaker_state = details.breakerState;
+  if (details.http_status !== undefined) response.http_status = details.http_status;
+  if (details.internal !== undefined) response.internal = details.internal;
   if (details.disambiguation) response.disambiguation = details.disambiguation;
   return response;
 }
@@ -135,9 +149,13 @@ export function handleApiError(error, details = {}) {
   const isInternal = error instanceof ReferenceError || error instanceof TypeError
     || error instanceof RangeError || error instanceof SyntaxError
     || (error instanceof Error && /is not (defined|a function)|undefined is not an object/.test(error.message));
+  const status = error?.response?.status;
   const errType = isInternal ? 'UNKNOWN_ERROR'
-    : error.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'NETWORK_ERROR';
-  return jsonResponse(buildErrorResponse(errType, error.message || 'APIエラー', { ...details, internal: isInternal }));
+    : error.code === 'ECONNABORTED' ? 'API_TIMEOUT'
+    : status === 401 || status === 403 ? 'API_AUTH_ERROR'
+    : status >= 500 ? 'API_SERVER_ERROR'
+    : 'NETWORK_ERROR';
+  return jsonResponse(buildErrorResponse(errType, error.message || 'APIエラー', { ...details, internal: isInternal, http_status: status }));
 }
 
 

@@ -33,11 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **コミュニティバス案内を目的地（降車駅）基準に改善（v2.42.0）**
-  - **コミュニティバスを目的地のみに変更**: 出発駅側の足（駅までの足）を表示せず、降車後の足（ラストマイル）として目的地＝降車駅のコミュニティバスだけを案内
-  - **バス停案内を目的地基準に統一**: `station_bus_stops`（バス停を地図で確認）の表示対象を出発駅から目的地（降車駅）に変更し、見出し・文言も「目的地駅周辺バス停」「降車後の出口・バス停」に統一
-  - **バスデータのない目的地でもバス停案内を常に表示**: コミュニティバス登録・振替輸送の有無に関わらず、目的地では降車後の足としてバス停を地図で確認できる表示を提供（basis=`destination`）
-  - **検証** — build PASS・test-contextual-display-routines 全項目 PASS（コミュニティバス目的地化・バス無し駅 の回帰テスト追加、gov_facility_search_support テストを現行仕様 v2.36.3 に修正）
+- **コード監査で発見した交通API障害・曖昧検索・キャッシュの不都合を修正（v2.42.1）**
+  - **時刻表API障害の誤判定を修正**: ODPTの路線一覧取得失敗を `NO_DATA` として返さず、サーキットブレーカーへ通知してAPIエラーとして扱うよう改善
+  - **バス停の曖昧検索を停止**: 複数事業者・地域の候補が一致した場合、先頭候補を自動採用せず `AMBIGUOUS_BUS_STOP` と候補一覧を返すよう変更
+  - **キャッシュを真のLRU化**: 参照されたエントリを最新として扱い、容量超過時の不要な再取得を抑制
+  - **APIエラー分類を細分化**: 認証失敗（401/403）、サーバー障害（5xx）、タイムアウト、内部エラーを区別して構造化レスポンスに反映
+  - **検証** — 全対象モジュール `node --check`、修正回帰テスト、実データによるルート・バス停・時刻表スモークテスト、`git diff --check` が PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -602,15 +603,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Improved potential bugs, robustness and performance from code-audit issue #93 (v2.41.0)**
-  - **Fixed the circuit breaker's progressive cooldown (#93)**: previously keyed off the failure count, so with `threshold > 1` the 60s/120s values were overwritten just before opening and never used. Now the cooldown escalates monotonically (60s → 120s → 180s) by how many times the circuit has tripped (episode count)
-  - **Notify `jmaBreaker.onFailure` on weather fetch failure (#93)**: JMA API errors never increased the failure count, so `jmaBreaker` never tripped. Failures inside `getWeatherAdvice` are now always reported
-  - **Implemented graceful degradation in search_route (#93)**: when external APIs (JMA / ODPT train info) are cut off, the route is still computed by the built-in engine and returned with `degraded_mode: true` (previously the whole search errored out)
-  - **Replaced Dijkstra's priority queue with a MinHeap (#93)**: the per-iteration array sort (O(N log N)) is now a binary heap (O(log N)). An insertion-order FIFO tie-break keeps the exact same route selection as before
-  - **Made cache-cap eviction O(1) (#93)**: the O(N) scan over `Object.entries` is now an O(1) eviction of the oldest entry via Map insertion order (LRU approximation)
-  - **Moved GTFS ZIP/CSV parsing to a worker thread (#93)**: the up-to-950k-row `stop_times.txt` is processed on a dedicated worker so the event loop is no longer blocked
-  - **Strengthened strong-wind and special-warning detection (#93)**: added strong-wind phrases (「風が強く」「強い風」etc.) and cross-checked special warnings against the warning/advisory overview text. Added a function check for `src.date()` in `gtfs.mjs`
-  - **Verification** — build PASS, probe-all-lang 26/26, test:walk ALL PASS, test:bus ALL PASS, test:issue (84/80/82-83/88-89-90/91-92) all PASS, 23-item unit verification of the new logic ALL PASS
+- **Fixed transit API failure handling, ambiguous bus-stop search, and cache behavior found in the code audit (v2.42.1)**
+  - **Fixed timetable API failure classification**: failures while loading ODPT railway data are no longer reported as `NO_DATA`; they notify the circuit breaker and remain API errors
+  - **Paused ambiguous bus-stop searches**: matches spanning multiple operators or areas now return `AMBIGUOUS_BUS_STOP` with candidates instead of silently selecting the first result
+  - **Made the cache a true LRU**: accessed entries are marked as recently used, reducing unnecessary refetches when the cache reaches its limit
+  - **Improved API error classification**: authentication failures (401/403), server failures (5xx), timeouts, and internal errors are distinguished in structured responses
+  - **Verification** — `node --check` for all changed modules, regression tests, live route/bus-stop/timetable smoke tests, and `git diff --check` PASS
 
 ### 🤖 AI Intelligent Advice
 

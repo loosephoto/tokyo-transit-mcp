@@ -49,9 +49,10 @@ export async function getTimetableRailways() {
       .filter(Boolean);
     if (lines.length > 0) cache.set(cacheKey, lines, cache.trainTimetable.ttl);
     return lines;
-  } catch (_) {
-    // 🔴 取得失敗時は空リストを永続キャッシュしない（次回呼び出しで再取得を試みる）
-    return [];
+  } catch (error) {
+    // API障害を「対象路線なし」と誤認させない。
+    odptBreaker.onFailure(error);
+    throw error;
   }
 }
 

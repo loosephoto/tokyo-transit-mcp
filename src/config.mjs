@@ -105,6 +105,9 @@ const cache = {
     const c = this._store.get(key);
     if (c === undefined) return null;
     if (Date.now() - c.ts >= c.ttl) { this._store.delete(key); return null; }
+    // 参照されたエントリを末尾へ移動し、容量超過時に真のLRUとして扱う。
+    this._store.delete(key);
+    this._store.set(key, c);
     return c.data;
   },
   set(key, data, ttlMs) {

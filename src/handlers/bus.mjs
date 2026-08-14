@@ -1293,6 +1293,27 @@ export async function searchBus(args) {
       return aStation - bStation;
     });
     const matched = matchedPrefixSorted.length > 0 ? matchedPrefixSorted : matchedAll;
+    // 一意に解決できないバス停は先頭候補を勝手に採用しない。
+    // 同一停名が複数事業者・地域に存在する場合は、候補を返して再入力を促す。
+    const matchedNames = [...new Set(matched.map(b => b['odpt:note'] || b._displayNote).filter(Boolean))];
+    const matchedOperators = [...new Set(matched.map(b => b._operatorId).filter(Boolean))];
+    // 同じ停留所名が複数レコードに現れるのは、同一事業者の別系統が
+    // 同じ停留所を共有している場合がある。その場合は曖昧扱いにしない。
+    if (matchedNames.length > 1 && matchedOperators.length > 1) {
+      const label = userLang === 'en' ? 'Multiple bus stops match the input. Please choose one.'
+        : userLang === 'zh' ? '有多个公交站符合输入，请选择一个。'
+        : '複数のバス停が一致しました。候補を選択してください。';
+      return jsonResponse({
+        status: 'ERROR', error_type: 'AMBIGUOUS_BUS_STOP', error_code: 400,
+        retryable: false, detected_language: userLang, busstop: busstopName,
+        message: label,
+        disambiguation: {
+          input: busstopName,
+          candidates: matchedNames.slice(0, 20).map(name => getDisplayStationName(name, userLang))
+        },
+        data_source: dataSourceNote, fallback_url: 'https://www.kotsu.metro.tokyo.jp/bus/'
+      });
+    }
     // 🔴 0件時の案内改善: 入力に部分一致する実在バス停を類似候補として提示
     // （例: 「合羽橋」→「合羽坂下」「浅草」→「浅草雷門」等）。
     // ODPT に同名バス停が無い場合でも、最寄りの実在バス停名を教えることで
