@@ -47,22 +47,22 @@ export const BUS_OPERATORS = [
 ];
 
 export const TOKYO_COMMUNITY_BUSES = [
-  { municipality: '荒川区', name: 'さくら・汐入さくら', url: 'https://www.city.arakawa.tokyo.jp/kurashi/koutsu_bus/kotsu/index.html' },
+  { municipality: '荒川区', name: 'さくら', url: 'https://www.city.arakawa.tokyo.jp/a040/koutsuu-bus/komyuniteibasu/sakura.html' },
   { municipality: '足立区', name: 'はるかぜ', url: 'https://www.city.adachi.tokyo.jp/machi/kotsu/index.html' },
-  { municipality: '昭島市', name: 'Ａバス', url: 'http://www.city.akishima.lg.jp/030/130/index.html' },
+  { municipality: '昭島市', name: 'Ａバス', url: 'https://www.city.akishima.lg.jp/kurashi/bus/1002242/index.html' },
   { municipality: 'あきる野市', name: 'るのバス', url: 'http://www.city.akiruno.tokyo.jp/category/1-9-5-0-0.html' },
   { municipality: '板橋区', name: 'りんりん号', url: 'http://www.city.itabashi.tokyo.jp/c_kurashi/026/026518.html' },
-  { municipality: '稲城市', name: 'ｉバス', url: 'https://www.city.inagi.tokyo.jp/kurashi/bus/ai_bus/index.html' },
+  { municipality: '稲城市', name: 'ｉバス', url: 'https://www.city.inagi.tokyo.jp/kurashi/koutsuu/1002846/1002848/index.html' },
   { municipality: '大田区', name: 'たまちゃんバス', url: 'http://www.city.ota.tokyo.jp/seikatsu/sumaimachinami/koutsu/communitybusdounyu/communitybus_shikou.html' },
   { municipality: '北区', name: 'Ｋバス', url: 'http://www.city.kita.tokyo.jp/kurashi/bus/index.html' },
   { municipality: '清瀬市', name: 'きよバス', url: 'http://www.city.kiyose.lg.jp/050/060/010/index.html' },
-  { municipality: '国立市', name: 'くにっこ', url: 'http://www.city.kunitachi.tokyo.jp/machi/traffic/traffic3/traffic7/index.html' },
+  { municipality: '国立市', name: 'くにっこ', url: 'https://www.city.kunitachi.tokyo.jp/kurashi/kotsu/3/1/index.html' },
   { municipality: '江東区', name: 'しおかぜ', url: 'http://www.city.koto.lg.jp/470801/kurashi/kotsu/kokyo/13116.html' },
   { municipality: '小金井市', name: 'ＣｏＣｏバス', url: 'https://www.city.koganei.lg.jp/smph/kurashi/482/buss/cocobus.html' },
   { municipality: '国分寺市', name: 'ぶんバス', url: 'http://www.city.kokubunji.tokyo.jp/kurashi/koutsuu/bus/' },
   { municipality: '狛江市', name: 'こまバス', url: 'http://www.city.komae.tokyo.jp/sp/index.cfm/41,23028,312,html' },
   { municipality: '小平市', name: 'にじバス', url: 'http://www.city.kodaira.tokyo.jp/kurashi/000/000137.html' },
-  { municipality: '新宿区', name: '新宿ＷＥバス', url: 'http://www.city.shinjuku.lg.jp/seikatsu/file17_06_00001.html' },
+  { municipality: '新宿区', name: '新宿ＷＥバス（運行終了）', url: 'https://www.city.shinjuku.lg.jp/seikatsu/kotsu01_000001_00022.html' },
   { municipality: '渋谷区', name: 'ハチ公バス', url: 'https://www.city.shibuya.tokyo.jp/kurashi/kotsu/hachiko/' },
   { municipality: '墨田区', name: 'すみまるくん　他', url: 'http://www.city.sumida.lg.jp/kurashi/jyunkanbus/index.html' },
   { municipality: '杉並区', name: 'すぎ丸', url: 'https://www.city.suginami.tokyo.jp/guide/machi/bus/index.html' },
@@ -71,18 +71,18 @@ export const TOKYO_COMMUNITY_BUSES = [
   { municipality: '立川市', name: 'くるりんバス', url: 'http://www.city.tachikawa.lg.jp/kurashi/kotsu/shiminbus/index.html' },
   { municipality: '多摩市', name: '多摩市ミニバス', url: 'http://www.city.tama.lg.jp/0000001287.html' },
   { municipality: '中央区', name: '江戸バス', url: 'http://www.city.chuo.lg.jp/kurasi/edobasu/index.html' },
-  { municipality: '調布市', name: 'ミニバス', url: 'http://www.city.chofu.tokyo.jp/www/genre/0000000000000/1000000010120/index.html' },
+  { municipality: '調布市', name: 'ミニバス', url: 'https://www.city.chofu.lg.jp/080070/p050018.html' },
   { municipality: '豊島区', name: '池07系統', url: 'http://www.city.toshima.lg.jp/298/machizukuri/kotsu/bus/1504221057.html' },
   { municipality: '西東京市', name: 'はなバス', url: 'http://www.city.nishitokyo.lg.jp/kurasi/kotu/hanabus/index.html' },
   { municipality: '練馬区', name: 'みどりバス', url: 'http://www.city.nerima.tokyo.jp/kurashi/sumai/bus/index.html' },
   { municipality: '八王子市', name: 'はちバス', url: 'http://www.city.hachioji.tokyo.jp/kurashi/life/001/002/index.html' },
   { municipality: '羽村市', name: 'はむらん', url: 'http://www.city.hamura.tokyo.jp/category/1-11-15-0-0.html' },
   { municipality: '日野市', name: 'ミニバス', url: 'http://www.city.hino.lg.jp/kurashi/kotsu/bus/minibus/index.html' },
-  { municipality: '東大和市', name: 'ちょこバス', url: 'https://www.city.higashiyamato.lg.jp/index.cfm/31,0,335,547,html' },
+  { municipality: '東大和市', name: 'ちょこバス', url: 'https://www.city.higashiyamato.lg.jp/kurashi/dorokotsu/1002085/index.html' },
   { municipality: '東村山市', name: 'グリーンバス', url: 'http://www.city.higashimurayama.tokyo.jp/kurashi/sumai/bus/index.html' },
   { municipality: '檜原村', name: 'やまびこ', url: 'http://www.vill.hinohara.tokyo.jp/0000000090.html' },
   { municipality: '府中市', name: 'ちゅうバス', url: 'https://www.city.fuchu.tokyo.jp/kurashi/machi/chubus/index.html' },
-  { municipality: '文京区', name: 'Ｂーぐる', url: 'http://www.city.bunkyo.lg.jp/sosiki_busyo_kumin_jigyou_b-guru.html' },
+  { municipality: '文京区', name: 'Ｂーぐる', url: 'https://www.city.bunkyo.lg.jp/b011/p001057/index.html' },
   { municipality: '町田市', name: 'まちっこ　他', url: 'http://www.city.machida.tokyo.jp/kanko/kotu_syuku/index.html' },
   { municipality: '港区', name: 'ちぃばす', url: 'https://www.city.minato.tokyo.jp/kankyo-machi/kotsu/bus/community.html' },
   { municipality: '三鷹市', name: 'みたかシティバス', url: 'http://www.city.mitaka.tokyo.jp/c_service/000/000756.html' },
@@ -182,7 +182,7 @@ export const COMMUNITY_BUS_ROUTES = [
   },
   {
     bus: 'Bーぐる', municipality: '文京区',
-    url: 'https://www.city.bunkyo.lg.jp/sosiki_busyo_kumin_jigyou_b-guru.html',
+    url: 'https://www.city.bunkyo.lg.jp/b011/p001057/index.html',
     routes: [
       { name: '千駄木・駒込ルート', stops: ['千駄木駅前', '駒込駅前', '千駄木駅前'] },
       { name: '本郷・小日向ルート', stops: ['本郷三丁目駅前', '後楽園駅前', '本郷三丁目駅前'] },
@@ -357,7 +357,7 @@ export const COMMUNITY_BUS_ROUTES = [
   // #25: 新宿区 新宿WEバス（新宿駅西口起点の循環・観光路線）
   {
     bus: '新宿WEバス', municipality: '新宿区',
-    url: 'https://www.city.shinjuku.lg.jp/seikatsu/file17_06_00001.html',
+    url: 'https://www.city.shinjuku.lg.jp/seikatsu/kotsu01_000001_00022.html',
     routes: [
       { name: '新宿御苑ルート', stops: ['新宿駅西口', '新宿センタービル', '新宿御苑', '新宿三丁目', '新宿駅西口'] },
       { name: '歌舞伎町ルート', stops: ['新宿駅西口', '歌舞伎町', '新宿駅西口'] }

@@ -252,6 +252,8 @@ export function getTsunamiAreasForPorts(...ports) {
 }
 
 export function isTsunamiRelevantToPorts(tsunami, ...ports) {
+  // 安全情報を取得できない場合は「警報なし」とみなさず、安全側で航路を停止する。
+  if (!tsunami?.available) return true;
   if (!tsunami.active) return false;
   const portAreas = getTsunamiAreasForPorts(...ports);
   // 港の予報区が未登録なら、安全側で有効な津波警報を航路停止対象とする。
@@ -260,23 +262,32 @@ export function isTsunamiRelevantToPorts(tsunami, ...ports) {
 }
 
 export async function buildTsunamiWaterSafetyResponse(userLang, tsunami, context = {}) {
+  const safetyUnavailable = tsunami?.available === false;
   const safety = buildEarthquakeTransportSafety('water', userLang);
-  const advisory = userLang === 'en'
-    ? 'An active tsunami warning/advisory affects this water-transport area. Do not board or continue water travel.'
-    : userLang === 'zh'
-      ? '该水路区域受到有效海啸警报/注意报影响。请停止登船和水路出行。'
-      : 'この水路地域に有効な津波警報・注意報が発表されています。乗船・水路移動を中止してください。';
+  const advisory = safetyUnavailable
+    ? (userLang === 'en'
+      ? 'Maritime safety information is unavailable. Water-route guidance is suspended. Check JMA, the port authority, and the operator, then retry later.'
+      : userLang === 'zh'
+        ? '无法获取水上安全信息，已暂停水路出行。请确认气象厅、港口管理者和运营公司官方信息，稍后重试。'
+        : '安全判定に必要な情報を取得できないため、航路案内を停止しています。気象庁・港湾管理者・運航会社の公式情報を確認し、後ほど再試行してください。')
+    : (userLang === 'en'
+      ? 'An active tsunami warning/advisory affects this water-transport area. Do not board or continue water travel.'
+      : userLang === 'zh'
+        ? '该水路区域受到有效海啸警报/注意报影响。请停止登船和水路出行。'
+        : 'この水路地域に有効な津波警報・注意報が発表されています。乗船・水路移動を中止してください。');
   // 出発港側の自治体データから、津波対応の指定緊急避難場所だけを抽出する。
   const tsunamiShelters = await getGroundEmergencyShelters(context.from_port, 'tsunami', userLang);
   return jsonResponse({
-    status: 'EMERGENCY_MODE_ACTIVE',
+    status: safetyUnavailable ? 'MARITIME_SAFETY_UNKNOWN' : 'EMERGENCY_MODE_ACTIVE',
     detected_language: userLang,
-    emergency_type: 'tsunami',
+    emergency_type: safetyUnavailable ? 'maritime_safety_unknown' : 'tsunami',
     transport_mode: 'water',
     route_guidance_suspended: true,
     message: advisory,
     maritime_safety_status: {
-      tsunami_warning_active: true,
+      tsunami_warning_active: safetyUnavailable ? null : true,
+      safety_check_available: !safetyUnavailable,
+      weather_check_available: !safetyUnavailable,
       source: tsunami.source,
       updated_at: tsunami.updated_at,
       headline: tsunami.headline || undefined,
@@ -299,7 +310,8 @@ export async function checkSevereWaterWeather(fromPort, toPort, userLang) {
     getWeatherAdvice(userLang, stationToJmaArea(p), placeToSubarea(p)).catch(() => null)
   ));
   const ok = results.filter(r => r && r.weather);
-  if (ok.length === 0) return null;
+  // 港の気象情報を全く取得できない場合は、警報なしではなく判定不能。
+  if (ok.length === 0) return { available: false, isSevereWind: false, isHighWave: false, wind: '', wave: '' };
   let isSevereWind = false, isHighWave = false, wind = '', wave = '';
   for (const r of ok) {
     isSevereWind = isSevereWind || r.isSevereWind;
@@ -307,26 +319,35 @@ export async function checkSevereWaterWeather(fromPort, toPort, userLang) {
     if (r.isSevereWind && !wind) wind = r.windText || '';
     if (r.isHighWave && !wave) wave = r.waveText || '';
   }
-  if (!isSevereWind && !isHighWave) return null;
-  return { isSevereWind, isHighWave, wind, wave };
+  if (!isSevereWind && !isHighWave) return { available: true, isSevereWind, isHighWave, wind, wave };
+  return { available: true, isSevereWind, isHighWave, wind, wave };
 }
 
 export async function buildSevereWeatherWaterSafetyResponse(userLang, wind, wave, context = {}) {
-  const advisory = userLang === 'en'
-    ? 'Strong winds or high waves may suspend ferry operations. Do not board until the operator confirms safety.'
-    : userLang === 'zh'
-      ? '强风或大浪可能导致停航。请停止乘船，待航运公司确认安全后再出行。'
-      : '強風・高波により運航見合わせの可能性があります。乗船は安全確認が取れるまでお控えください。';
+  const unavailable = context.weather_check_available === false;
+  const advisory = unavailable
+    ? (userLang === 'en'
+      ? 'Port weather information is unavailable. Water-route guidance is suspended. Check JMA, the port authority, and the operator, then retry later.'
+      : userLang === 'zh'
+        ? '无法获取港口天气信息，已暂停水路出行。请确认气象厅、港口管理者和运营公司官方信息，稍后重试。'
+        : '港の気象情報を取得できないため、航路案内を停止しています。気象庁・港湾管理者・運航会社の公式情報を確認し、後ほど再試行してください。')
+    : (userLang === 'en'
+      ? 'Strong winds or high waves may suspend ferry operations. Do not board until the operator confirms safety.'
+      : userLang === 'zh'
+        ? '强风或大浪可能导致停航。请停止乘船，待航运公司确认安全后再出行。'
+        : '強風・高波により運航見合わせの可能性があります。乗船は安全確認が取れるまでお控えください。');
   return jsonResponse({
-    status: 'SEVERE_WEATHER_ADVISORY',
+    status: unavailable ? 'MARITIME_SAFETY_UNKNOWN' : 'SEVERE_WEATHER_ADVISORY',
     detected_language: userLang,
-    emergency_type: 'severe_weather',
+    emergency_type: unavailable ? 'maritime_safety_unknown' : 'severe_weather',
     transport_mode: 'water',
     route_guidance_suspended: true,
     message: advisory,
     maritime_safety_status: {
-      tsunami_warning_active: false,
-      wind_wave_warning_active: true,
+      tsunami_warning_active: unavailable ? null : false,
+      wind_wave_warning_active: unavailable ? null : true,
+      weather_check_available: !unavailable,
+      safety_check_available: !unavailable,
       wind: wind ? translateWeather(wind, userLang) : undefined,
       wave: wave ? translateWeather(wave, userLang) : undefined,
       official_info_url: 'https://www.jma.go.jp/bosai/'
@@ -381,13 +402,16 @@ export async function searchFerry(args) {
   if (testAdv.failureAdviceKey && typhoonLike.includes(testAdv.failureAdviceKey)) {
     const live = await checkSevereWaterWeather(fromPort, toPort, userLang);
     return await buildSevereWeatherWaterSafetyResponse(userLang, live?.wind, live?.wave, {
-      from_port: rawFrom, to_port: rawTo, test_mode: true, simulated_failure_type: parsedTest.simulatedFailure
+      from_port: rawFrom, to_port: rawTo, weather_check_available: live?.available !== false,
+      test_mode: true, simulated_failure_type: parsedTest.simulatedFailure
     });
   }
   // #90: 強風・高波ゲート（津波がなくても、荒天・高波で運航見合わせの可能性がある場合は抑止）
   const severeWaterWeather = await checkSevereWaterWeather(fromPort, toPort, userLang);
-  if (severeWaterWeather) {
-    return await buildSevereWeatherWaterSafetyResponse(userLang, severeWaterWeather.wind, severeWaterWeather.wave, { from_port: rawFrom, to_port: rawTo });
+  if (severeWaterWeather?.available === false || severeWaterWeather?.isSevereWind || severeWaterWeather?.isHighWave) {
+    return await buildSevereWeatherWaterSafetyResponse(userLang, severeWaterWeather.wind, severeWaterWeather.wave, {
+      from_port: rawFrom, to_port: rawTo, weather_check_available: severeWaterWeather.available !== false
+    });
   }
   try {
     const data = await fetchFerryData();
