@@ -3,7 +3,7 @@
 ---
 
 <a id="japanese"></a>
-# 🚃 Tokyo Transit MCP Server (日本語)
+# 🚃 Tokyo Transit MCP Server
 
 **ODPT API + 気象庁 API を統合した東京圏総合交通情報MCPサーバー**
 
@@ -33,15 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
-- **コード監査イシュー#93の潜在バグ・堅牢性・パフォーマンスを改善（v2.41.0）**
-  - **サーキットブレイカーの段階クールダウンを修正（#93）**: 従来は失敗回数ベースのため `threshold>1` では 60/120秒がオープン直前に上書きされ一度も参照されなかった。開放エピソード回数に応じて 60秒→120秒→180秒と単調延長する方式に修正
-  - **天気取得失敗を `jmaBreaker.onFailure` に通知（#93）**: JMA API エラー時に失敗カウントが増えず `jmaBreaker` が機能しなかった問題を修正。`getWeatherAdvice` の取得失敗で必ず通知
-  - **search_route の Graceful Degradation 実装（#93）**: 外部API（気象庁・ODPT運行情報）が遮断されても内蔵経路エンジンでルートを算出し `degraded_mode: true` で返却（従来は即エラー中断）
-  - **ダイクストラの優先度キューをMinHeap化（#93）**: 毎ループの配列ソート（O(N log N)）を二分ヒープ（O(log N)）に置換。挿入順の FIFO タイブレークで従来の経路選択と同一挙動を維持
-  - **キャッシュ上限逐出を O(1) 化（#93）**: `Object.entries` の O(N) 全走査を Map の挿入順先頭から O(1) で逐出（LRU近似）に変更
-  - **GTFS ZIP/CSVパースをワーカースレッド化（#93）**: 最大95万行の `stop_times.txt` を専用ワーカーで処理し、イベントループのブロックを回避
-  - **強風・特別警報検出の強化（#93）**: 強風表現（「風が強く」「強い風」等）を追加し、特別警報を警報・注意報の概況文とも突合。`gtfs.mjs` の `src.date()` に関数チェックを追加
-  - **検証** — build PASS・probe-all-lang 26/26・test:walk ALL PASS・test:bus ALL PASS・test:issue（84/80/82-83/88-89-90/91-92）全PASS・新ロジック単体検証 23項目 ALL PASS
+- **コミュニティバス案内を目的地（降車駅）基準に改善（v2.42.0）**
+  - **コミュニティバスを目的地のみに変更**: 出発駅側の足（駅までの足）を表示せず、降車後の足（ラストマイル）として目的地＝降車駅のコミュニティバスだけを案内
+  - **バス停案内を目的地基準に統一**: `station_bus_stops`（バス停を地図で確認）の表示対象を出発駅から目的地（降車駅）に変更し、見出し・文言も「目的地駅周辺バス停」「降車後の出口・バス停」に統一
+  - **バスデータのない目的地でもバス停案内を常に表示**: コミュニティバス登録・振替輸送の有無に関わらず、目的地では降車後の足としてバス停を地図で確認できる表示を提供（basis=`destination`）
+  - **検証** — build PASS・test-contextual-display-routines 全項目 PASS（コミュニティバス目的地化・バス無し駅 の回帰テスト追加、gov_facility_search_support テストを現行仕様 v2.36.3 に修正）
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -576,7 +572,7 @@ MIT License
 ---
 
 <a id="english"></a>
-# 🚃 Tokyo Transit MCP Server (English)
+# 🚃 Tokyo Transit MCP Server
 
 **Integrated Tokyo Metropolitan Area Public Transit Information MCP Server powered by ODPT API + Japan Meteorological Agency API**
 
@@ -1111,7 +1107,7 @@ MIT License
 ---
 
 <a id="chinese"></a>
-# 🚃 Tokyo Transit MCP Server (中文)
+# 🚃 Tokyo Transit MCP Server
 
 **整合 ODPT API + 日本气象厅 API 的东京圈综合交通信息 MCP 服务器**
 

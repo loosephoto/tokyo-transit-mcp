@@ -915,9 +915,8 @@ export async function searchRoute(args) {
 
   const displayFrom = getDisplayStationName(fromName, userLang);
   const displayTo = getDisplayStationName(toName, userLang);
-  // 🚌 駅⇔コミュニティバス接続（足の悪いユーザーの駅までの足・駅からの足）
+  // 🚌 駅⇔コミュニティバス接続（降車後の足＝ラストマイル。目的地＝降車駅のみを案内）
   const communityBusAccess = [
-    buildCommunityBusAccessBlock(fromName, userLang),
     buildCommunityBusAccessBlock(toName, userLang)
   ].filter(Boolean);
   const communityBusAccessOut = communityBusAccess.length ? communityBusAccess : undefined;
@@ -1132,22 +1131,24 @@ export async function searchRoute(args) {
                 "詳細は list_transit_operators ツールを"
   };
 
-  // 🚉 バス連携を検出した場合だけ、出発駅周辺のバス停を案内する。
-  // 鉄道のみの通常経路に「最寄りの出口直結バス」等を推測して混在させない。
-  if (fromName && (communityBusAccessOut?.length || busTransferDetected)) {
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fromName + '駅 バス停')}`;
+  // 🚉 目的地（降車駅）周辺のバス停を案内する。降車後の移動手段として、コミュニティ
+  // バスや振替輸送の有無に関わらず表示する。
+  if (toName) {
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(toName + '駅 バス停')}`;
     resultPayload.station_bus_stops = {
-      note: userLang === 'en' ? "🚉 [Bus Stops Relevant to This Journey]" :
-            userLang === 'zh' ? "🚉 【与本次行程相关的车站周边巴士站】" :
-            "🚉 【この経路に関連する駅周辺バス停】",
+      note: userLang === 'en' ? "🚉 [Bus Stops Near Your Destination]" :
+            userLang === 'zh' ? "🚉 【目的地车站周边巴士站】" :
+            "🚉 【目的地駅周辺バス停】",
       link: mapUrl,
-      basis: communityBusAccessOut?.length ? 'community_bus_access' : 'substitute_transport',
-      hint: userLang === 'en' ? `Verify the boarding stop and exit with station staff or the bus operator near ${displayFrom} Station.` :
-            userLang === 'zh' ? `请向车站工作人员或巴士运营商确认${displayFrom}站附近的乘车站点与出口。` :
-            `${displayFrom}駅での乗車バス停・最寄り出口は、駅係員またはバス事業者の案内でご確認ください。`,
-      link_label: userLang === 'en' ? `📍 Show bus stops near ${displayFrom} Station on Google Maps` :
-                  userLang === 'zh' ? `📍 在地图上查看${displayFrom}站周边巴士站` :
-                  `📍 ${displayFrom}駅周辺のバス停を地図で確認`
+      basis: communityBusAccessOut?.length ? 'community_bus_access'
+           : busTransferDetected ? 'substitute_transport'
+           : 'destination',
+      hint: userLang === 'en' ? `Verify the nearest exit and bus stop with station staff or the bus operator near ${displayTo} Station.` :
+            userLang === 'zh' ? `请向车站工作人员或巴士运营商确认${displayTo}站附近的出站口与巴士站。` :
+            `${displayTo}駅での降車後の出口・バス停は、駅係員またはバス事業者の案内でご確認ください。`,
+      link_label: userLang === 'en' ? `📍 Show bus stops near ${displayTo} Station on Google Maps` :
+                  userLang === 'zh' ? `📍 在地图上查看${displayTo}站周边巴士站` :
+                  `📍 ${displayTo}駅周辺のバス停を地図で確認`
     };
   }
 
