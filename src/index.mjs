@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.42.1 (Production Ready)
+ * Tokyo Transit MCP Server v2.42.2 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -34,7 +34,7 @@ import { searchFare } from './handlers/fare.mjs';
 import { getTimetable } from './handlers/timetable.mjs';
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.42.1' },
+  { name: 'tokyo-transit-mcp', version: '2.42.2' },
   { capabilities: { tools: {} } }
 );
 

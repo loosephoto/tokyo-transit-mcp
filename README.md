@@ -33,12 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **コード監査で発見した交通API障害・曖昧検索・キャッシュの不都合を修正（v2.42.1）**
-  - **時刻表API障害の誤判定を修正**: ODPTの路線一覧取得失敗を `NO_DATA` として返さず、サーキットブレーカーへ通知してAPIエラーとして扱うよう改善
-  - **バス停の曖昧検索を停止**: 複数事業者・地域の候補が一致した場合、先頭候補を自動採用せず `AMBIGUOUS_BUS_STOP` と候補一覧を返すよう変更
-  - **キャッシュを真のLRU化**: 参照されたエントリを最新として扱い、容量超過時の不要な再取得を抑制
-  - **APIエラー分類を細分化**: 認証失敗（401/403）、サーバー障害（5xx）、タイムアウト、内部エラーを区別して構造化レスポンスに反映
-  - **検証** — 全対象モジュール `node --check`、修正回帰テスト、実データによるルート・バス停・時刻表スモークテスト、`git diff --check` が PASS
+- **水上交通のフェイルセーフ、自治体公式リンク、天気地域表示を改善（v2.42.2）**
+  - **水上交通の安全情報障害をフェイルセーフ化**: 津波・港湾気象APIが取得できない場合は「警報なし」とみなさず、`MARITIME_SAFETY_UNKNOWN` として航路案内を停止
+  - **判定状態を明確化**: `active: true`（危険情報あり）、`active: false`（正常取得・危険情報なし）、`available: false`（判定不能）を区別し、多言語の安全案内と公式確認先を返却
+  - **コミュニティバス公式リンクを更新**: 荒川・昭島・稲城・国立・新宿・東大和・文京・調布の現行自治体ページへ更新し、運行終了した新宿WEバスは終了案内を表示
+  - **天気地域表示を修正**: 横浜を神奈川に縮退させず、日本語 `横浜`・英語 `Yokohama`・中国語 `横滨` として表示
+  - **検証** — 天気地域、荒天・津波、安全情報障害、公式リンクの回帰テスト、`npm run build`、`git diff --check` が PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -603,12 +603,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Fixed transit API failure handling, ambiguous bus-stop search, and cache behavior found in the code audit (v2.42.1)**
-  - **Fixed timetable API failure classification**: failures while loading ODPT railway data are no longer reported as `NO_DATA`; they notify the circuit breaker and remain API errors
-  - **Paused ambiguous bus-stop searches**: matches spanning multiple operators or areas now return `AMBIGUOUS_BUS_STOP` with candidates instead of silently selecting the first result
-  - **Made the cache a true LRU**: accessed entries are marked as recently used, reducing unnecessary refetches when the cache reaches its limit
-  - **Improved API error classification**: authentication failures (401/403), server failures (5xx), timeouts, and internal errors are distinguished in structured responses
-  - **Verification** — `node --check` for all changed modules, regression tests, live route/bus-stop/timetable smoke tests, and `git diff --check` PASS
+- **Improved maritime fail-safe behavior, official municipal links, and weather region labels (v2.42.2)**
+  - **Fail-safe maritime safety outages**: when tsunami or port-weather APIs are unavailable, the server no longer treats the condition as “no warning”; it returns `MARITIME_SAFETY_UNKNOWN` and suspends water-route guidance
+  - **Explicit safety states**: distinguishes `active: true` (hazard active), `active: false` (successfully checked, no hazard), and `available: false` (unable to determine), with multilingual guidance and official confirmation links
+  - **Updated community-bus official links**: refreshed the current municipal pages for Arakawa, Akishima, Inagi, Kunitachi, Shinjuku, Higashiyamato, Bunkyo, and Chofu; the discontinued Shinjuku WE Bus now links to its end-of-service notice
+  - **Corrected weather region labels**: Yokohama is displayed as `横浜` / `Yokohama` / `横滨` instead of collapsing to Kanagawa
+  - **Verification** — weather-region, severe-weather/tsunami, safety-outage, and official-link regression tests, `npm run build`, and `git diff --check` PASS
 
 ### 🤖 AI Intelligent Advice
 
