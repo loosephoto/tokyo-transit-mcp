@@ -120,7 +120,11 @@ export async function getWeather(args) {
     if (muniLabel) {
       const inputShort = rawArea.replace(/駅$/, '').replace(/区$/, '');
       const muniShort = muniLabel.replace(/区$/, '');
-      displayArea = inputShort === muniShort ? muniLabel : `${inputShort}（${muniLabel}）`;
+      // 自治体名そのもの（例: 横浜）は、多言語ラベルだけを表示する。
+      // 駅名（例: 渋谷駅）は駅名と自治体名を併記する。
+      displayArea = inputShort === muniShort || inputShort === (muni.ja || '').replace(/区$/, '')
+        ? muniLabel
+        : `${inputShort}（${muniLabel}）`;
     } else {
       // 🔴 #79: 地域表示を東京固定にしない。エリアコード 3言語ラベルを基本に表示。
       // 🔴 #93: 島（PLACE_SUBAREA 指定）は区域名（伊豆諸島北部等）を表示。それ以外は県ラベルを表示し、区域名は region フィールドで提供。

@@ -329,6 +329,9 @@ export const JMA_AREA_LABELS = {
 export const PLACE_MUNICIPALITY = {
   // 東京23区
   '上野': { ja: '台東区', en: 'Taito', zh: '台东区' },
+  // 横浜は都道府県ラベル（神奈川）ではなく、市域の表示名を優先する。
+  '横浜': { ja: '横浜', en: 'Yokohama', zh: '横滨' },
+  '横浜駅': { ja: '横浜', en: 'Yokohama', zh: '横滨' },
   '浅草': { ja: '台東区', en: 'Taito', zh: '台东区' },
   '渋谷': { ja: '渋谷区', en: 'Shibuya', zh: '涩谷区' },
   '新宿': { ja: '新宿区', en: 'Shinjuku', zh: '新宿区' },

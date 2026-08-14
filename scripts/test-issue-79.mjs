@@ -22,7 +22,7 @@ axios.get = async (url) => {
   const code = url.match(/forecast\/(\d+)\.json/)?.[1] || '130000';
   return { data: [{
     timeSeries: [{
-      areas: [{ weathers: [`${code === '140010' ? '横浜' : '東京'}の天気 晴れ`] }],
+      areas: [{ weathers: [`${code === '140000' ? '横浜' : '東京'}の天気 晴れ`] }],
     }],
   }] };
 };
@@ -33,7 +33,7 @@ console.log('横浜:', JSON.stringify({ status: rYoko.status, area: rYoko.area, 
 assert(rTokyo.area === '東京', '1: 東京の地域表示が東京');
 assert(rYoko.area === '横浜', '1: 横浜の地域表示が横浜');
 assert(rTokyo.weather !== rYoko.weather, '1: 東京と横浜の天気が混ざらない');
-assert(calls.filter(u => u.includes('140010')).length >= 1, '1: 横浜のAPI(140010)が呼ばれた');
+assert(calls.filter(u => u.includes('140000')).length >= 1, '1: 横浜のAPI(140000)が呼ばれた');
 assert(calls.filter(u => u.includes('130000')).length >= 1, '1: 東京のAPI(130000)が呼ばれた');
 
 // ---- シナリオ2: 通信失敗時はエラー応答（未キャッシュの茨城エリアで検証） ----

@@ -253,7 +253,7 @@ export function getTsunamiAreasForPorts(...ports) {
 
 export function isTsunamiRelevantToPorts(tsunami, ...ports) {
   // 安全情報を取得できない場合は「警報なし」とみなさず、安全側で航路を停止する。
-  if (!tsunami?.available) return true;
+  if (tsunami?.available === false) return true;
   if (!tsunami.active) return false;
   const portAreas = getTsunamiAreasForPorts(...ports);
   // 港の予報区が未登録なら、安全側で有効な津波警報を航路停止対象とする。

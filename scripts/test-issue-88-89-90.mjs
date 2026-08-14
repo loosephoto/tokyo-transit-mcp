@@ -74,7 +74,7 @@ assert(placeToMunicipality('上野').ja === '台東区', '#93 上野→自治体
 assert(placeToMunicipality('渋谷駅').ja === '渋谷区', '#93 渋谷駅→自治体 渋谷区');
 assert(placeToMunicipality('池袋').zh === '丰岛区', '#93 池袋→自治体 zh 丰岛区');
 assert(placeToMunicipality('御茶ノ水').ja === '文京区', '#93 御茶ノ水→自治体 文京区');
-assert(placeToMunicipality('横浜') === null, '#93 横浜→自治体なし（県表示）');
+assert(placeToMunicipality('横浜').ja === '横浜', '#93 横浜→自治体表示 横浜');
 assert(placeToSubarea('大島') === '130020', '#93 大島→伊豆諸島北部(130020)');
 assert(placeToSubarea('伊豆大島') === '130020', '#93 伊豆大島→伊豆諸島北部(130020)');
 assert(placeToSubarea('三宅島') === '130030', '#93 三宅島→伊豆諸島南部(130030)');
