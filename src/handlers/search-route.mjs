@@ -105,8 +105,8 @@ function addEdge(a, b, w) {
   GRAPH[a][b] = w;
   GRAPH[b][a] = w;
 }
-// 同一路線内の隣接駅を結ぶ（乗車エッジ）。重みは駅間実距離（m）÷100（1km≈10単位）とし、
-// 座標未登録の駅はフォールバック重み 10 を使用。これによりダイクストラは実距離が短い経路を選ぶ。
+// 同一路線内の隣接駅を結ぶ（乗車エッジ）。重みは駅数ベース（隣接駅1駅=1）。
+// 実距離ベースは座標未登録駅で不均一になるため使用しない。
 function stationEdgeWeight(a, b) {
   return 1; // 均等重み（駅数ベース）。距離ベースは座標未登録駅で不均一になるため使用しない
 }
@@ -808,15 +808,19 @@ export async function searchRoute(args) {
           ));
           const ok = results.filter(r => r && r.weather);
           if (ok.length === 0) return { error: 'WEATHER_FETCH_FAILED' };
-          let text = '', isRainy = false, isSevere = false, isHot = false;
+          let text = '', isRainy = false, isSevere = false, isSpecial = false,
+            isSevereWind = false, isHighWave = false, isHot = false;
           for (const r of ok) {
             const lbl = (JMA_AREA_LABELS[r.code] && JMA_AREA_LABELS[r.code][userLang]) || r.code;
             text += (text ? ' ／ ' : '') + `${lbl}: ${r.weather}`;
             isRainy = isRainy || r.isRainy;
             isSevere = isSevere || r.isSevere;
+            isSpecial = isSpecial || r.isSpecial;
+            isSevereWind = isSevereWind || r.isSevereWind;
+            isHighWave = isHighWave || r.isHighWave;
             isHot = isHot || r.isHot;
           }
-          return { weather: text, isRainy, isSevere, isHot };
+          return { weather: text, isRainy, isSevere, isSpecial, isSevereWind, isHighWave, isHot };
         } catch (e) { jmaBreaker.onFailure(e); return { error: e.message }; }
       })(),
       (async () => {

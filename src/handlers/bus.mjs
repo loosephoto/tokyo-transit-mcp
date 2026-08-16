@@ -1292,14 +1292,28 @@ export async function searchBus(args) {
       const bStation = /駅前$/.test(bKey) ? 0 : 1;
       return aStation - bStation;
     });
-    const matched = matchedPrefixSorted.length > 0 ? matchedPrefixSorted : matchedAll;
+    let matched = matchedPrefixSorted.length > 0 ? matchedPrefixSorted : matchedAll;
+    // 完全一致を前方一致候補より優先する。
+    const exactQueryVariants = busstopVariants(resolvedBusstop).map(v => v.replace(/(停留所|バス停|駅)$/, ''));
+    const exact = matched.filter(b => {
+      const names = [b['odpt:note'], b._displayNote].filter(Boolean);
+      return names.some(name => exactQueryVariants.includes(name))
+        || (b._searchKeys || []).some(key => exactQueryVariants.includes(key));
+    });
+    let exactAmbiguous = false;
+    if (exact.length > 0) {
+      const exactNames = [...new Set(exact.map(b => b['odpt:note'] || b._displayNote).filter(Boolean))];
+      const exactOperators = [...new Set(exact.map(b => b._operatorId).filter(Boolean))];
+      exactAmbiguous = exactOperators.length > 1;
+      matched = exact;
+    }
     // 一意に解決できないバス停は先頭候補を勝手に採用しない。
     // 同一停名が複数事業者・地域に存在する場合は、候補を返して再入力を促す。
     const matchedNames = [...new Set(matched.map(b => b['odpt:note'] || b._displayNote).filter(Boolean))];
     const matchedOperators = [...new Set(matched.map(b => b._operatorId).filter(Boolean))];
     // 同じ停留所名が複数レコードに現れるのは、同一事業者の別系統が
     // 同じ停留所を共有している場合がある。その場合は曖昧扱いにしない。
-    if (matchedNames.length > 1 && matchedOperators.length > 1) {
+    if (exactAmbiguous || (matchedNames.length > 1 && matchedOperators.length > 1)) {
       const label = userLang === 'en' ? 'Multiple bus stops match the input. Please choose one.'
         : userLang === 'zh' ? '有多个公交站符合输入，请选择一个。'
         : '複数のバス停が一致しました。候補を選択してください。';

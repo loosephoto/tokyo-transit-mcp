@@ -511,7 +511,9 @@ export async function searchFerry(args) {
         ? '数据中没有发船时刻（ODPT静态GTFS已停止提供）。请通过官方网站确认最新时刻表。'
         : '発着時刻のデータがありません（ODPT静的GTFSは廃止済み）。最新の時刻表は公式サイトでご確認ください。';
 
-    const isWaterBus = ['浅草','お台場海浜公園','お台場','豊洲','日の出桟橋','日の出','浜離宮'].some(p => fromStop.stop_name.includes(p));
+    const waterBusPortPatterns = ['浅草','お台場海浜公園','お台場','豊洲','日の出桟橋','日の出','浜離宮'];
+    const isWaterBus = waterBusPortPatterns.some(p =>
+      fromStop.stop_name.includes(p) || toStop.stop_name.includes(p));
     const operatorName = userLang === 'en' ? (isWaterBus ? "Tokyo Cruise (Water Bus)" : "Tokai Kisen") :
                          userLang === 'zh' ? (isWaterBus ? "东京游览船（水上巴士）" : "东海汽船") :
                          (isWaterBus ? "東京クルーズ" : "東海汽船");
