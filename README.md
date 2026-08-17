@@ -33,12 +33,13 @@
 
 ### 🛤️ 直近の更新内容
 
-- **安全判定・曖昧検索・水上交通表示を修正**
-  - **ライブ天気安全判定を修正**: 複数地域の天気集約で `isSpecial`・`isSevereWind`・`isHighWave` を保持し、特別警報・津波・強風・高波の判定を正しく反映
-  - **バス停完全一致を優先**: `busstop_name` 検索で完全一致候補を前方一致候補より優先し、完全一致が複数事業者の場合だけ曖昧応答を返却
-  - **水上バス事業者表示を統一**: 出発港・到着港の双方を判定し、方向による事業者名・公式サイトの揺れを解消
-  - **駅間重みコメントを実装と整合**: 駅数ベースの均等重みを明記
-  - **検証** — `npm run build`、`npm run test:issue`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、各 Issue 再現テストが PASS
+- **コード監査で発見された多言語表示・路線一覧・運賃・時刻表・ドキュメントの不都合を修正（v2.42.4）**
+  - **路線名の多言語誤変換を修正**: 完全一致・事業者付き完全一致を優先し、「有楽町線」「新宿線」が西武線として表示される問題を是正
+  - **事業者別路線一覧を修正**: `get_operator_routes` の英語・中国語出力で路線が二重登録される問題を修正し、MIR / Yurikamome の内蔵路線補完を正規化
+  - **運賃の重複を除去**: `search_fare` の同一事業者・同一運賃の重複レコードをデデュープ
+  - **時刻表を多言語化**: `get_timetable` の路線名、行先、列車種別、方向を表示用名称へ変換し、ODPT内部URIの露出を防止
+  - **ドキュメント・バージョン情報を同期**: READMEの日英中更新内容、SKILL.md更新履歴、`package-lock.json` を v2.42.4 に同期
+  - **検証** — `npm run build`、`npm run test:issue`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、対象回帰テスト、`git diff --check` が PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -603,12 +604,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Improved maritime fail-safe behavior, official municipal links, and weather region labels (v2.42.2)**
-  - **Fail-safe maritime safety outages**: when tsunami or port-weather APIs are unavailable, the server no longer treats the condition as “no warning”; it returns `MARITIME_SAFETY_UNKNOWN` and suspends water-route guidance
-  - **Explicit safety states**: distinguishes `active: true` (hazard active), `active: false` (successfully checked, no hazard), and `available: false` (unable to determine), with multilingual guidance and official confirmation links
-  - **Updated community-bus official links**: refreshed the current municipal pages for Arakawa, Akishima, Inagi, Kunitachi, Shinjuku, Higashiyamato, Bunkyo, and Chofu; the discontinued Shinjuku WE Bus now links to its end-of-service notice
-  - **Corrected weather region labels**: Yokohama is displayed as `横浜` / `Yokohama` / `横滨` instead of collapsing to Kanagawa
-  - **Verification** — weather-region, severe-weather/tsunami, safety-outage, and official-link regression tests, `npm run build`, and `git diff --check` PASS
+- **Fixed code-audit issues in multilingual display, route listings, fares, timetables, and documentation (v2.42.4)**
+  - **Fixed multilingual line-name mislabeling**: exact and operator-qualified matches prevent Tokyo Metro Yurakucho and Toei Shinjuku lines from being labeled as Seibu lines
+  - **Fixed operator route listings**: removed multilingual duplicate routes and normalized MIR / Yurikamome internal-line fallback
+  - **Removed duplicate fares** from `search_fare` and translated timetable railway, destination, train type, and direction fields
+  - **Synchronized documentation and version metadata** across README, SKILL.md, `package.json`, `package-lock.json`, and the MCP server metadata
+  - **Verification** — build, issue regression tests, 26-language probe cases, targeted regressions, and `git diff --check` PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1135,15 +1136,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **改善代码审计议题#93中的潜在缺陷、稳健性与性能（v2.41.0）**
-  - **修正断路器分级冷却（#93）**: 原先按失败次数计算，`threshold>1` 时 60/120 秒会在开启前被覆盖、从未生效。现按开启（trip）次数单调延长 60秒→120秒→180秒
-  - **天气获取失败时通知 `jmaBreaker.onFailure`（#93）**: JMA API 错误不会增加失败计数，导致 `jmaBreaker` 一直不生效。现 `getWeatherAdvice` 获取失败必通知
-  - **实现 search_route 的优雅降级（#93）**: 外部API（气象厅/ODPT运行信息）被切断时，仍由内置路线引擎计算路线并以 `degraded_mode: true` 返回（原先直接报错中断）
-  - **将迪杰斯特拉的优先队列改为最小堆（#93）**: 将每次循环的数组排序（O(N log N)）改为二叉堆（O(log N)），并以插入顺序的 FIFO 打破平局，保持原有路线选择一致
-  - **缓存上限逐出改为 O(1)（#93）**: 将 `Object.entries` 的 O(N) 全遍历改为按 Map 插入顺序 O(1) 逐出最旧条目（近似LRU）
-  - **将 GTFS ZIP/CSV 解析移至工作线程（#93）**: 高达95万行的 `stop_times.txt` 在专用线程处理，避免阻塞事件循环
-  - **强化强风与特别警报检测（#93）**: 增加强风表述（「风が强く」「強い风」等），特别警报与警报・注意报概況文交叉核对。`gtfs.mjs` 的 `src.date()` 增加函数检查
-  - **验证** — build 通过・probe-all-lang 26/26・test:walk ALL PASS・test:bus ALL PASS・test:issue（84/80/82-83/88-89-90/91-92）全PASS・新逻辑单测 23项 ALL PASS
+- **修复代码审计发现的多语言显示、线路列表、票价、时刻表和文档问题（v2.42.4）**
+  - **修正多语言线路名称**：通过完全匹配和运营商限定匹配，避免东京地铁有乐町线/都营新宿线被误标为西武线路
+  - **修正运营商线路列表**：删除多语言重复线路，并统一 MIR / Yurikamome 内置线路回退
+  - **去除重复票价**，并翻译时刻表中的线路、目的地、列车类型和方向字段
+  - **同步文档与版本信息**：统一 README、SKILL.md、`package.json`、`package-lock.json` 和 MCP 服务器元数据
+  - **验证** — 构建、Issue 回归测试、26项多语言探针、针对性回归测试和 `git diff --check` 均通过
 
 ### 🤖 AI 智能建议
 

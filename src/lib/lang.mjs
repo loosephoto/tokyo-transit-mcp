@@ -52,9 +52,23 @@ export function getDisplayLineName(lineName, userLang) {
   if (!lineName || userLang === 'ja') return lineName;
   const trans = LINE_DISPLAY_NAMES[lineName];
   if (trans && trans[userLang]) return trans[userLang];
-  // ODPT の dc:title は「丸ノ内線」等、辞書キーは「東京メトロ丸ノ内線」等のため部分一致で解決
-  // （例: "丸ノ内線" → "東京メトロ丸ノ内線" / "千代田線" → "東京メトロ千代田線"）
   const norm = lineName.replace(/[・\s]/g, '');
+  // 1. 完全一致
+  for (const [key, t] of Object.entries(LINE_DISPLAY_NAMES)) {
+    if (key.replace(/[・\s]/g, '') === norm) {
+      if (t[userLang]) return t[userLang];
+    }
+  }
+  // 2. 主要プレフィックス付き完全一致（東京メトロ / 都営 / JR）
+  for (const p of ['東京メトロ', '都営', 'JR']) {
+    const prefixed = `${p}${norm}`;
+    for (const [key, t] of Object.entries(LINE_DISPLAY_NAMES)) {
+      if (key.replace(/[・\s]/g, '') === prefixed) {
+        if (t[userLang]) return t[userLang];
+      }
+    }
+  }
+  // 3. 部分一致で解決（例: "丸ノ内線" → "東京メトロ丸ノ内線"）
   for (const [key, t] of Object.entries(LINE_DISPLAY_NAMES)) {
     const keyNorm = key.replace(/[・\s]/g, '');
     if (keyNorm.includes(norm) || norm.includes(keyNorm)) {

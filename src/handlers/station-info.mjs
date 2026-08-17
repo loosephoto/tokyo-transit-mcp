@@ -144,19 +144,19 @@ export async function getOperatorRoutes(args) {
         const title = so['odpt:stationTitle'] || {};
         return { index: idx, name: title[userLang === 'zh' ? 'zh-Hans' : userLang] || title.ja || title.en || Object.values(title)[0] || `駅${idx}` };
       }),
-      station_count: r['odpt:stationOrder']?.length || 0
+      station_count: r['odpt:stationOrder']?.length || 0,
+      _rawTitle: r['dc:title']
     }));
     // #53: ODPTに駅データが無い事業者（JR東日本等）は、内蔵 RAILWAY_LINES から補完する。
     // ODPT の odpt:Railway は路線定義を返すが、odpt:stationOrder が空（0駅）の路線が多い。
     // 内蔵グラフに同名路線（表記ゆれ吸収）があれば駅一覧を埋め、ODPT に無い路線
     // （例: 鶴見線）は事業者プレフィックスで追加する。
-    const ODTP_TITLE_SET = new Set(railways.map(r => (r['dc:title'] || '').replace(/[・\s]/g, '')));
     const LOCAL_LINE_PREFIX = {
       'JR-East': 'JR', 'TokyoMetro': '東京メトロ', 'Toei': '都営',
       'Odakyu': '小田急', 'Keio': '京王', 'Seibu': '西武', 'Tobu': '東武',
       'Keikyu': '京急', 'Keisei': '京成', 'Sotetsu': '相鉄', 'Tokyu': '東急',
-      'YokohamaMunicipal': '横浜市営地下鉄', 'MIR': 'ゆりかもめ', 'TWR': 'りんかい線',
-      'Minatomirai': 'みなとみらい線', 'TsukubaExpress': 'つくばエクスプレス',
+      'YokohamaMunicipal': '横浜市営地下鉄', 'MIR': 'つくばエクスプレス', 'TWR': 'りんかい線',
+      'Yurikamome': 'ゆりかもめ', 'Minatomirai': 'みなとみらい線', 'TsukubaExpress': 'つくばエクスプレス',
       'KantoRailway': '関東鉄道', 'SaitamaRailway': '埼玉高速鉄道', 'ToyoRapid': '東葉高速鉄道'
     };
     const prefix = LOCAL_LINE_PREFIX[opId];
@@ -164,13 +164,15 @@ export async function getOperatorRoutes(args) {
     const routesWithFallback = [...routes];
     if (prefix) {
       for (const [lineName, stationsArr] of Object.entries(RAILWAY_LINES)) {
-        // 内蔵路線がこの事業者に属するか（プレフィックス一致）
-        if (!lineName.startsWith(prefix)) continue;
-        const normLocal = odptLineNorm(lineName.replace(prefix, ''));
-        // ODPT に既に同名路線（表記ゆれ吸収後）がある場合は、駅が空なら埋める
+        // 内蔵路線がこの事業者に属するか（単一路線事業者は完全一致も許可）
+        const belongsToOperator = lineName === prefix || lineName.startsWith(prefix);
+        if (!belongsToOperator) continue;
+        const normLocal = odptLineNorm(lineName === prefix ? lineName : lineName.replace(prefix, ''));
+        // ODPT に既に同名路線（日本語生タイトルまたは路線名との比較）がある場合は、駅が空なら埋める
         const existing = routesWithFallback.find(rt => {
-          const normRt = odptLineNorm(rt.railway);
-          return normRt.includes(normLocal) || normLocal.includes(normRt);
+          const raw = rt._rawTitle || rt.railway;
+          const normRt = odptLineNorm(raw);
+          return normRt === normLocal || normRt.includes(normLocal) || normLocal.includes(normRt);
         });
         if (existing) {
           if (!existing.station_count) {
@@ -189,7 +191,12 @@ export async function getOperatorRoutes(args) {
         });
       }
     }
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, operator_name: opKey, type: opMeta.type, routes: routesWithFallback, total_routes: routesWithFallback.length, website: opMeta.website || null });
+    // 内部照合用 _rawTitle を削除して返却
+    const cleanRoutes = routesWithFallback.map(rt => {
+      const { _rawTitle, ...rest } = rt;
+      return rest;
+    });
+    return jsonResponse({ status: "SUCCESS", detected_language: userLang, operator_name: opKey, type: opMeta.type, routes: cleanRoutes, total_routes: cleanRoutes.length, website: opMeta.website || null });
   } catch (error) {
     odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });

@@ -136,6 +136,26 @@ export async function searchFare(args) {
       return ticket < best.ticket ? { ticket, f } : best;
     }, { ticket: Infinity, f: null });
 
+    // 同一事業者・同一運賃の重複を排除
+    const seenFares = new Set();
+    const uniqueFares = [];
+    for (const f of results) {
+      const op = f['odpt:operator']?.replace('odpt.Operator:', '') || 'Unknown';
+      const ticket = f['odpt:ticketFare'] || f['odpt:childTicketFare'] || null;
+      const ic = f['odpt:icCardFare'] || f['odpt:childIcCardFare'] || null;
+      const key = `${op}:${ticket}:${ic}`;
+      if (!seenFares.has(key)) {
+        seenFares.add(key);
+        uniqueFares.push({
+          operator: op,
+          ticket,
+          ic,
+          child_ticket: f['odpt:childTicketFare'] || null,
+          child_ic: f['odpt:childIcCardFare'] || null
+        });
+      }
+    }
+
     return jsonResponse({
       status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo,
       fare: cheapest.f ? {
@@ -144,13 +164,7 @@ export async function searchFare(args) {
         child_ticket: cheapest.f['odpt:childTicketFare'] || null,
         child_ic: cheapest.f['odpt:childIcCardFare'] || null
       } : null,
-      fares: results.slice(0, 5).map(f => ({
-        operator: f['odpt:operator']?.replace('odpt.Operator:', '') || 'Unknown',
-        ticket: f['odpt:ticketFare'] || f['odpt:childTicketFare'] || null,
-        ic: f['odpt:icCardFare'] || f['odpt:childIcCardFare'] || null,
-        child_ticket: f['odpt:childTicketFare'] || null,
-        child_ic: f['odpt:childIcCardFare'] || null
-      })),
+      fares: uniqueFares.slice(0, 5),
       data_source: noteText
     });
   } catch (error) {

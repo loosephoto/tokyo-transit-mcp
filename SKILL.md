@@ -2,7 +2,6 @@
 name: tokyo-transit-mcp
 description: 公共交通オープンデータセンター（ODPT）API・気象庁JMA API・GBFS を利用した東京圏総合交通情報MCPサーバー。鉄道・バス・水上バス・フェリー・空港フライト・コミュニティバスを横断検索し、日英中3言語のAIアドバイスを提供。
 category: transportation
-version: 2.42.3
 ---
 
 # Tokyo Transit MCP Server
@@ -138,10 +137,11 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.42.3（2026-08-16）— 安全判定・曖昧検索・水上交通表示を修正
+### v2.42.4（2026-08-17）— コード監査で発見された表示・検索・ドキュメント不整合を修正
 
-- **ライブ天気安全判定を修正**: 複数地域の天気集約で `isSpecial`・`isSevereWind`・`isHighWave` を保持し、特別警報・津波・強風・高波の判定を正しく反映
-- **バス停完全一致を優先**: `busstop_name` 検索で完全一致候補を前方一致候補より優先し、完全一致が複数事業者の場合だけ曖昧応答を返す
-- **水上バス事業者表示を統一**: 出発港・到着港の双方を判定し、方向による事業者名・公式サイトの揺れを解消
-- **駅間重みコメントを実装と整合**: 駅数ベースの均等重みを明記
-- **検証**: `npm run build`、`npm run test:issue`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、各 Issue 再現テストが PASS
+- **路線名の多言語誤変換を修正**: 完全一致・事業者付き完全一致を優先し、「有楽町線」「新宿線」が西武線として表示される問題を是正
+- **事業者別路線一覧を修正**: `get_operator_routes` の多言語時の二重登録を修正し、MIR / Yurikamome の内蔵路線補完を正規化
+- **運賃の重複を除去**: `search_fare` の同一事業者・同一運賃の重複レコードをデデュープ
+- **時刻表を多言語化**: `get_timetable` の路線名、行先、列車種別、方向を表示用名称へ変換し、ODPT内部URIの露出を防止
+- **ドキュメント・バージョン情報を同期**: READMEの日英中更新内容、`package-lock.json` を v2.42.4 に同期
+- **検証**: `npm run build`、`npm run test:issue`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、対象回帰テスト、`git diff --check` PASS

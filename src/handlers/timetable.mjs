@@ -4,7 +4,7 @@
  */
 import { cache, odptBreaker, API_BASE_URL, API_KEY } from '../config.mjs';
 import { OPERATOR_MAP } from '../data/misc.mjs';
-import { RAILWAY_NAME_MAP } from '../data/station-names.mjs';
+import { RAILWAY_NAME_MAP, ODPT_RAILWAY_NAME_MAP } from '../data/station-names.mjs';
 import { RAILWAY_LINES } from '../data/railway-lines.mjs';
 import { getParams, jsonResponse, buildErrorResponse, handleApiError } from '../lib/common.mjs';
 import { normalizeOvernightTime, timeToSortMinutes } from '../lib/time.mjs';
@@ -199,22 +199,57 @@ export async function getTimetable(args) {
       return times;
     };
 
+    const translateTrainType = (typeUri, lang) => {
+      if (!typeUri) return undefined;
+      const raw = String(typeUri).split(/[.:]/).pop() || '';
+      const map = {
+        'Local': { ja: '各駅停車', en: 'Local', zh: '各站停车' },
+        'Rapid': { ja: '快速', en: 'Rapid', zh: '快速' },
+        'Express': { ja: '急行', en: 'Express', zh: '急行' },
+        'LimitedExpress': { ja: '特急', en: 'Limited Express', zh: '特快' },
+        'SemiExpress': { ja: '準急', en: 'Semi Express', zh: '准急' }
+      };
+      return map[raw]?.[lang] || raw;
+    };
+
+    const translateRailDirection = (dirUri, lang) => {
+      if (!dirUri) return undefined;
+      const raw = String(dirUri).split(/[.:]/).pop() || '';
+      const map = {
+        'Inbound': { ja: '上り', en: 'Inbound', zh: '上行' },
+        'Outbound': { ja: '下り', en: 'Outbound', zh: '下行' },
+        'Eastbound': { ja: '東行', en: 'Eastbound', zh: '东行' },
+        'Westbound': { ja: '西行', en: 'Westbound', zh: '西行' },
+        'Northbound': { ja: '北行', en: 'Northbound', zh: '北行' },
+        'Southbound': { ja: '南行', en: 'Southbound', zh: '南行' }
+      };
+      return map[raw]?.[lang] || raw;
+    };
+
     const buildRow = (t) => {
       const times = extractTimes(t);
       const departures = times.filter(x => x.kind === 'departure');
       const arrivals = times.filter(x => x.kind === 'arrival');
       const destId = Array.isArray(t['odpt:destinationStation']) ? (t['odpt:destinationStation'][0] || '') : (t['odpt:destinationStation'] || '');
       const destTail = stationIdTail(destId);
+      const destJa = destTail ? (romanToJa[destTail.toLowerCase()] || destTail) : destId;
+      const destDisplay = getDisplayStationName(destJa, userLang);
+
+      const rwRaw = t['odpt:railway'] || '';
+      const rwKey = rwRaw.replace(/^odpt\.Railway:/, '');
+      const rwJapanese = ODPT_RAILWAY_NAME_MAP[rwKey] || rwKey;
+      const rwDisplay = getDisplayLineName(rwJapanese, userLang);
+
       // #82: 方面（railDirection）別に分離して表示。departure / arrival それぞれ昇順ソート
       const sortByTime = (arr) => [...arr].sort((a, b) => (a.sort?.minutes ?? 0) - (b.sort?.minutes ?? 0));
       const depSorted = sortByTime(departures);
       const arrSorted = sortByTime(arrivals);
       return {
-        railway: t['odpt:railway'],
+        railway: rwDisplay,
         train: t['odpt:train'],
-        destination: destTail ? (romanToJa[destTail.toLowerCase()] || destTail) : destId,
-        type: t['odpt:trainType'],
-        direction: t['odpt:railDirection'],
+        destination: destDisplay,
+        type: translateTrainType(t['odpt:trainType'], userLang),
+        direction: translateRailDirection(t['odpt:railDirection'], userLang),
         calendar: targetCalendar, // #82: 応答に calendar を含める
         departure_time: depSorted.length ? depSorted.map(x => x.time).join(', ') : null,
         departure_next_day: depSorted.some(x => x.nextDay) || undefined, // #82: 24時超は翌日扱い

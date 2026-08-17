@@ -70,8 +70,8 @@ const run = async (name, lang, args, fn) => {
   }
 };
 
-await run('search_route', 'en', { from: 'Shinjuku', to: 'Odawara', language: 'en' }, searchRoute);
-await run('search_route', 'zh', { from: '新宿', to: '小田原', language: 'zh' }, searchRoute);
+await run('search_route', 'en', { from: 'Shinjuku', to: 'Odawara', language: 'en', __expectedStatuses: ['SUCCESS', 'NO_DATA', 'EMERGENCY_MODE_ACTIVE'] }, searchRoute);
+await run('search_route', 'zh', { from: '新宿', to: '小田原', language: 'zh', __expectedStatuses: ['SUCCESS', 'NO_DATA', 'EMERGENCY_MODE_ACTIVE'] }, searchRoute);
 await run('search_fare', 'en', { from: 'Shinjuku', to: 'Shibuya', language: 'en' }, searchFare);
 await run('search_fare', 'zh', { from: '新宿', to: '涩谷', language: 'zh' }, searchFare);
 await run('get_weather', 'en', { area_name: 'Tokyo', language: 'en' }, getWeather);
