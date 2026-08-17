@@ -545,6 +545,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
+├── CLAUDE.md            # Claude Code 用プロジェクトガイド
 ├── SKILL.md             # プロジェクトスキル定義
 ├── mcp.json             # MCPクライアント設定例
 ├── .env.example         # 環境変数サンプル
@@ -1074,6 +1075,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
+├── CLAUDE.md            # Claude Code project guide
 ├── SKILL.md             # Project skill definition (v2.25.4)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
@@ -1602,6 +1604,7 @@ tokyo-transit-mcp/
 ├── package.json
 ├── package-lock.json
 ├── README.md
+├── CLAUDE.md            # Claude Code 项目指南
 ├── SKILL.md             # 项目技能定义
 ├── mcp.json             # MCP 客户端配置示例
 ├── .env.example         # 环境变量示例

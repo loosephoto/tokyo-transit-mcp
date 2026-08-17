@@ -10,6 +10,12 @@ category: transportation
 
 公共交通オープンデータセンター（ODPT）・気象庁（JMA）・GBFS などの**無料APIのみ**を利用した、東京圏の公共交通情報をスマートに扱うMCPサーバーです。天候・運行情報を加味したAIインテリジェントアドバイスを日本語・英語・中国語で自動生成します。
 
+## 前提条件
+
+- **Node.js 18+**（ESM・`import` 構文。`"type": "module"`）
+- リポジトリ直下で `npm install` 済み（依存: `@modelcontextprotocol/sdk`・`axios`・`adm-zip`・`dotenv`）
+- APIキーはリポジトリルートの `.env` **のみ**に保存（MCPクライアントの env には入れない）。`src/config.mjs` が `src/` を基準に `.env` を解決するため、起動時カレントディレクトリに依存しない。
+
 ## 対象サービス
 
 ### 利用可能（無料）
@@ -25,7 +31,7 @@ category: transportation
 - NAVITIME乗換検索API
 - Google Transit API
 
-## ツール一覧
+## ツール一覧（12種）
 
 | ツール | 説明 |
 |-------|------|
@@ -51,7 +57,7 @@ category: transportation
 
 ### 2. 環境変数の設定
 
-`.env`ファイルにAPIキーを設定：
+`.env`ファイルにAPIキーを設定（**コミット禁止・`.gitignore` 除外済み**）:
 
 ```
 ODPT_API_KEY=取得したAPIキー
@@ -66,7 +72,21 @@ npm start
 
 ### 4. MCPクライアント設定
 
-`mcp.json`（または Claude Desktop / Hermes の設定）に `node src/index.mjs` を登録し、`ODPT_API_KEY`（必須）と `FLIGHT_API_KEY`（任意）を env に指定します。
+`mcp.json` に `node src/index.mjs` を登録します。APIキーはMCPクライアントの設定には記載せず、リポジトリルートの `.env` のみに保存します（`src/config.mjs` の位置基準で解決）。
+
+```json
+{
+  "mcpServers": {
+    "tokyo-transit": {
+      "command": "node",
+      "args": ["/path/to/tokyo-transit-mcp/src/index.mjs"]
+    }
+  }
+}
+```
+
+- **Claude Code** から利用する場合は、リポジトリ直下で `claude mcp add -s project tokyo-transit -- node src/index.mjs` と登録。詳細は `CLAUDE.md` を参照。
+- Hermes / Claude Desktop では上記 `mcp.json` 形式を設定に追加。
 
 ## 使用例
 
@@ -78,6 +98,17 @@ search_route(from: "涩谷", to: "台场")         # 中国語入力→中国語
 search_route(from: "スカイツリー", to: "浅草") # 略称・ランドマーク名も解決
 search_route(from: "Haneda Airport", to: "Narita Airport", language: "en") # 空港アクセス
 ```
+ユーザーが英語（中国語）で質問した場合は `language: "en"`（`"zh"`）を**明示指定**すること。省略時は駅名から自動判定されるが、駅名が日本語のままの英語質問では判定がズレるため、クエリ言語に合わせて渡すと確実。
+
+### 障害シミュレーション（-test モード）
+`search_route` に `-test <障害種別>` を付けると、実際の外部APIを呼ばずに20種類以上の障害をシミュレーション（日英中キーワード対応）。開発・動作検証に利用。
+```
+search_route(from: "東京 -test 人身事故", to: "新宿")
+search_route(from: "新宿 -test 台風", to: "渋谷")
+search_route(from: "Tokyo -test typhoon", to: "Shinjuku")
+search_route(from: "东京 -test 台风", to: "新宿")
+```
+津波など災害系の `-test` では安全のため自転車案内（シェアサイクル）が抑止される（`isDisasterRisk`）。
 
 ### バス横断乗り継ぎ
 ```
@@ -106,6 +137,21 @@ search_flight(airport: "羽田空港", direction: "arrival", destination: "東�
 get_weather(area_name: "東京")
 ```
 
+## 開発ワークフロー（検証コマンド）
+
+コード変更後は必ず以下を実行して検証:
+
+```bash
+npm run build          # 構文チェック（node --check を src 配下全 .mjs に）
+npm test               # 多言語回帰プローブ（26ケース・日英中）
+npm run test:walk      # 徒歩連絡・同名別駅・路線データ整合性の回帰
+npm run test:bus       # バス乗り継ぎ実APIプローブ（API状況により長時間化）
+npm run test:issue     # イシュー回帰テスト群（#79/#80/#82/83/#84/#88-90/#91-92/#94-95）
+npm run test:vehicle   # vehicle優先の決定的モック回帰
+```
+
+**重要**: MCPツール経由の確認にはサーバー再起動が必要（ホットリロードなし）。`src/` 変更後は必ず `node --check` 全モジュール → 検証プローブ（全ツール×3言語）→ `npm run build` の順で確認（詳細は mcp-transit-server スキル参照）。
+
 ## データ構造
 
 ### 駅ID形式
@@ -126,7 +172,9 @@ odpt:Railway:TokyoMetro.{路線名}
 2. **サーキットブレイカー**: ODPT 3回連続失敗で60秒クールダウン。障害時もハードコードデータ（コミュニティバス等）で部分稼働を継続します。
 3. **荒天時安全ロジック**: 台風・浸水・降雪・凍結時は自転車案内を自動非表示にし、必要に応じて避難所リンクを表示します。荒天以外は、到着地点の座標を解決でき、GBFSリアルタイム情報を取得できた場合に限り、到着地点周辺のドコモ・バイクシェアを案内します。利用可能台数・返却可否は変動するため公式アプリで確認してください。
 4. **コミュニティバス**: 41自治体ディレクトリ＋主要10件の駅接続データ（バリアフリー案内）。時刻表・路線の詳細は各自治体公式サイトで確認してください。
-5. **コード変更後の検証**: `node --check` を src 配下の全モジュール（`src/index.mjs` `src/config.mjs` `src/data/*.mjs` `src/lib/*.mjs` `src/advice/*.mjs` `src/handlers/*.mjs`）に実行 → 検証プローブ（全ツール×3言語）→ `npm run build` の順で確認してください。MCPツール経由の確認にはサーバー再起動が必要です（詳細は mcp-transit-server スキル参照）。
+5. **search_fare の `fare: null`**: JR・私鉄等 ODPT運賃対象外の**正常動作**。対応7事業者（東京メトロ・都営・横浜市営・TX・りんかい・ゆりかもめ・多摩モノレール）で検証してから「異常」と判断してください。
+6. **公的機関案内（gov_facility_search_support）**: ラベル文字だけでなく実リンク（markdown）を必ず表示（リンク消失の指摘あり）。
+7. **MCP stdio 保護**: `console.log` は stderr へリダイレクト済み（`src/config.mjs`）。stdout に勝手に書き込まないこと。モジュール依存方向は `handlers → advice/data/lib → config` の一方向。
 
 ## 参考リンク
 
