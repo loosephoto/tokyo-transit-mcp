@@ -211,9 +211,14 @@ export async function searchFlight(args) {
   const label = (ja, en, zh) => userLang === 'en' ? en : userLang === 'zh' ? zh : ja;
 
   try {
-    // 🔴 #95: 地震 -test は空港アクセス経路・フライト情報を提示せず、地上交通と同様に安全確保を優先する。
-    // （従来は search_flight だけ地震シミュレーションを無視して通常応答を返していた）
-    if (isEarthquakeSimulation(testAdv)) {
+    // 🔴 #95: 地震・津波などの災害系（disaster）の -test は空港アクセス経路・フライト情報を
+    // 提示せず、地上交通と同様に安全確保を優先する。
+    // （従来は search_flight だけ地震シミュレーションを無視して通常応答を返していた。
+    //   さらに #96 で津波も含む disaster 系（type:'disaster'）全般を対象に拡張。
+    //   羽田空港は埋立地で津波リスクが高く、警報時にフライト一覧を返すのは誤解を招くため）
+    const isDisasterSim = isEarthquakeSimulation(testAdv)
+      || (testAdv.failureAdviceKey === 'emergency' && testAdv.fc?.type === 'disaster');
+    if (isDisasterSim) {
       return await buildEarthquakeSafetyResponse('ground', userLang, { from: airportRaw, to: destination || '' });
     }
     // 入力検証: 空港名または便名のいずれか必須

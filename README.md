@@ -33,13 +33,9 @@
 
 ### 🛤️ 直近の更新内容
 
-- **コード監査で発見された堅牢性・安全応答・言語判定の不都合を修正（v2.43.0）**
-  - **天気キャッシュの気温消失を修正**: `get_weather` でキャッシュヒット時に `max_temp` が応答から消える不具合を解消（`maxTemp` をキャッシュに保存・復元）
-  - **サーキットブレイカーの二重カウントを修正**: `get_timetable` / `search_fare` で1回のAPI障害が失敗回数2回分として数えられ、意図より早く遮断される問題を是正（単一catchで1回だけカウント）
-  - **内部エラーを障害と誤診断しない**: 実装バグ（TypeError 等）をサーキットブレイカーの失敗として数えず、`UNKNOWN_ERROR` に分類（#91方針との整合）。天気のJSONパース例外もブレーカーに正しく通知
-  - **フライト検索に地震シミュレーションを配線**: `search_flight` が `-test 地震` を無視して通常応答を返していた不具合を修正し、他ツールと同様に安全確保応答へ
-  - **ツール実行ハンドラの冗長な言語判定を整理**: 各ハンドラが自前で言語を解決するため、最上位の自動判定をエラー応答専用に簡素化
-  - **検証** — `npm run build`、`npm run test:issue`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、対象回帰テストが PASS
+- **コード監査で発見された堅牢性・安全応答・言語判定の不都合を修正（v2.43.1）**
+  - **フライト検索の災害シミュレーションを拡張**: `search_flight` が地震だけでなく津波などの災害系（disaster）`-test` も無視してフライト一覧を返していた不具合を修正。羽田空港（埋立地・津波リスク大）で警報時にフライトを提示する誤解を防ぎ、安全確保応答へ（v2.43.0の地震配線を津波含む全disasterに拡張）
+  - **検証** — `npm run build`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、`test-issue-94-95` が PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -604,13 +600,9 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Fixed code-audit issues in robustness, safety responses, and language detection (v2.43.0)**
-  - **Fixed weather-cache temperature loss**: `get_weather` no longer drops `max_temp` on cache hits (`maxTemp` is now cached and restored)
-  - **Fixed circuit-breaker double counting**: `get_timetable` / `search_fare` no longer count one API failure as two, which tripped the breaker earlier than intended (counted once in a single catch)
-  - **Internal errors no longer misdiagnosed as outages**: implementation bugs (e.g. TypeError) are not counted as breaker failures and are classified as `UNKNOWN_ERROR` (consistent with #91). JMA JSON parse errors are now correctly reported to the breaker
-  - **Wired earthquake simulation into flight search**: `search_flight` no longer ignores `-test 地震` and now returns the safety-first response like other tools
-  - **Simplified redundant language detection** in the tool-dispatch handler (each handler resolves its own language; the top-level fallback is now error-response-only)
-  - **Verification** — build, issue regression tests, `probe-all-lang` (26/26 PASS), and targeted regressions PASS
+- **Fixed code-audit issues in robustness, safety responses, and language detection (v2.43.1)**
+  - **Extended disaster simulation in flight search**: `search_flight` no longer ignores tsunami and other disaster-type `-test` inputs (it previously returned flight listings for anything but earthquakes). Prevents misleading flight info when Haneda (landfill, high tsunami risk) is under a warning; now returns the safety-first response (v2.43.0's earthquake wiring extended to all `disaster`-type failures)
+  - **Verification** — build, `probe-all-lang` (26/26 PASS), and `test-issue-94-95` PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1137,13 +1129,9 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复代码审计发现的稳健性、安全响应和语言检测问题（v2.43.0）**
-  - **修复天气缓存气温丢失**：`get_weather` 在缓存命中时不再丢失 `max_temp`（`maxTemp` 现在已缓存并恢复）
-  - **修复断路器重复计数**：`get_timetable` / `search_fare` 不再把一次API故障计为两次，从而避免比预期更早触发熔断（在单个catch中只计数一次）
-  - **不再把内部错误误判为故障**：实现缺陷（如TypeError）不计入断路器失败，并分类为 `UNKNOWN_ERROR`（与#91一致）。JMA JSON解析异常现在也会正确上报给断路器
-  - **为航班搜索接入地震模拟**：`search_flight` 不再忽略 `-test 地震`，并与其他工具一样返回优先确保安全的响应
-  - **简化工具分发处理器中冗余的语言检测**：各处理器自行解析语言；顶层回退现在仅用于错误响应
-  - **验证** — 构建、Issue回归测试、`probe-all-lang`（26/26 PASS）及针对性回归测试均通过
+- **修复代码审计发现的稳健性、安全响应和语言检测问题（v2.43.1）**
+  - **扩展航班搜索的灾害模拟**：`search_flight` 不再忽略海啸等灾害类（disaster）`-test` 输入（此前除地震外都会返回航班列表）。避免在羽田机场（填海造地、海啸风险高）发布警报时提示航班信息造成误解；现返回优先确保安全的响应（将 v2.43.0 的地震处理扩展至所有 disaster 类故障）
+  - **验证** — 构建、`probe-all-lang`（26/26 PASS）及 `test-issue-94-95` 均通过
 
 ### 🤖 AI 智能建议
 
