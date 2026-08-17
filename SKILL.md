@@ -137,7 +137,7 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.43.1（2026-08-17）— フライト検索の災害系シミュレーションを拡張
+### v2.43.2（2026-08-17）— 災害時 -test の自転車案内抑止を修正
 
-- **フライト検索の災害シミュレーションを拡張**: `search_flight` が地震だけでなく津波などの災害系（disaster）`-test` も無視してフライト一覧を返していた不具合を修正。羽田空港（埋立地・津波リスク大）で警報時にフライトを提示する誤解を防ぎ、安全確保応答へ（v2.43.0の地震配線を津波含む全 disaster に拡張）
-- **検証**: `npm run build`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、`test-issue-94-95` PASS
+- **災害時 -test の自転車案内抑止を修正**: `search_route` で津波などの災害系（disaster）`-test` 時に、運転見合わせの代替シェアサイクル案内（`cycling_alternative` / `destination_bike_share`）が表示される不都合を解消。津波・浸水・強風時は自転車移動が危険なため、実天気の特別警報と同様に自転車を非表示（`isDisasterRisk` を導入し避難リンク判定と共通化）。人身事故などの通常の運転見合わせでは従来どおり自転車を案内
+- **検証**: `npm run build`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、`test-contextual-display-routines` / `test-issue-88-89-90`（62/62）/ walk PASS

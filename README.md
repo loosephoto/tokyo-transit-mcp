@@ -33,9 +33,9 @@
 
 ### 🛤️ 直近の更新内容
 
-- **コード監査で発見された堅牢性・安全応答・言語判定の不都合を修正（v2.43.1）**
-  - **フライト検索の災害シミュレーションを拡張**: `search_flight` が地震だけでなく津波などの災害系（disaster）`-test` も無視してフライト一覧を返していた不具合を修正。羽田空港（埋立地・津波リスク大）で警報時にフライトを提示する誤解を防ぎ、安全確保応答へ（v2.43.0の地震配線を津波含む全disasterに拡張）
-  - **検証** — `npm run build`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、`test-issue-94-95` が PASS
+- **コード監査で発見された堅牢性・安全応答・言語判定の不都合を修正（v2.43.2）**
+  - **災害時 -test の自転車案内抑止を修正**: `search_route` で津波などの災害系（disaster）`-test` 時に、運転見合わせの代替シェアサイクル案内（`cycling_alternative` / `destination_bike_share`）が表示される不都合を解消。津波・浸水・強風時は自転車移動が危険なため、実天気の特別警報と同様に自転車を非表示（`isDisasterRisk` を導入し避難リンク判定と共通化）。人身事故などの通常の運転見合わせでは従来どおり自転車を案内
+  - **検証** — `npm run build`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、`test-contextual-display-routines` / `test-issue-88-89-90`（62/62）/ walk が PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -600,9 +600,9 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Fixed code-audit issues in robustness, safety responses, and language detection (v2.43.1)**
-  - **Extended disaster simulation in flight search**: `search_flight` no longer ignores tsunami and other disaster-type `-test` inputs (it previously returned flight listings for anything but earthquakes). Prevents misleading flight info when Haneda (landfill, high tsunami risk) is under a warning; now returns the safety-first response (v2.43.0's earthquake wiring extended to all `disaster`-type failures)
-  - **Verification** — build, `probe-all-lang` (26/26 PASS), and `test-issue-94-95` PASS
+- **Fixed code-audit issues in robustness, safety responses, and language detection (v2.43.2)**
+  - **Fixed bike-share suppression on disaster `-test`**: `search_route` no longer shows the substitute bike-share guidance (`cycling_alternative` / `destination_bike_share`) during tsunami and other disaster-type `-test` inputs. Since cycling is dangerous during tsunami/flooding/high winds, bikes are now hidden like for real special warnings (introduced `isDisasterRisk`, shared with the evacuation-link check). Normal suspensions (e.g. accidents) still show bike guidance as before
+  - **Verification** — build, `probe-all-lang` (26/26 PASS), `test-contextual-display-routines`, `test-issue-88-89-90` (62/62), and walk PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1129,9 +1129,9 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复代码审计发现的稳健性、安全响应和语言检测问题（v2.43.1）**
-  - **扩展航班搜索的灾害模拟**：`search_flight` 不再忽略海啸等灾害类（disaster）`-test` 输入（此前除地震外都会返回航班列表）。避免在羽田机场（填海造地、海啸风险高）发布警报时提示航班信息造成误解；现返回优先确保安全的响应（将 v2.43.0 的地震处理扩展至所有 disaster 类故障）
-  - **验证** — 构建、`probe-all-lang`（26/26 PASS）及 `test-issue-94-95` 均通过
+- **修复代码审计发现的稳健性、安全响应和语言检测问题（v2.43.2）**
+  - **修复灾害类 `-test` 的共享单车提示抑制**：`search_route` 在海啸等灾害类（disaster）`-test` 时不再显示替代共享单车指引（`cycling_alternative` / `destination_bike_share`）。由于海啸、积水、大风期间骑行存在危险，现与真实特别警报一样隐藏单车（引入 `isDisasterRisk`，并与避难链接判定共用）。一般停运（如人身事故）仍按原样提示单车
+  - **验证** — 构建、`probe-all-lang`（26/26 PASS）、`test-contextual-display-routines`、`test-issue-88-89-90`（62/62）及 walk 均通过
 
 ### 🤖 AI 智能建议
 

@@ -906,14 +906,20 @@ export async function searchRoute(args) {
   // 🚲 運転見合わせ時のみ自転車。ただし降雪・凍結時は転倒リスクが高いため非表示。
   // failureAdviceKey を見ることで、実際の降雪警報だけでなく -test 降雪も安全に抑止する。
   const isSnowRisk = failureAdviceKey === 'snow' || /雪|積雪|凍結/i.test(weatherText || '');
+  // 🔴 #97: 災害系（地震・津波・洪水・台風・火災等）の -test では、運転見合わせ時の代替として
+  // 自転車を案内しない。津波・浸水・強風時は自転車移動そのものが危険なため。
+  // 従来は isSevereWeather（実天気の特別警報・津波のみ）で抑止していたため、
+  // -test 津波（failureAdviceKey='emergency'）では isSevereWeather が false のまま
+  // 自転車が表示される不都合があった（実測確認）。
+  const isDisasterRisk = failureAdviceKey && ['emergency', 'earthquake', 'typhoon', 'flood', 'fire'].includes(failureAdviceKey);
   let bikeShareInfo = null;
   let destinationBikeShareInfo = null;
-  if (isTrainSuspended && !isSevereWeather && !isSevereWind && !isSnowRisk) {
+  if (isTrainSuspended && !isSevereWeather && !isSevereWind && !isSnowRisk && !isDisasterRisk) {
     bikeShareInfo = await findNearestBikeStations(fromName, userLocation);
   }
   // 荒天・降雪・凍結時を除き、到着地点周辺のラストワンマイル用ポートを案内する。
   // リアルタイムAPIが取得できない場合は推測せず、案内ブロック自体を省略する。
-  if (!isSevereWeather && !isSevereWind && !isSnowRisk) {
+  if (!isSevereWeather && !isSevereWind && !isSnowRisk && !isDisasterRisk) {
     destinationBikeShareInfo = await findNearestBikeStations(toName, null);
   }
 
@@ -1171,7 +1177,8 @@ export async function searchRoute(args) {
 
   // 🚨 緊急避難場所の検索リンクは、災害時のみ表示する。
   // 人身事故・降雪・通常の運行障害は避難場所の適合性を意味しないためリンクを付けない。
-  const isDisasterEvacuationCase = ['earthquake', 'emergency', 'typhoon', 'flood', 'fire'].includes(failureAdviceKey);
+  // （isDisasterRisk は上記で定義済み。災害系 failureAdviceKey と同期）
+  const isDisasterEvacuationCase = isDisasterRisk;
   if (isEmergencyActive) {
     resultPayload.emergency_alert = {
       status: "ALERT_ACTIVE",
