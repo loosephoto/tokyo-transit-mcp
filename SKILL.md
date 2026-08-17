@@ -198,7 +198,8 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.43.2（2026-08-17）— 災害時 -test の自転車案内抑止を修正
+### v2.43.3（2026-08-18）— 天気の府県判定を駅座標から自動解決
 
-- **災害時 -test の自転車案内抑止を修正**: `search_route` で津波などの災害系（disaster）`-test` 時に、運転見合わせの代替シェアサイクル案内（`cycling_alternative` / `destination_bike_share`）が表示される不都合を解消。津波・浸水・強風時は自転車移動が危険なため、実天気の特別警報と同様に自転車を非表示（`isDisasterRisk` を導入し避難リンク判定と共通化）。人身事故などの通常の運転見合わせでは従来どおり自転車を案内
-- **検証**: `npm run build`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、`test-contextual-display-routines` / `test-issue-88-89-90`（62/62）/ walk PASS
+- **座標→point-in-polygonで府県を自動判定**: `get_weather` の地域名解決（`stationToJmaArea`）で、手動辞書に無い駅名でも駅座標（ODPT geo・主要駅・JR検証済み駅）から 47都道府県ポリゴンへ point-in-polygon して JMA府県コードを自動導出（JIS府県コード×10000）。これまで「越谷レイクタウン」「鶴見」「東武動物公園」など非東京の駅が東京(130000)に縮退していた不具合を解消（越谷レイクタウン→埼玉110000、鶴見→神奈川140000 など）
+- **新規データ**: `src/data/prefecture-bounds.mjs`（47都道府県境界リング、Douglas-Peucker簡略化）、`src/data/station-coords-extra.mjs`（ODPT geo 352駅 + JR検証済み3駅）
+- **検証**: `npm run build`、`test-issue-88-89-90`（75/75 PASS）、`probe-all-lang`（26/26）、walk / check-integrity PASS

@@ -4,9 +4,45 @@
  */
 import { jmaBreaker, cache } from '../config.mjs';
 import { MULTILINGUAL_ADVICE, JMA_AREA_MAP, JMA_AREA_LABELS, PLACE_MUNICIPALITY, PLACE_SUBAREA } from '../data/misc.mjs';
+import { STATION_COORDS } from '../data/railway-lines.mjs';
+import { STATION_COORDS_EXTRA } from '../data/station-coords-extra.mjs';
+import { PREFECTURE_BOUNDS } from '../data/prefecture-bounds.mjs';
 import { resolveLang, detectLanguage, translateWeather } from '../lib/lang.mjs';
 import { jsonResponse, buildErrorResponse } from '../lib/common.mjs';
 import axios from 'axios';
+
+// #96: 座標→府県 自動解決。駅名は手動辞書（JMA_AREA_MAP）より先に検索するのではなく、
+// 座標を持つ駅を point-in-polygon で府県（JIS→JMA府県コード）へ解決する。
+// STATION_COORDS（主要駅・フェリー港）と STATION_COORDS_EXTRA（ODPT geo + JR検証済み駅）を統合。
+const COORD_LOOKUP = {};
+for (const [k, v] of Object.entries(STATION_COORDS)) COORD_LOOKUP[k] = [v.lat, v.lon];
+Object.assign(COORD_LOOKUP, STATION_COORDS_EXTRA);
+
+// point-in-polygon（レイキャスティング）。ring = [[lon,lat],...]
+function pointInPolygon(lon, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if ((yi > lat) !== (yj > lat) && (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+// 座標 → JMA府県予報区コード（JIS府県コード×10000）。島などポリゴン外は null。
+export function prefectureCodeFromCoords(lat, lon) {
+  for (const f of PREFECTURE_BOUNDS) {
+    if (f.rings.some(r => pointInPolygon(lon, lat, r))) return String(f.code).padStart(2, '0') + '0000';
+  }
+  return null;
+}
+
+// #96: 駅名 → 座標 → 府県コード（自動解決）。該当なしは null。
+function jmaCodeFromStationCoords(name) {
+  const raw = (name || '').trim();
+  if (!raw) return null;
+  const c = COORD_LOOKUP[raw] || COORD_LOOKUP[raw.replace(/駅$/, '')];
+  return c ? prefectureCodeFromCoords(c[0], c[1]) : null;
+}
 
 export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCode = null) {
   if (!jmaBreaker.canExecute()) {
@@ -95,6 +131,9 @@ export function stationToJmaArea(name) {
     const muniKey = muniEntry.ja.replace(/区$/, '');
     if (JMA_AREA_MAP[muniKey]) return JMA_AREA_MAP[muniKey];
   }
+  // 🔴 #96: 手動辞書に無い駅名は座標→point-in-polygonで府県を自動解決（東京縮退を防止）。
+  const coordCode = jmaCodeFromStationCoords(raw) || jmaCodeFromStationCoords(norm);
+  if (coordCode) return coordCode;
   return '130000'; // デフォルト: 東京
 }
 

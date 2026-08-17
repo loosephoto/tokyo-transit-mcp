@@ -21,6 +21,21 @@ assert(stationToJmaArea('神奈川') === '140000', '#88 神奈川→140000');
 assert(stationToJmaArea('横浜') === '140000', '#93 横浜→140000（市コード無効→府県正規化）');
 assert(stationToJmaArea('大宮') === '110000', '#88 大宮→110000');
 assert(stationToJmaArea('川崎') === '140000', '#88 川崎→140000');
+// 越谷→埼玉県110000＋南部一次細分区域110010（県内の区域選択。既定の北部から外れるため明示）
+assert(stationToJmaArea('越谷') === '110000', '越谷→110000');
+assert(stationToJmaArea('越谷レイクタウン') === '110000', '越谷レイクタウン→110000');
+assert(stationToJmaArea('越谷レイクタウン駅') === '110000', '越谷レイクタウン駅→110000');
+assert(placeToSubarea('越谷') === '110010', '越谷→南部区域110010');
+assert(placeToSubarea('越谷レイクタウン') === '110010', '越谷レイクタウン→南部区域110010');
+assert(placeToMunicipality('越谷').ja === '越谷', '越谷→自治体表示 越谷');
+// #96: 座標→point-in-polygonの自動解決（手動辞書なしでも駅名から府県を解決。東京縮退を防止）
+assert(stationToJmaArea('越谷レイクタウン') === '110000', '#96 越谷レイクタウン→埼玉110000（座標自動解決）');
+assert(stationToJmaArea('越谷レイクタウン駅') === '110000', '#96 越谷レイクタウン駅→埼玉110000');
+assert(stationToJmaArea('鶴見') === '140000', '#96 鶴見→神奈川140000（座標自動解決）');
+assert(stationToJmaArea('東武動物公園') === '110000', '#96 東武動物公園→埼玉110000');
+assert(stationToJmaArea('千葉') === '120000', '#96 千葉→120000');
+assert(stationToJmaArea('川崎') === '140000', '#96 川崎→140000');
+assert(stationToJmaArea('横浜') === '140000', '#96 横浜→140000');
 // フェリー港名→県コード（#90）
 assert(stationToJmaArea('東京・竹芝') === '130000', '#88 港 東京・竹芝→130000');
 assert(stationToJmaArea('大島') === '130000', '#88 港 大島→130000');
