@@ -33,13 +33,13 @@
 
 ### 🛤️ 直近の更新内容
 
-- **コード監査で発見された多言語表示・路線一覧・運賃・時刻表・ドキュメントの不都合を修正（v2.42.4）**
-  - **路線名の多言語誤変換を修正**: 完全一致・事業者付き完全一致を優先し、「有楽町線」「新宿線」が西武線として表示される問題を是正
-  - **事業者別路線一覧を修正**: `get_operator_routes` の英語・中国語出力で路線が二重登録される問題を修正し、MIR / Yurikamome の内蔵路線補完を正規化
-  - **運賃の重複を除去**: `search_fare` の同一事業者・同一運賃の重複レコードをデデュープ
-  - **時刻表を多言語化**: `get_timetable` の路線名、行先、列車種別、方向を表示用名称へ変換し、ODPT内部URIの露出を防止
-  - **ドキュメント・バージョン情報を同期**: READMEの日英中更新内容、SKILL.md更新履歴、`package-lock.json` を v2.42.4 に同期
-  - **検証** — `npm run build`、`npm run test:issue`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、対象回帰テスト、`git diff --check` が PASS
+- **コード監査で発見された堅牢性・安全応答・言語判定の不都合を修正（v2.43.0）**
+  - **天気キャッシュの気温消失を修正**: `get_weather` でキャッシュヒット時に `max_temp` が応答から消える不具合を解消（`maxTemp` をキャッシュに保存・復元）
+  - **サーキットブレイカーの二重カウントを修正**: `get_timetable` / `search_fare` で1回のAPI障害が失敗回数2回分として数えられ、意図より早く遮断される問題を是正（単一catchで1回だけカウント）
+  - **内部エラーを障害と誤診断しない**: 実装バグ（TypeError 等）をサーキットブレイカーの失敗として数えず、`UNKNOWN_ERROR` に分類（#91方針との整合）。天気のJSONパース例外もブレーカーに正しく通知
+  - **フライト検索に地震シミュレーションを配線**: `search_flight` が `-test 地震` を無視して通常応答を返していた不具合を修正し、他ツールと同様に安全確保応答へ
+  - **ツール実行ハンドラの冗長な言語判定を整理**: 各ハンドラが自前で言語を解決するため、最上位の自動判定をエラー応答専用に簡素化
+  - **検証** — `npm run build`、`npm run test:issue`、`node scripts/probe-all-lang.mjs`（26/26 PASS）、対象回帰テストが PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -604,12 +604,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Fixed code-audit issues in multilingual display, route listings, fares, timetables, and documentation (v2.42.4)**
-  - **Fixed multilingual line-name mislabeling**: exact and operator-qualified matches prevent Tokyo Metro Yurakucho and Toei Shinjuku lines from being labeled as Seibu lines
-  - **Fixed operator route listings**: removed multilingual duplicate routes and normalized MIR / Yurikamome internal-line fallback
-  - **Removed duplicate fares** from `search_fare` and translated timetable railway, destination, train type, and direction fields
-  - **Synchronized documentation and version metadata** across README, SKILL.md, `package.json`, `package-lock.json`, and the MCP server metadata
-  - **Verification** — build, issue regression tests, 26-language probe cases, targeted regressions, and `git diff --check` PASS
+- **Fixed code-audit issues in robustness, safety responses, and language detection (v2.43.0)**
+  - **Fixed weather-cache temperature loss**: `get_weather` no longer drops `max_temp` on cache hits (`maxTemp` is now cached and restored)
+  - **Fixed circuit-breaker double counting**: `get_timetable` / `search_fare` no longer count one API failure as two, which tripped the breaker earlier than intended (counted once in a single catch)
+  - **Internal errors no longer misdiagnosed as outages**: implementation bugs (e.g. TypeError) are not counted as breaker failures and are classified as `UNKNOWN_ERROR` (consistent with #91). JMA JSON parse errors are now correctly reported to the breaker
+  - **Wired earthquake simulation into flight search**: `search_flight` no longer ignores `-test 地震` and now returns the safety-first response like other tools
+  - **Simplified redundant language detection** in the tool-dispatch handler (each handler resolves its own language; the top-level fallback is now error-response-only)
+  - **Verification** — build, issue regression tests, `probe-all-lang` (26/26 PASS), and targeted regressions PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1136,12 +1137,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复代码审计发现的多语言显示、线路列表、票价、时刻表和文档问题（v2.42.4）**
-  - **修正多语言线路名称**：通过完全匹配和运营商限定匹配，避免东京地铁有乐町线/都营新宿线被误标为西武线路
-  - **修正运营商线路列表**：删除多语言重复线路，并统一 MIR / Yurikamome 内置线路回退
-  - **去除重复票价**，并翻译时刻表中的线路、目的地、列车类型和方向字段
-  - **同步文档与版本信息**：统一 README、SKILL.md、`package.json`、`package-lock.json` 和 MCP 服务器元数据
-  - **验证** — 构建、Issue 回归测试、26项多语言探针、针对性回归测试和 `git diff --check` 均通过
+- **修复代码审计发现的稳健性、安全响应和语言检测问题（v2.43.0）**
+  - **修复天气缓存气温丢失**：`get_weather` 在缓存命中时不再丢失 `max_temp`（`maxTemp` 现在已缓存并恢复）
+  - **修复断路器重复计数**：`get_timetable` / `search_fare` 不再把一次API故障计为两次，从而避免比预期更早触发熔断（在单个catch中只计数一次）
+  - **不再把内部错误误判为故障**：实现缺陷（如TypeError）不计入断路器失败，并分类为 `UNKNOWN_ERROR`（与#91一致）。JMA JSON解析异常现在也会正确上报给断路器
+  - **为航班搜索接入地震模拟**：`search_flight` 不再忽略 `-test 地震`，并与其他工具一样返回优先确保安全的响应
+  - **简化工具分发处理器中冗余的语言检测**：各处理器自行解析语言；顶层回退现在仅用于错误响应
+  - **验证** — 构建、Issue回归测试、`probe-all-lang`（26/26 PASS）及针对性回归测试均通过
 
 ### 🤖 AI 智能建议
 

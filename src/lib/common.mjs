@@ -139,6 +139,15 @@ export const getParams = (operator, additionalParams = {}) => {
 
 export function isRateLimitError(error) { return error?.response?.status === 429 || (error?.message || '').includes('429'); }
 
+// プログラム内部エラー（実装バグ）とネットワーク/API起因の一時障害を区別する。
+// 内部エラーは再試行しても治らないため、サーキットブレイカーの失敗カウントに加算すべきではない
+// （API障害と誤診断して早く OPEN にすると #91 の再発）。handleApiError と各ハンドラの catch で共用する。
+export function isInternalError(error) {
+  return error instanceof ReferenceError || error instanceof TypeError
+    || error instanceof RangeError || error instanceof SyntaxError
+    || (error instanceof Error && /is not (defined|a function)|undefined is not an object/.test(error.message));
+}
+
 export function handleApiError(error, details = {}) {
   if (isRateLimitError(error)) {
     return jsonResponse(buildErrorResponse('API_TIMEOUT', 'APIレート制限に達しました。しばらく待ってから再試行してください。', { ...details, retryable: true }));
@@ -146,9 +155,7 @@ export function handleApiError(error, details = {}) {
   // プログラム内部エラー（ReferenceError/TypeError/RangeError/SyntaxError 等）は、ネットワーク起因の
   // 一時障害ではなく実装バグの可能性が高いため、NETWORK_ERROR に化けさせず UNKNOWN_ERROR
   // （retryable:false）として分類する。再試行を促す誤診断（#91）を防ぐ。
-  const isInternal = error instanceof ReferenceError || error instanceof TypeError
-    || error instanceof RangeError || error instanceof SyntaxError
-    || (error instanceof Error && /is not (defined|a function)|undefined is not an object/.test(error.message));
+  const isInternal = isInternalError(error);
   const status = error?.response?.status;
   const errType = isInternal ? 'UNKNOWN_ERROR'
     : error.code === 'ECONNABORTED' ? 'API_TIMEOUT'

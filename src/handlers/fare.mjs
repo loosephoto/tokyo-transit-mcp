@@ -4,7 +4,7 @@
  */
 import { cache, odptBreaker, API_BASE_URL, API_KEY } from '../config.mjs';
 import { OPERATOR_MAP, NON_RAIL_OPERATORS } from '../data/misc.mjs';
-import { getParams, jsonResponse, buildErrorResponse } from '../lib/common.mjs';
+import { getParams, jsonResponse, buildErrorResponse, isInternalError } from '../lib/common.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName } from '../lib/lang.mjs';
 import { getStationRomanToJa, normalizeStationName } from './search-route.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
@@ -39,7 +39,7 @@ export async function resolveFareStations(rawName) {
         }
       }
       if (candidates.length) break;
-    } catch (e) { odptBreaker.onFailure(e); lastError = e; }
+    } catch (e) { lastError = e; }
   }
   if (candidates.length === 0 && !anySuccess && lastError) {
     // 全クエリ通信失敗 → データ非対応と区別せず、通信障害として上位に伝播
@@ -69,8 +69,8 @@ export async function fetchFaresByFromStation(stationId) {
     cache.set(cacheKey, fares, cache.railwayFare.ttl);
     return fares;
   } catch (e) {
-    // 🔴 通信失敗は空結果として握りつぶさず、searchFare の handleApiError に伝播させる（#84）
-    odptBreaker.onFailure(e);
+    // 🔴 通信失敗は空結果として握りつぶさず、searchFare の handleApiError に伝播させる（#84）。
+    // 🔴 #95: onFailure は searchFare の単一の catch（L171）で1回だけ数える（二重カウント防止）。
     throw e;
   }
 }
@@ -168,7 +168,10 @@ export async function searchFare(args) {
       data_source: noteText
     });
   } catch (error) {
-    odptBreaker.onFailure(error);
+    // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
+    // ヘルパー（resolveFareStations / fetchFaresByFromStation）側では onFailure を呼ばないため、
+    // ここで1回だけカウントされる（二重カウント防止）。
+    if (!isInternalError(error)) odptBreaker.onFailure(error);
     return handleApiError(error, { userLang, from, to });
   }
 }

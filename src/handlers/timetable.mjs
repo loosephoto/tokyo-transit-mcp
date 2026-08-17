@@ -6,7 +6,7 @@ import { cache, odptBreaker, API_BASE_URL, API_KEY } from '../config.mjs';
 import { OPERATOR_MAP } from '../data/misc.mjs';
 import { RAILWAY_NAME_MAP, ODPT_RAILWAY_NAME_MAP } from '../data/station-names.mjs';
 import { RAILWAY_LINES } from '../data/railway-lines.mjs';
-import { getParams, jsonResponse, buildErrorResponse, handleApiError } from '../lib/common.mjs';
+import { getParams, jsonResponse, buildErrorResponse, handleApiError, isInternalError } from '../lib/common.mjs';
 import { normalizeOvernightTime, timeToSortMinutes } from '../lib/time.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName, getDisplayLineName, translateTrainInfoDetail } from '../lib/lang.mjs';
 import { normalizeStationName, getStationRomanToJa } from './search-route.mjs';
@@ -50,8 +50,8 @@ export async function getTimetableRailways() {
     if (lines.length > 0) cache.set(cacheKey, lines, cache.trainTimetable.ttl);
     return lines;
   } catch (error) {
-    // API障害を「対象路線なし」と誤認させない。
-    odptBreaker.onFailure(error);
+    // 🔴 #95: 二重カウント防止 — このヘルパーでは onFailure を呼ばず、getTimetable の
+    // 単一の catch（L291）でブレーカーに通知する。呼び出し元が失敗を1回だけ数えられるようにする。
     throw error;
   }
 }
@@ -288,7 +288,10 @@ export async function getTimetable(args) {
     }
     return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, calendar: targetCalendar, service_date: serviceDate || new Date().toISOString().slice(0, 10), truncated: truncated || undefined, total: sortedMatched.length, timetable: sortedMatched.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable (路線×calendar別取得)", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
   } catch (error) {
-    odptBreaker.onFailure(error);
+    // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
+    // 外部 API 障害のみ onFailure でカウントする。ヘルパー（getTimetableRailways）側で
+    // onFailure を呼ばないようにしたため、ここで1回だけカウントされる（二重カウント防止）。
+    if (!isInternalError(error)) odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });
   }
 }

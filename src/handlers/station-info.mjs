@@ -7,7 +7,7 @@ import { OPERATOR_MAP, NON_RAIL_OPERATORS } from '../data/misc.mjs';
 import { RAILWAY_NAME_MAP } from '../data/station-names.mjs';
 import { RAILWAY_LINES } from '../data/railway-lines.mjs';
 import { TOKYO_COMMUNITY_BUSES } from '../data/bus-routes.mjs';
-import { getParams, jsonResponse, buildErrorResponse, handleApiError, buildGovFacilitySearchSupport } from '../lib/common.mjs';
+import { getParams, jsonResponse, buildErrorResponse, handleApiError, buildGovFacilitySearchSupport, isInternalError } from '../lib/common.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName, getLineDisplayName, getDisplayLineName } from '../lib/lang.mjs';
 import { normalizeStationName, resolveStation, getStationRomanToJa, getDestinationCulturalFacilities, STATION_TO_LINES } from './search-route.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
@@ -81,7 +81,8 @@ export async function getStationInfo(args) {
       gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, displayStation)
     });
   } catch (error) {
-    odptBreaker.onFailure(error);
+    // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
+    if (!isInternalError(error)) odptBreaker.onFailure(error);
     return handleApiError(error, { userLang, station: stationName, api: 'ODPT' });
   }
 }
@@ -198,7 +199,8 @@ export async function getOperatorRoutes(args) {
     });
     return jsonResponse({ status: "SUCCESS", detected_language: userLang, operator_name: opKey, type: opMeta.type, routes: cleanRoutes, total_routes: cleanRoutes.length, website: opMeta.website || null });
   } catch (error) {
-    odptBreaker.onFailure(error);
+    // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
+    if (!isInternalError(error)) odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });
   }
 }

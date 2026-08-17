@@ -16,7 +16,7 @@ import { MULTILINGUAL_ADVICE, NON_RAIL_OPERATORS, EMERGENCY_EVACUATION_SEARCH_UR
 import { FERRY_PORT_MAP } from '../data/ferry-ports.mjs';
 import { getDisplayStationName, getDisplayLineName, getLineDisplayName, getCommunityBusDisplayName,
          getCommunityBusStopDisplayName, detectLanguage, resolveLang, translateWeather, translateTrainInfoDetail } from '../lib/lang.mjs';
-import { jsonResponse, buildErrorResponse, getParams, buildGovFacilitySearchSupport } from '../lib/common.mjs';
+import { jsonResponse, buildErrorResponse, getParams, buildGovFacilitySearchSupport, isInternalError } from '../lib/common.mjs';
 import { haversineDistance } from '../lib/geo.mjs';
 import { parseTestMode, detectFailureType } from '../advice/transit-advice.mjs';
 import { getWeatherAdvice, stationToJmaArea } from '../advice/weather.mjs';
@@ -821,7 +821,7 @@ export async function searchRoute(args) {
             isHot = isHot || r.isHot;
           }
           return { weather: text, isRainy, isSevere, isSpecial, isSevereWind, isHighWave, isHot };
-        } catch (e) { jmaBreaker.onFailure(e); return { error: e.message }; }
+        } catch (e) { if (!isInternalError(e)) jmaBreaker.onFailure(e); return { error: e.message }; }
       })(),
       (async () => {
         if (!odptBreaker.canExecute()) return { error: 'CIRCUIT_OPEN' };
@@ -850,7 +850,7 @@ export async function searchRoute(args) {
           busTransferDetected = fb; busTransferDetail = fd;
           odptBreaker.onSuccess();
           return { delays: allDelays, busTransfer: fb, busTransferDetail: fd, suspendedLineNames: [...suspendedLineNames] };
-        } catch (e) { odptBreaker.onFailure(e); return { error: e.message }; }
+        } catch (e) { if (!isInternalError(e)) odptBreaker.onFailure(e); return { error: e.message }; }
       })()
     ]);
 

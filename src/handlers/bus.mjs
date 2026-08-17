@@ -10,7 +10,7 @@ import { BUS_OPERATORS, TOKYO_COMMUNITY_BUSES, COMMUNITY_BUS_ROUTES, COMMUNITY_B
 import { MULTILINGUAL_ADVICE, NON_RAIL_OPERATORS, OPERATOR_MAP } from '../data/misc.mjs';
 import { STATION_COORDS, RAILWAY_LINES } from '../data/railway-lines.mjs';
 import { STATION_NAME_MAP, STATION_DISPLAY_NAMES, RAILWAY_NAME_MAP } from '../data/station-names.mjs';
-import { getParams, jsonResponse, buildErrorResponse, handleApiError, buildGovFacilitySearchSupport } from '../lib/common.mjs';
+import { getParams, jsonResponse, buildErrorResponse, handleApiError, buildGovFacilitySearchSupport, isInternalError } from '../lib/common.mjs';
 import { getDisplayStationName, getCommunityBusDisplayName, getCommunityBusStopDisplayName,
          resolveLang, detectLanguage, translateTrainInfoDetail } from '../lib/lang.mjs';
 import { haversineDistance, haversineM } from '../lib/geo.mjs';
@@ -1182,7 +1182,8 @@ export async function searchBus(args) {
         simulated_failure_type: testAdv.failureType || undefined
       });
     } catch (error) {
-      odptBreaker.onFailure(error);
+      // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
+      if (!isInternalError(error)) odptBreaker.onFailure(error);
       return handleApiError(error, { userLang });
     }
   }
@@ -1405,7 +1406,8 @@ export async function searchBus(args) {
       simulated_failure_type: testAdv.failureType || undefined
     });
   } catch (error) {
-    odptBreaker.onFailure(error);
+    // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
+    if (!isInternalError(error)) odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });
   }
 }

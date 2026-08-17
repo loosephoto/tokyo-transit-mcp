@@ -17,38 +17,48 @@ export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCod
   const cacheKey = `${cache.jmaWeather.key}:${areaCode}:${subAreaCode || 'default'}`;
   const cached = cache.get(cacheKey);
   let weather, windText = '', waveText = '', isRainy = false, isHot = false, isSevere = false, isSpecial = false, isSevereWind = false, isHighWave = false, maxTemp = 0, areaRegionName = '';
-  if (cached) { weather = cached.weather; windText = cached.windText || ''; waveText = cached.waveText || ''; isRainy = cached.isRainy; isHot = cached.isHot; isSevere = cached.isSevere || false; isSpecial = cached.isSpecial || false; isSevereWind = cached.isSevereWind || false; isHighWave = cached.isHighWave || false; areaRegionName = cached.areaRegionName || ''; }
+  if (cached) {
+    weather = cached.weather; windText = cached.windText || ''; waveText = cached.waveText || '';
+    isRainy = cached.isRainy; isHot = cached.isHot; isSevere = cached.isSevere || false;
+    isSpecial = cached.isSpecial || false; isSevereWind = cached.isSevereWind || false; isHighWave = cached.isHighWave || false;
+    areaRegionName = cached.areaRegionName || ''; maxTemp = cached.maxTemp || 0;
+  }
   else {
     // #93: JMA API 呼び出しの失敗を jmaBreaker に必ず通知する。
     // 従来は getWeatherAdvice / search-route のどちらの呼び出し元でも例外が
     // 握り潰されるか無視され、失敗カウントが増えず jmaBreaker が機能しなかった。
-    let response;
+    // さらに HTTP取得（axios.get）だけでなく、その後の JSON パース（data[0].timeSeries 等）も
+    // 同一の try 内で処理し、200 OK だが不正な構造（マラフォームドな JSON や配列外アクセス）の
+    // 例外も jmaBreaker.onFailure に通知して API 障害として数える。
     try {
-      response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
+      const response = await axios.get(`https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`, { timeout: 15000 });
+      // 🔴 #93: 府県 JSON 内の一次細分区域（伊豆諸島北部等）を subAreaCode で選択。無ければ先頭区域（東京地方等）を使用。
+      const allAreas = response.data[0]?.timeSeries?.[0]?.areas || [];
+      const area = (subAreaCode && allAreas.find(a => a.area?.code === subAreaCode)) || allAreas[0];
+      areaRegionName = area?.area?.name || '';
+      weather = area?.weathers?.[0];
+      windText = area?.winds?.[0] || '';
+      waveText = area?.waves?.[0] || '';
+      if (!weather) throw new Error(`JMA forecast area not found for ${areaCode}${subAreaCode ? `/${subAreaCode}` : ''}`);
+      isRainy = weather.includes("雨") || weather.includes("雪");
+      // #89: 強風・高波・特別警報を予報文（winds/waves）から検出。
+      // #93: 警報・注意報の概況文（response.data[0].text）も突合して特別警報検出を強化。
+      const sev = parseSevereWeather(weather, windText, waveText, response.data[0]?.text || '');
+      isSevere = sev.isSevere;      // 荒天全体（アドバイス昇格用）
+      isSpecial = sev.isSpecial;    // 特別警報・津波（経路抑止用）
+      isSevereWind = sev.isSevereWind;
+      isHighWave = sev.isHighWave;
+      for (const ts of response.data[0]?.timeSeries || []) {
+        if (ts.areas?.[0]?.temps) { maxTemp = Math.max(...ts.areas[0].temps.map(t => parseInt(t) || 0)); if (maxTemp >= 33) isHot = true; }
+      }
+      // 🔴 #94/#95: maxTemp もキャッシュに保存・復元する。
+      // 従来は maxTemp をキャッシュ保存せず、キャッシュヒット時に max_temp が応答から消えていた。
+      cache.set(cacheKey, { weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave, areaRegionName, maxTemp }, cache.jmaWeather.ttl);
+      jmaBreaker.onSuccess();
     } catch (error) {
       jmaBreaker.onFailure(error);
       throw error;
     }
-    // 🔴 #93: 府県 JSON 内の一次細分区域（伊豆諸島北部等）を subAreaCode で選択。無ければ先頭区域（東京地方等）を使用。
-    const allAreas = response.data[0].timeSeries[0].areas || [];
-    const area = (subAreaCode && allAreas.find(a => a.area?.code === subAreaCode)) || allAreas[0];
-    areaRegionName = area?.area?.name || '';
-    weather = area.weathers[0];
-    windText = area.winds?.[0] || '';
-    waveText = area.waves?.[0] || '';
-    isRainy = weather.includes("雨") || weather.includes("雪");
-    // #89: 強風・高波・特別警報を予報文（winds/waves）から検出。
-    // #93: 警報・注意報の概況文（response.data[0].text）も突合して特別警報検出を強化。
-    const sev = parseSevereWeather(weather, windText, waveText, response.data[0]?.text || '');
-    isSevere = sev.isSevere;      // 荒天全体（アドバイス昇格用）
-    isSpecial = sev.isSpecial;    // 特別警報・津波（経路抑止用）
-    isSevereWind = sev.isSevereWind;
-    isHighWave = sev.isHighWave;
-    for (const ts of response.data[0]?.timeSeries || []) {
-      if (ts.areas?.[0]?.temps) { maxTemp = Math.max(...ts.areas[0].temps.map(t => parseInt(t) || 0)); if (maxTemp >= 33) isHot = true; }
-    }
-    cache.set(cacheKey, { weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave, areaRegionName }, cache.jmaWeather.ttl);
-    jmaBreaker.onSuccess();
   }
   // #89: 荒天（強風・高波・特別警報）は typhoon 系アドバイスに昇格
   const adviceKey = isSevere ? 'typhoon' : (isHot ? 'hot' : (isRainy ? 'rainy' : 'fair'));

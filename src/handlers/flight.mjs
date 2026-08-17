@@ -9,7 +9,7 @@ import { getParams, jsonResponse, buildErrorResponse, handleApiError } from '../
 import { validateFlightDate } from '../lib/time.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName, getLineDisplayName, getDisplayLineName, translateWeather } from '../lib/lang.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
-import { isEarthquakeSimulation } from '../advice/earthquake.mjs';
+import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import { getWeatherAdvice } from '../advice/weather.mjs';
 import { computeRoutes } from './search-route.mjs';
 import axios from 'axios';
@@ -211,6 +211,11 @@ export async function searchFlight(args) {
   const label = (ja, en, zh) => userLang === 'en' ? en : userLang === 'zh' ? zh : ja;
 
   try {
+    // 🔴 #95: 地震 -test は空港アクセス経路・フライト情報を提示せず、地上交通と同様に安全確保を優先する。
+    // （従来は search_flight だけ地震シミュレーションを無視して通常応答を返していた）
+    if (isEarthquakeSimulation(testAdv)) {
+      return await buildEarthquakeSafetyResponse('ground', userLang, { from: airportRaw, to: destination || '' });
+    }
     // 入力検証: 空港名または便名のいずれか必須
     if (!airportRaw && !flightNumber) {
       return jsonResponse(buildErrorResponse('INVALID_INPUT',

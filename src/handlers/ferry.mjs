@@ -5,7 +5,7 @@
 import { cache, odptBreaker, jmaBreaker, API_BASE_URL, API_KEY } from '../config.mjs';
 import { FERRY_PORT_MAP, FERRY_PORT_NAMES, FERRY_GTFS_SOURCES, FERRY_PORT_TSUNAMI_AREAS } from '../data/ferry-ports.mjs';
 import { MULTILINGUAL_ADVICE } from '../data/misc.mjs';
-import { getParams, jsonResponse, buildErrorResponse } from '../lib/common.mjs';
+import { getParams, jsonResponse, buildErrorResponse, isInternalError } from '../lib/common.mjs';
 import { parseCsvRecords } from '../lib/csv.mjs';
 import { gtfsFetchDates, normalizeOvernightTime } from '../lib/time.mjs';
 import { fetchGtfsZipBuffer } from '../lib/gtfs.mjs';
@@ -572,6 +572,10 @@ export async function searchFerry(args) {
     const errMsg = error.message || String(error);
     if (errMsg.includes('Circuit Breaker') || errMsg.includes('CIRCUIT_OPEN')) {
       return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません（サーキットブレイカー作動中）。キャッシュが期限切れの場合は時間をおいてお試しください。', { userLang, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
+    }
+    // 🔴 #95: 内部エラー（実装バグ）はネットワーク起因の一時障害と誤診断しない（#91 方針との整合）。
+    if (isInternalError(error)) {
+      return jsonResponse(buildErrorResponse('UNKNOWN_ERROR', errMsg, { userLang, from: fromPort, to: toPort, internal: true }));
     }
     return jsonResponse(buildErrorResponse(
       error.code === 'ECONNABORTED' ? 'API_TIMEOUT' : 'NETWORK_ERROR',

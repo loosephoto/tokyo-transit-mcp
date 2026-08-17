@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.42.4 (Production Ready)
+ * Tokyo Transit MCP Server v2.43.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -34,7 +34,7 @@ import { searchFare } from './handlers/fare.mjs';
 import { getTimetable } from './handlers/timetable.mjs';
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.42.4' },
+  { name: 'tokyo-transit-mcp', version: '2.43.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -113,16 +113,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 // ツール実行ハンドラ
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  // 言語決定: 明示指定(resolveLang) > from/to の自動判定（いずれかが zh/en なら採用）> ja
-  // 中国語/英語で検索された際は検索言語で返す（ユーザー要求）。
-  const autoLang =
-    detectLanguage(args?.from) === 'ja' && detectLanguage(args?.to) === 'ja' && detectLanguage(args?.area_name) === 'ja' && detectLanguage(args?.from_port) === 'ja'
-      ? 'ja'
-      : (detectLanguage(args?.from) !== 'ja' ? detectLanguage(args?.from)
+  // 🔴 #95: 各ツールの成功応答の言語はハンドラ内で独立に解決される（resolveLang / detectLanguage）。
+  // ここで計算する userLang は「未知ツール / 未捕捉例外」という最上位エラーのみに使用する。
+  // 従来の複雑な autoLang 三項チェーンはハンドラの言語解決と重複するだけで、成功応答には
+  // 一切影響しなかったため、簡潔なフォールバック判定に置き換えた。
+  const errLang =
+    resolveLang(args)
+    || (detectLanguage(args?.from) !== 'ja' ? detectLanguage(args?.from)
         : detectLanguage(args?.to) !== 'ja' ? detectLanguage(args?.to)
         : detectLanguage(args?.area_name) !== 'ja' ? detectLanguage(args?.area_name)
-        : detectLanguage(args?.from_port));
-  const userLang = resolveLang(args) || autoLang || 'ja';
+        : detectLanguage(args?.from_port) !== 'ja' ? detectLanguage(args?.from_port)
+        : detectLanguage(args?.station_name) !== 'ja' ? detectLanguage(args?.station_name)
+        : 'ja');
   try {
     switch (name) {
       case 'search_route': return await searchRoute(args);
@@ -137,10 +139,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'get_timetable': return await getTimetable(args);
       case 'search_bus': return await searchBus(args);
       case 'search_flight': return await searchFlight(args);
-      default: return jsonResponse(buildErrorResponse('INVALID_INPUT', `Unknown tool: ${name}`, { userLang }));
+      default: return jsonResponse(buildErrorResponse('INVALID_INPUT', `Unknown tool: ${name}`, { userLang: errLang }));
     }
   } catch (error) {
-    return jsonResponse(buildErrorResponse('UNKNOWN_ERROR', error.message || String(error), { userLang }));
+    return jsonResponse(buildErrorResponse('UNKNOWN_ERROR', error.message || String(error), { userLang: errLang }));
   }
 });
 
