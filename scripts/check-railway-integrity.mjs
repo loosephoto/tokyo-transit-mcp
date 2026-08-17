@@ -4,6 +4,7 @@
 // 3. 同一駅が複数路線に所属する際の整合性（STATION_TO_LINES 逆引き）
 // 4. 環状線のチェック（先頭=末尾なら正常扱い）
 import fs from 'fs';
+import { EXPECTED_RAILWAY_STATION_COUNTS } from '../src/data/expected-railway-counts.mjs';
 
 const src = fs.readFileSync('src/data/railway-lines.mjs', 'utf8');
 const start = src.indexOf('const RAILWAY_LINES = {');
@@ -78,12 +79,7 @@ const extremes = lines.filter(l => l.stations.length <= 2 || l.stations.length >
 for (const l of extremes) console.log(`${l.stations.length}駅 | ${l.name} | ${l.stations.join(',')}`);
 
 console.log('\n=== 5. 公式駅数の目視チェック対象（主要路線） ===');
-const known = {
-  'JR山手線': 30, 'JR中央線快速': 17, 'JR総武線各停': 22, 'JR中央総武線各停': 39,
-  'JR常磐線快速': 27, 'JR常磐線各停': 14, 'JR埼京線': 19, 'JR横須賀線': 14,
-  '東京メトロ銀座線': 19, '東京メトロ丸ノ内線': 25, '都営大江戸線': 38, '都営浅草線': 20,
-};
-for (const [name, expected] of Object.entries(known)) {
+for (const [name, expected] of Object.entries(EXPECTED_RAILWAY_STATION_COUNTS)) {
   const actual = byName[name] ? byName[name].length : 0;
   const flag = actual === expected ? 'OK' : `⚠️ 期待${expected} vs 実際${actual}`;
   console.log(`${flag} | ${name}: ${actual}駅`);

@@ -1,0 +1,72 @@
+/**
+ * STATION_NAME_MAP セクション: extra-lines
+ * 元: station-names.mjs（並行作業・ドメイン分割のための独立編集ファイル）
+ */
+export const STATION_NAME_EXTRA_LINES = {
+  // ===== 2026-08 追加路線（#10〜#19）主要駅 英字エイリアス =====
+  // 常磐線各停（#14）
+  'Ayase': '綾瀬', 'Kameari': '亀有', 'Kanamachi': '金町', 'Kita-Matsudo': '北松戸', 'KitaMatsudo': '北松戸',
+  'Mabashi': '馬橋', 'Shin-Matsudo': '新松戸', 'ShinMatsudo': '新松戸', 'Kita-Kogane': '北小金', 'KitaKogane': '北小金',
+  'Minami-Kashiwa': '南柏', 'MinamiKashiwa': '南柏', 'Sakasai': '逆井', 'Takayanagi': '高柳', 'Tennodai': '天王台',
+  // 南武線（#19）
+  'Kawasaki': '川崎', 'Shitte': '尻手', 'Yako': '矢向', 'Kashimada': '鹿島田', 'Hirama': '平間', 'Mukaigawara': '向河原',
+  'Musashi-Kosugi': '武蔵小杉', 'MusashiKosugi': '武蔵小杉', 'Musashi-Nakahara': '武蔵中原', 'MusashiNakahara': '武蔵中原',
+  'Musashi-Shinjo': '武蔵新城', 'MusashiShinjo': '武蔵新城', 'Musashi-Mizonokuchi': '武蔵溝ノ口', 'MusashiMizonokuchi': '武蔵溝ノ口',
+  'Tsudayama': '津田山', 'Kuji': '久地', 'Shukugawara': '宿河原', 'Noborito': '登戸', 'Nakanoshima': '中野島',
+  'Inadaizumi': '稲田堤', 'Yanokuchi': '矢野口', 'Inagi-Naganuma': '稲城長沼', 'InagiNaganuma': '稲城長沼',
+  'Minami-Tama': '南多摩', 'MinamiTama': '南多摩', 'Fuchu-Honmachi': '府中本町', 'Nishifu': '西府', 'Yabo': '谷保',
+  'Yagawa': '矢川', 'Nishi-Kunitachi': '西国立', 'NishiKunitachi': '西国立', 'Tachikawa': '立川',
+  // 武蔵野線補完（#12）
+  'Higashi-Urawa': '東浦和', 'HigashiUrawa': '東浦和', 'Minami-Koshigaya': '南越谷', 'MinamiKoshigaya': '南越谷',
+  'Koshigaya-Laketown': '越谷レイクタウン', 'KoshigayaLaketown': '越谷レイクタウン',
+  'Yoshikawa': '吉川', 'Yoshikawa-Minami': '吉川美南', 'YoshikawaMinami': '吉川美南',
+  'Shin-Misato': '新三郷', 'ShinMisato': '新三郷', 'Misato': '三郷', 'Funabashi-Hoten': '船橋法典', 'FunabashiHoten': '船橋法典',
+  'Nishi-Urawa': '西浦和', 'NishiUrawa': '西浦和', 'Minami-Urawa': '南浦和', 'MinamiUrawa': '南浦和',
+  // 新京成線（#11）
+  'Matsudo-Shinden': '松戸新田', 'MatsudoShinden': '松戸新田', 'Kami-Hongo': '上本郷', 'KamiHongo': '上本郷',
+  'Minoridai': 'みのり台', 'Yahashira': '八柱', 'Tokiwadaira': '常盤平', 'Goko': '五香', 'Motoyama': '元山',
+  'Kunugiyama': 'くぬぎ山', 'Kita-Hatsutomi': '北初富', 'KitaHatsutomi': '北初富', 'Hatsutomi': '初富',
+  'Kamagaya-Daibutsu': '鎌ヶ谷大仏', 'KamagayaDaibutsu': '鎌ヶ谷大仏', 'Futawa-Mukodai': '二和向台', 'FutawaMukodai': '二和向台',
+  'Misaki': '三咲', 'Taki-Fudo': '滝不動', 'TakiFudo': '滝不動', 'Takane-Kodan': '高根公団', 'TakaneKodan': '高根公団',
+  'Takane-Kido': '高根木戸', 'TakaneKido': '高根木戸', 'Narashino': '習志野', 'Yakuendai': '薬園台', 'Maehara': '前原',
+  'Shin-Tsudanuma': '新津田沼', 'ShinTsudanuma': '新津田沼', 'Tsudanuma': '津田沼',
+  // 東武大師線（#15）・西武3路線（#10）
+  'Daishimae': '大師前', 'Nishi-Arai': '西新井', 'NishiArai': '西新井',
+  'Kokubunji': '国分寺', 'Hitotsubashi-Gakuen': '一橋学園', 'HitotsubashiGakuen': '一橋学園',
+  'Ome-Kaido': '青梅街道', 'OmeKaido': '青梅街道', 'Hagiyama': '萩山', 'Tamako': '多摩湖',
+  // 西武拝島線・多摩湖線（v2.31.0・Issue #50）
+  'Seibu-Tachikawa': '西武立川', 'SeibuTachikawa': '西武立川',
+  'Musashi-Sunagawa': '武蔵砂川', 'MusashiSunagawa': '武蔵砂川', 'Sunagawa': '武蔵砂川',
+  'Yasaka': '八坂',
+  'Seibuen-Yuenchi': '西武園ゆうえんち', 'SeibuenYuenchi': '西武園ゆうえんち', 'Yuenchi-Nishi': '西武園ゆうえんち', 'YuenchiNishi': '西武園ゆうえんち', // 遊園地西は2021年改称（#26）
+  'Seibu-Kyujomae': '西武球場前', 'SeibuKyujomae': '西武球場前', 'Seibuen': '西武園',
+  'Higashi-Murayama': '東村山', 'HigashiMurayama': '東村山',
+  // 東京メトロ補完駅（#16〜#18）
+  'Kunitachi': '国立', 'Nagatacho': '永田町', 'Kojimachi': '麴町', 'Yoyogi-Koen': '代々木公園', 'YoyogiKoen': '代々木公園',
+  'Toranomon Hills': '虎ノ門ヒルズ', 'ToranomonHills': '虎ノ門ヒルズ',
+  'Chikatetsu-Akatsuka': '地下鉄赤塚', 'ChikatetsuAkatsuka': '地下鉄赤塚', 'Chikatetsu-Narimasu': '地下鉄成増', 'ChikatetsuNarimasu': '地下鉄成増',
+  'Nakano-Shimbashi': '中野新橋', 'NakanoShimbashi': '中野新橋', 'Nakano-Fujimicho': '中野富士見町', 'NakanoFujimicho': '中野富士見町',
+  'Ochiai': '落合',
+  // 2026-08 実装漏れ是正（有楽町線・副都心線・相鉄本線・小田急多摩線・横浜線・近接異名駅）
+  'Heiwadai': '平和台', 'Hikawadai': '氷川台',
+  'Mitsukyo': '三ツ境', 'Mitsukyou': '三ツ境', 'Seya': '瀬谷', 'Yamato': '大和', 'Sagami-Otsuka': '相模大塚', 'SagamiOtsuka': '相模大塚',
+  'Odakyu-Tama-Center': '小田急多摩センター', 'OdakyuTamaCenter': '小田急多摩センター', 'Odakyu-TamaCenter': '小田急多摩センター',
+  'Hachioji': '八王子', 'Nishi-Hachioji': '西八王子', 'NishiHachioji': '西八王子', 'Hachioji-Minamino': '八王子みなみ野', 'HachiojiMinamino': '八王子みなみ野', 'Katakura': '片倉', 'Aihara': '相原',
+  'Naka-Okachimachi': '仲御徒町', 'NakaOkachimachi': '仲御徒町', 'Ueno-Okachimachi': '上野御徒町', 'UenoOkachimachi': '上野御徒町',
+  'Keisei-Tsudanuma': '京成津田沼', 'Tsudanuma': '津田沼', 'Keikyu-Kawasaki': '京急川崎', 'KeikyuKawasaki': '京急川崎',
+  'Musashi-Mizonokuchi': '武蔵溝ノ口', 'MusashiMizonokuchi': '武蔵溝ノ口', 'Mizonokuchi': '溝の口',
+  'Hibiya': '日比谷', 'Yurakucho': '有楽町',
+  'Mitsukyō': '三ツ境', '相模大塚': '相模大塚', '小田急多摩中心': '小田急多摩センター',
+  // 2026-08 京浜東北線・京葉線・横須賀線・南武支線 駅欠落是正（英字エイリアス）
+  'Saitama-Shintoshin': 'さいたま新都心', 'SaitamaShintoshin': 'さいたま新都心',
+  'Yono': '与野', 'Kita-Urawa': '北浦和', 'KitaUrawa': '北浦和', 'Urawa': '浦和',
+  'Warabi': '蕨', 'Nishi-Kawaguchi': '西川口', 'NishiKawaguchi': '西川口', 'Kawaguchi': '川口',
+  'Higashi-Jujo': '東十条', 'HigashiJujo': '東十条', 'Tsurumi': '鶴見', 'Shin-Koyasu': '新子安', 'ShinKoyasu': '新子安',
+  'Higashi-Kanagawa': '東神奈川', 'HigashiKanagawa': '東神奈川',
+  'Minami-Funabashi': '南船橋', 'MinamiFunabashi': '南船橋', 'Shin-Narashino': '新習志野', 'ShinNarashino': '新習志野',
+  'Makuhari-Toyosuna': '幕張豊砂', 'MakuhariToyosuna': '幕張豊砂', 'Kaihin-Makuhari': '海浜幕張', 'KaihinMakuhari': '海浜幕張',
+  'Kemigawahama': '検見川浜', 'Inage-Kaigan': '稲毛海岸', 'InageKaigan': '稲毛海岸',
+  'Chiba-Minato': '千葉みなと', 'ChibaMinato': '千葉みなと', 'Soga': '蘇我', 'Kurihama': '久里浜',
+  'Hatchonawate': '八丁畷', 'Kawasaki-Shimmachi': '川崎新町', 'KawasakiShimmachi': '川崎新町', 'Hama-Kawasaki': '浜川崎', 'HamaKawasaki': '浜川崎',
+
+};

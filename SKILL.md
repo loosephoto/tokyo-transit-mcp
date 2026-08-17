@@ -152,6 +152,19 @@ npm run test:vehicle   # vehicle優先の決定的モック回帰
 
 **重要**: MCPツール経由の確認にはサーバー再起動が必要（ホットリロードなし）。`src/` 変更後は必ず `node --check` 全モジュール → 検証プローブ（全ツール×3言語）→ `npm run build` の順で確認（詳細は mcp-transit-server スキル参照）。
 
+## 並行作業（複数LLM）ガイド
+
+複数のLLM/エージェントが同時に開発するための分離規約が `.claude/` 配下にあります。
+
+- `.claude/agents/` — ドメイン別サブエージェント（`station-data` / `bus-data` / `landmark-data` / `ferry-flight-data` / `test-runner` / `code-reviewer`）。各エージェントが所有ファイルを明示し、並行編集の衝突を回避。
+- `.claude/rules/file-ownership.md` — ドメイン→所有ファイルのマップ。共有ファイル（`config.mjs` / `index.mjs` / `search-route.mjs`）は単独編集＋全回帰。
+- **駅名エイリアスはドメイン別セクションに分割済み**: `STATION_NAME_MAP` は `src/data/station-names-*.mjs`（core / zh-old / private-main / extra-lines / expansion237 / yokohama-chiba / disney）に分割し、`station-names.mjs` はスプレッドマージで再エクスポート。新規エイリアスは追加内容に最も近いセクションファイルへ（後勝ち）。
+- `.claude/rules/parallel-work.md` — 機能ブランチ＋git worktree（`claude -w <name>`）で物理分離。`main` 直push禁止。
+- `.claude/rules/testing.md` — データ追加時の同期チェックリスト（`expected-railway-counts.mjs` の期待値更新等）。実APIテスト（`test:bus`）はflakyなため決定的モック優先。
+- `.claude/rules/coding-conventions.md` — stdio保護・依存方向・安全応答・多言語・曖昧性の扱い。
+
+**要旨**: 駅・路線の駅数を変えたら `src/data/expected-railway-counts.mjs` を必ず同期更新し、`check-railway-integrity` を PASS させてからマージ。並行検証では決定的モックを優先し、実APIプローブは最終確認で個別実行。
+
 ## データ構造
 
 ### 駅ID形式

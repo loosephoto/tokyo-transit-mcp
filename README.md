@@ -529,7 +529,9 @@ tokyo-transit-mcp/
 │   ├── index.mjs            # サーバー起動・ツール登録・エクスポート再公開（v2.39.0 で155行にスリム化）
 │   ├── config.mjs           # 共有状態（envConfig / cache / CircuitBreaker / API定数）
 │   ├── data/                # 路線・駅・バス・フェリー・ランドマーク・多言語辞書データ
-│   │   ├── station-names.mjs
+│   │   ├── station-names.mjs             # マージ再エクスポート + RAILWAY/STATION_DISPLAY/LINE_DISPLAY
+│   │   ├── station-names-*.mjs           # STATION_NAME_MAP の7ドメインセクション（並行編集用に分割）
+│   │   ├── expected-railway-counts.mjs   # 路線別期待駅数（check-railway-integrity 参照）
 │   │   ├── railway-lines.mjs
 │   │   ├── landmarks.mjs
 │   │   ├── ferry-ports.mjs
@@ -538,10 +540,14 @@ tokyo-transit-mcp/
 │   ├── lib/                 # 純関数ユーティリティ（lang / csv / geo / time / common）
 │   ├── advice/              # AIアドバイス・天気・地震安全（transit-advice / weather / earthquake）
 │   └── handlers/            # 各ツール実装（search-route / bus / ferry / fare / timetable / flight / station-info）
+├── .claude/                 # Claude Code 並行作業支援
+│   ├── agents/              # ドメイン別サブエージェント（station-data / bus-data / landmark-data / ferry-flight-data / test-runner / code-reviewer）
+│   └── rules/               # 所有権・並行worktree・検証ゲート・コーディング規約
 ├── scripts/            # 回帰検証プローブ（多言語・バス乗り継ぎ・言語検出）
 │   ├── probe-all-lang.mjs
 │   ├── probe-bus-transfer-lang.mjs
-│   └── probe-language-detection.mjs
+│   ├── probe-language-detection.mjs
+│   └── split-station-names.mjs   # STATION_NAME_MAP 分割ツール（履歴・セクション対応表）
 ├── package.json
 ├── package-lock.json
 ├── README.md
@@ -1059,7 +1065,9 @@ tokyo-transit-mcp/
 │   ├── index.mjs            # Server bootstrap, tool registration, re-exports (slimmed to 155 lines in v2.39.0)
 │   ├── config.mjs           # Shared state (envConfig / cache / CircuitBreaker / API constants)
 │   ├── data/                # Lines/stations/buses/ferries/landmarks/multilingual dictionaries
-│   │   ├── station-names.mjs
+│   │   ├── station-names.mjs             # Merge re-export + RAILWAY/STATION_DISPLAY/LINE_DISPLAY
+│   │   ├── station-names-*.mjs           # 7 domain sections of STATION_NAME_MAP (split for parallel editing)
+│   │   ├── expected-railway-counts.mjs   # Expected station counts per line (used by check-railway-integrity)
 │   │   ├── railway-lines.mjs
 │   │   ├── landmarks.mjs
 │   │   ├── ferry-ports.mjs
@@ -1068,10 +1076,14 @@ tokyo-transit-mcp/
 │   ├── lib/                 # Pure-function utilities (lang / csv / geo / time / common)
 │   ├── advice/              # AI advice / weather / earthquake safety (transit-advice / weather / earthquake)
 │   └── handlers/            # Tool implementations (search-route / bus / ferry / fare / timetable / flight / station-info)
+├── .claude/                 # Claude Code parallel-work support
+│   ├── agents/              # Domain subagents (station-data / bus-data / landmark-data / ferry-flight-data / test-runner / code-reviewer)
+│   └── rules/               # Ownership / parallel worktree / verification gate / coding conventions
 ├── scripts/            # Regression probes (multilingual / bus transfer / language detection)
 │   ├── probe-all-lang.mjs
 │   ├── probe-bus-transfer-lang.mjs
-│   └── probe-language-detection.mjs
+│   ├── probe-language-detection.mjs
+│   └── split-station-names.mjs   # STATION_NAME_MAP split tool (history & section map)
 ├── package.json
 ├── package-lock.json
 ├── README.md
@@ -1588,7 +1600,9 @@ tokyo-transit-mcp/
 │   ├── index.mjs            # 服务器启动・工具注册・导出名重新导出（v2.39.0 精简至155行）
 │   ├── config.mjs           # 共享状态（envConfig / cache / CircuitBreaker / API常量）
 │   ├── data/                # 线路・车站・巴士・轮渡・地标・多语言词典数据
-│   │   ├── station-names.mjs
+│   │   ├── station-names.mjs             # 合并再导出 + RAILWAY/STATION_DISPLAY/LINE_DISPLAY
+│   │   ├── station-names-*.mjs           # STATION_NAME_MAP 的7个域分节（为并行编辑拆分）
+│   │   ├── expected-railway-counts.mjs   # 各线路期望车站数（check-railway-integrity 引用）
 │   │   ├── railway-lines.mjs
 │   │   ├── landmarks.mjs
 │   │   ├── ferry-ports.mjs
@@ -1597,10 +1611,14 @@ tokyo-transit-mcp/
 │   ├── lib/                 # 纯函数工具（lang / csv / geo / time / common）
 │   ├── advice/              # AI建议・天气・地震安全（transit-advice / weather / earthquake）
 │   └── handlers/            # 各工具实现（search-route / bus / ferry / fare / timetable / flight / station-info）
+├── .claude/                 # Claude Code 并行作业支持
+│   ├── agents/              # 分域子代理（station-data / bus-data / landmark-data / ferry-flight-data / test-runner / code-reviewer）
+│   └── rules/               # 所有权・并行worktree・验证门槛・编码规范
 ├── scripts/            # 回归验证探针（多语言 / 公交换乘 / 语言检测）
 │   ├── probe-all-lang.mjs
 │   ├── probe-bus-transfer-lang.mjs
-│   └── probe-language-detection.mjs
+│   ├── probe-language-detection.mjs
+│   └── split-station-names.mjs   # STATION_NAME_MAP 拆分工具（历史・分节对照）
 ├── package.json
 ├── package-lock.json
 ├── README.md
