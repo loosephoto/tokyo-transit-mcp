@@ -29,7 +29,7 @@
 | 🚢 フェリー | 東海汽船（伊豆諸島・小笠原航路）。ODPT GTFS が利用できない場合は内蔵ポートリスト（19港）で検索。GTFS復旧は1時間ごとに自動再試行し、起動ログ（`[Ferry] 東海汽船: real GTFS ...`）で状態を確認可能 |
 | 🚤 水上バス | 東京クルーズ（浅草〜お台場〜豊洲） |
 | ✈️ フライト | 羽田(HND)・成田(NRT) の到着/出発フライト（AviationStack）。キー未設定時は空港アクセス経路のみ表示（graceful degradation） |
-| 🚲 シェアサイクル | ドコモ・バイクシェア（GBFS API・1,878ポート） |
+| 🚲 シェアサイクル | ドコモ・バイクシェア + ハローサイクリング（GBFS API・2ネットワーク約16,500ポート） |
 
 ### 🛤️ 直近の更新内容
 
@@ -574,6 +574,7 @@ MIT License
 - [公共交通オープンデータセンター（ODPT）](https://www.odpt.org/)
 - [気象庁 API](https://www.jma.go.jp/jma/index.html)
 - [ドコモ・バイクシェア GBFS](https://docomo-cycle.jp/)
+- [ハローサイクリング（OpenStreet）GBFS](https://www.hellocycling.jp/)
 
 ---
 
@@ -604,7 +605,7 @@ Beyond simple route search, this server integrates weather data and public trans
 | 🚢 Ferries | Tokai Kisen (Izu Islands & Ogasawara routes). Falls back to the built-in port list (19 ports) when ODPT GTFS is unavailable |
 | 🚤 Water Buses | Tokyo Cruise (Asakusa - Odaiba - Toyosu) |
 | ✈️ Flights | Haneda (HND) / Narita (NRT) arrivals & departures (AviationStack). Without a key, airport access routes are shown only (graceful degradation) |
-| 🚲 Bike Sharing | Docomo Bike Share (GBFS API, 1,878 ports) |
+| 🚲 Bike Sharing | Docomo Bike Share + HELLOCYCLING (GBFS API, 2 networks, ~16,500 ports) |
 
 ### 🛤️ Latest Updates
 
@@ -1111,6 +1112,7 @@ MIT License
 - [Open Data Center for Public Transportation (ODPT)](https://www.odpt.org/)
 - [Japan Meteorological Agency (JMA) API](https://www.jma.go.jp/jma/index.html)
 - [Docomo Bike Share GBFS](https://docomo-cycle.jp/)
+- [HELLOCYCLING (OpenStreet) GBFS](https://www.hellocycling.jp/)
 
 ---
 
@@ -1141,7 +1143,7 @@ MIT License
 | 🚢 轮渡 | 东海汽船（伊豆群岛、小笠原航线）。ODPT GTFS 不可用时回退至内置港口列表（19 港） |
 | 🚤 水上巴士 | 东京观光汽船（浅草〜台场〜丰洲） |
 | ✈️ 航班 | 羽田 (HND) / 成田 (NRT) 的到达/出发航班（AviationStack）。未配置密钥时仅显示机场接驳路线（优雅降级） |
-| 🚲 共享单车 | Docomo Bike Share（GBFS API，1,878 个站点） |
+| 🚲 共享单车 | Docomo 共享单车 + HELLOCYCLING（GBFS API，双网络约16,500个站点） |
 
 ### 🛤️ 最近更新
 
@@ -1647,3 +1649,4 @@ MIT License
 - [公共交通开放数据中心 (ODPT)](https://www.odpt.org/)
 - [日本气象厅 API](https://www.jma.go.jp/jma/index.html)
 - [Docomo Bike Share GBFS](https://docomo-cycle.jp/)
+- [HELLOCYCLING（OpenStreet）GBFS](https://www.hellocycling.jp/)
