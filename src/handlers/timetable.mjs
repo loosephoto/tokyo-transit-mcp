@@ -10,6 +10,7 @@ import { getParams, jsonResponse, buildErrorResponse, handleApiError, isInternal
 import { normalizeOvernightTime, timeToSortMinutes } from '../lib/time.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName, getDisplayLineName, translateTrainInfoDetail } from '../lib/lang.mjs';
 import { normalizeStationName, getStationRomanToJa } from './search-route.mjs';
+import { getToeiGtfsStationTimetable } from '../lib/toei-gtfs-timetable.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import axios from 'axios';
@@ -279,6 +280,25 @@ export async function getTimetable(args) {
       return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, railway: getDisplayLineName(railwayFilter, userLang), calendar: targetCalendar, service_date: serviceDate || new Date().toISOString().slice(0, 10), total: 0, message: noRailwayMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
     }
     if (sortedMatched.length === 0) {
+      // 🔴 v2.45.0: ODPT が都営駅の時刻表を持たない場合、都営鉄道GTFSをフォールバックとして使用する。
+      // ODPT TrainTimetable が障害時・未カバーでも、都営（浅草線・大江戸線・三田線・新宿線・
+      // 都電荒川線・日暮里舎人ライナー）の時刻表を GTFS から提供（レジリエンス）。
+      const gtfsTT = await getToeiGtfsStationTimetable(stationName);
+      if (gtfsTT) {
+        return jsonResponse({
+          status: "SUCCESS", detected_language: userLang, station: displayStation, calendar: targetCalendar,
+          service_date: serviceDate || new Date().toISOString().slice(0, 10),
+          total: gtfsTT.length,
+          timetable: gtfsTT.slice(0, 20).map((l) => ({
+            railway: getDisplayLineName(l.railway, userLang),
+            destination: getDisplayStationName(l.destination, userLang),
+            departure_time: l.departure_time,
+            calendar: targetCalendar
+          })),
+          data_source: "Toei Train GTFS (fallback)",
+          fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}`
+        });
+      }
       const noDataMsg = userLang === 'en'
         ? `No timetable data found for ${displayStation} in ODPT (JR East and most private railways are not covered).`
         : userLang === 'zh'

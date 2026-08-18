@@ -186,7 +186,7 @@ const REGISTRY = {
     key: 'toei',
     name: { ja: '都営交通', en: 'Toei', zh: '都营交通' },
     url: 'https://www.kotsu.metro.tokyo.jp/train/topics.html',
-    fetch: () => fetchODPTStatus('Toei')
+    fetch: () => fetchGtfsRtAlerts('toei_odpt_train_alert')
   },
   mir: {
     key: 'mir',

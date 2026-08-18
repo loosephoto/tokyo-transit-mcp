@@ -198,9 +198,8 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.45.0（2026-08-18）— シェアサイクル・バスデータ大幅拡充
+### v2.46.0（2026-08-18）— 運行状況・時刻表を都営GTFSで強化
 
-- **シェアサイクル2ネットワーク統合**: `search-route.mjs` のシェアサイクル取得をドコモ・バイクシェア + ハローサイクリング（CC BY 4.0・日本全国）の2ネットワーク横断に拡張（総約16,500ポート）。`fetchBikeShareData` が並列取得し `network` フィールド付与
-- **京王バスを実GTFSソースへ移行**: `BUS_GTFS_SOURCES` のハードコード代表系統 → `api.odpt.org/.../KeioBus/AllLines.zip`（{ url, date } 方式）
-- **都営バスGTFS-JP追加**: `.../Toei/data/ToeiBus-GTFS.zip`（CC BY 4.0・固定URLのため `noDate` 対応を `fetchGtfsZipBuffer` に追加）。上野公園等の stop-fallback が実系統表示（亀戸駅前→上野公園・池袋駅東口→上野公園）へ改善。operatorId は ODPT の Toei に統一（別IDだと AMBIGUOUS）
+- **運行状況カバレッジ8社に拡大**: 都営を GTFS-RT alert（`toei_odpt_train_alert`）でライブ取得。JR東・東武・京急・メトロ・TX・りんかい・多摩モノレール・都営の8事業者がリアルタイム運行状況を返す
+- **都営鉄道GTFSを時刻表のフォールバックに**: 新規 `src/lib/toei-gtfs-timetable.mjs` が `Toei-Train-GTFS.zip`（CC BY 4.0・`noDate`）をパースし、`get_timetable` の NO_DATA 分岐でフォールバック。浅草線・大江戸線・三田線・新宿線・都電荒川線・日暮里舎人ライナーをODPT障害時も提供
 - **検証**: `npm run build`、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity PASS

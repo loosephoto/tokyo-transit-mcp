@@ -33,9 +33,9 @@
 
 ### 🛤️ 直近の更新内容
 
-- **シェアサイクル・バスデータを大幅拡充（v2.45.0）**
-  - **シェアサイクル2ネットワーク統合**: `search_route` のシェアサイクル案内をドコモ・バイクシェア（東京都心）+ ハローサイクリング（日本全国・CC BY 4.0）の2ネットワーク横断に拡張（総約16,500ポート）
-  - **京王バス・都営バスを実GTFSソースへ**: `search_bus` で西東京（調布・府中・多摩センター方面）と都営バス全系統をGTFS-JPで検索可能に。都営バスは従来の stop-fallback（停名のみ）から実系統表示（例: 上野公園→亀戸駅前・池袋駅東口）へ改善。固定URLのGTFSは date パラメータ不要対応（noDate）
+- **運行状況・時刻表を都営GTFSで強化（v2.46.0）**
+  - **運行状況カバレッジ8社に拡大**: 都営を GTFS-RT alert でライブ取得（`toei_odpt_train_alert`）。JR東・東武・京急・東京メトロ・TX・りんかい・多摩モノレール・**都営** の8事業者がリアルタイム運行状況を返す
+  - **都営鉄道GTFSを時刻表のフォールバックに**: ODPT `odpt:TrainTimetable` が障害時でも、都営鉄道GTFS（浅草線・大江戸線・三田線・新宿線・都電荒川線・日暮里舎人ライナー）から時刻表を提供
   - **検証** — `npm run build`、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity が PASS
 
 ### 🤖 AI インテリジェントアドバイス
@@ -608,9 +608,9 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Greatly expanded bike-share and bus data (v2.45.0)**
-  - **Two-network bike share**: `search_route` bike-share guidance now spans Docomo Bike Share (central Tokyo) + HELLOCYCLING (all Japan, CC BY 4.0), ~16,500 ports total
-  - **Keio Bus & Toei Bus moved to real GTFS sources**: `search_bus` now covers western Tokyo (Chofu, Fuchu, Tama Center) and all Toei Bus routes via GTFS-JP. Toei Bus improved from stop-fallback (name only) to real route display (e.g. Ueno Park → Kameido Sta., Ikebukuro East Exit). Fixed-URL GTFS supported via `noDate` (no date param)
+- **Enhanced running status & timetables with Toei GTFS (v2.46.0)**
+  - **Running-status coverage expanded to 8 operators**: Toei now live via GTFS-RT alert (`toei_odpt_train_alert`). JR East, Tobu, Keikyu, Tokyo Metro, Tsukuba Express, Rinkai, Tama Monorail and **Toei** all return real-time operating status
+  - **Toei Train GTFS as timetable fallback**: `get_timetable` serves Toei timetables (Asakusa, Oedo, Mita, Shinjuku Lines, Arakawa Tram, Nippori-Toneri Liner) from GTFS even when ODPT `odpt:TrainTimetable` fails
   - **Verification** — build, `probe-all-lang` (26/26), `test-issue-88-89-90` (75/75), walk / check-integrity PASS
 
 ### 🤖 AI Intelligent Advice
@@ -1145,9 +1145,9 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **大幅扩充共享单车与公交数据（v2.45.0）**
-  - **共享单车双网络整合**：`search_route` 的共享单车指引扩展为 Docomo 共享单车（东京都心）+ HELLOCYCLING（日本全国，CC BY 4.0）双网络（总计约16,500个停车点）
-  - **京王巴士、都营巴士迁移到真实 GTFS 数据源**：`search_bus` 现可检索西东京（调布、府中、多摩中心方向）及都营巴士全线，基于 GTFS-JP。都营巴士由原来的 stop-fallback（仅有站名）改进为显示真实线路（如 上野公园→龟户站前、池袋站东口）。固定 URL 的 GTFS 通过 `noDate`（不带日期参数）支持
+- **使用都营 GTFS 强化运行状况与时刻表（v2.46.0）**
+  - **运行状况覆盖扩大到8家事业者**：都营通过 GTFS-RT alert（`toei_odpt_train_alert`）实时获取。JR东、东武、京急、东京地铁、筑波快线、临海线、多摩单轨及**都营**均返回实时运行状况
+  - **都营铁道 GTFS 作为时刻表回退**：`get_timetable` 在 ODPT `odpt:TrainTimetable` 故障时，也能从都营铁道 GTFS（浅草线、大江户线、三田线、新宿线、都电荒川线、日暮里舍人线）提供时刻表
   - **验证** — 构建、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity 通过
 
 ### 🤖 AI 智能建议
