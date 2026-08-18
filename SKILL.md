@@ -198,9 +198,9 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.44.0（2026-08-18）— リアルタイム運行状況ツール追加
+### v2.45.0（2026-08-18）— シェアサイクル・バスデータ大幅拡充
 
-- **`get_running_status` ツールを新設**: 事業者ごとの列車運行状況（平常/遅延/一部運休/運転見合わせ）を路線別で返す。JR東（52路線）・東武・京急は公式ページ/XML、東京メトロ・つくばEX・りんかい・多摩モノレールは **GTFS-RT（protobuf）** からライブ取得。取得不可の事業者は公式リンクへグレースフル縮退
-- **GTFS-RT protobuf デコーダ**: `src/lib/gtfs-realtime.mjs`（依存なしワイヤーデコーダ）。`odpt:TrainStatus` がキー未付与でも GTFS-RT alert は取得可能
-- **`search_bus` に標柱別バス時刻表**: `odpt:BusstopPoleTimetable`（発車時刻・ノンステップ有無）を `stop_timetable` で表示
+- **シェアサイクル2ネットワーク統合**: `search-route.mjs` のシェアサイクル取得をドコモ・バイクシェア + ハローサイクリング（CC BY 4.0・日本全国）の2ネットワーク横断に拡張（総約16,500ポート）。`fetchBikeShareData` が並列取得し `network` フィールド付与
+- **京王バスを実GTFSソースへ移行**: `BUS_GTFS_SOURCES` のハードコード代表系統 → `api.odpt.org/.../KeioBus/AllLines.zip`（{ url, date } 方式）
+- **都営バスGTFS-JP追加**: `.../Toei/data/ToeiBus-GTFS.zip`（CC BY 4.0・固定URLのため `noDate` 対応を `fetchGtfsZipBuffer` に追加）。上野公園等の stop-fallback が実系統表示（亀戸駅前→上野公園・池袋駅東口→上野公園）へ改善。operatorId は ODPT の Toei に統一（別IDだと AMBIGUOUS）
 - **検証**: `npm run build`、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity PASS

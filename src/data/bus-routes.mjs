@@ -697,29 +697,15 @@ export const BUS_GTFS_SOURCES = [
       ['成田空港', '東京ディズニーリゾート'], ['成田空港', '吉祥寺駅']
     ]
   },
-  // #21-A: 主要私鉄バス事業者（京王・東急・小田急・京成バス）— ODPT未登録のためハードコード。
-  // 実在の代表系統のみ収録（実GTFSが安定取得できるようになったら { url, date } ソースへ移行）。
+  // 京王バス（実GTFSソースへ移行 v2.45.0）— CKAN keio_bus_all_lines 有効期間 2026/8/15〜12/31。
+  // 従来のハードコード代表系統から、stops.txt/routes.txt を展開する { url, date } 方式へ移行。
   {
     name: '京王バス', operatorId: 'KeioBus',
     label: '京王バス', labelEn: 'Keio Bus', labelZh: '京王巴士',
     website: 'https://www.keio-bus.com/',
-    hardCoded: true,
-    stops: [
-      '新宿駅西口', '新宿駅', '渋谷駅', '中野駅', '阿佐ヶ谷駅', '練馬駅', '高円寺駅',
-      '調布駅', 'つつじヶ丘駅', '千歳烏山駅', '八幡山駅', '三鷹駅', '吉祥寺駅',
-      '武蔵小金井駅', '国分寺駅', '国立駅', '府中駅', '聖蹟桜ヶ丘駅', '高幡不動駅', '京王八王子駅'
-    ],
-    routes: [
-      ['新宿駅西口', '渋谷駅'], ['新宿駅西口', '中野駅'], ['新宿駅西口', '阿佐ヶ谷駅'],
-      ['新宿駅西口', '練馬駅'], ['渋谷駅', '調布駅'], ['調布駅', '吉祥寺駅'],
-      ['三鷹駅', '調布駅'], ['三鷹駅', '吉祥寺駅'], ['武蔵小金井駅', '国分寺駅'],
-      ['国分寺駅', '国立駅'], ['府中駅', '聖蹟桜ヶ丘駅'], ['調布駅', '高幡不動駅'],
-      ['高幡不動駅', '京王八王子駅'], ['新宿駅西口', '府中駅'],
-      // v2.25.1 #21-A 拡充: 実在主要系統
-      ['渋谷駅', '中野駅'], ['吉祥寺駅', '武蔵小金井駅'], ['三鷹駅', '武蔵小金井駅'],
-      ['府中駅', '調布駅'], ['聖蹟桜ヶ丘駅', '府中駅'], ['新宿駅西口', '荻窪駅'],
-      ['中野駅', '阿佐ヶ谷駅'], ['調布駅', 'つつじヶ丘駅']
-    ]
+    url: 'https://api.odpt.org/api/v4/files/odpt/KeioBus/AllLines.zip',
+    date: () => '20260815',
+    useStopsAndRoutes: true
   },
   {
     name: '東急バス', operatorId: 'TokyuBus',
@@ -978,6 +964,17 @@ export const BUS_GTFS_SOURCES = [
     website: 'https://www.keiseibus.co.jp/',
     url: 'https://api.odpt.org/api/v4/files/odpt/KeiseiTransitBus/AllLines.zip',
     date: () => '20260401',
+    useStopsAndRoutes: true
+  },
+  // 都営バス GTFS-JP（v2.45.0 追加）— CKAN b_bus_gtfs_jp-toei（CC BY 4.0）。
+  // 固定URL（dateパラメータ不可）のため noDate:true。stops.txt/routes.txt を展開。
+  // これにより ODPT odpt:Bus で stop-fallback だった都営バス停（上野駅前・上野公園等）も系統を検索可能に。
+  {
+    name: '都営バス', operatorId: 'Toei',
+    label: '都営バス', labelEn: 'Toei Bus', labelZh: '都营公交',
+    website: 'https://www.kotsu.metro.tokyo.jp/bus/',
+    url: 'https://api.odpt.org/api/v4/files/Toei/data/ToeiBus-GTFS.zip',
+    noDate: true,
     useStopsAndRoutes: true
   }
 ];

@@ -11,7 +11,7 @@ import { STATION_NAME_MAP, STATION_DISPLAY_NAMES, RAILWAY_NAME_MAP, LINE_DISPLAY
 import { LANDMARK_DEFS, LANDMARK_LOOKUP, DESTINATION_CULTURAL_FACILITIES,
          CULTURAL_CATEGORY_NAMES, DERIVED_CULTURAL_FACILITIES } from '../data/landmarks.mjs';
 import { COMMUNITY_BUS_STATION_ACCESS } from '../data/bus-routes.mjs';
-import { MULTILINGUAL_ADVICE, NON_RAIL_OPERATORS, EMERGENCY_EVACUATION_SEARCH_URL, GBFS_BASE,
+import { MULTILINGUAL_ADVICE, NON_RAIL_OPERATORS, EMERGENCY_EVACUATION_SEARCH_URL, GBFS_BASE, GBFS_BASE_HELLOCYCLING,
          LIMITED_EXPRESS_KEYWORDS, LIMITED_EXPRESS_STATION_GUIDE, PRIVATE_EXPRESS_GUIDE, JMA_AREA_LABELS } from '../data/misc.mjs';
 import { FERRY_PORT_MAP } from '../data/ferry-ports.mjs';
 import { getDisplayStationName, getDisplayLineName, getLineDisplayName, getCommunityBusDisplayName,
@@ -65,15 +65,31 @@ export function resolveSuspendedLineNames(railwayId) {
 export async function fetchBikeShareData() {
   const cached = cache.get(cache.bikeShare.key);
   if (cached) return cached;
-  const [infoRes, statusRes] = await Promise.all([
-    axios.get(`${GBFS_BASE}/station_information.json`, { timeout: 15000 }),
-    axios.get(`${GBFS_BASE}/station_status.json`, { timeout: 15000 })
-  ]);
-  const stations = infoRes.data.data?.stations || [];
-  const statuses = statusRes.data.data?.stations || [];
-  const statusMap = {};
-  statuses.forEach(s => { statusMap[s.station_id] = s; });
-  const data = { stations, statuses: statusMap };
+  // 🔴 v2.45.0: ドコモ・バイクシェア（東京都心）+ ハローサイクリング（日本全国・CC BY）を並列取得し統合。
+  // 各ポートに network フィールドを付与し、どちらの事業者のポートかを判別できるようにする。
+  const networks = [
+    { base: GBFS_BASE, network: 'docomo-cycle-tokyo' },
+    { base: GBFS_BASE_HELLOCYCLING, network: 'hellocycling' }
+  ];
+  const fetched = await Promise.allSettled(networks.map(({ base }) => Promise.all([
+    axios.get(`${base}/station_information.json`, { timeout: 15000 }),
+    axios.get(`${base}/station_status.json`, { timeout: 15000 })
+  ])));
+  const stations = [];
+  const statuses = {};
+  const availableNetworks = [];
+  fetched.forEach((res, i) => {
+    if (res.status !== 'fulfilled') return;
+    const [infoRes, statusRes] = res.value;
+    const infoStations = infoRes.data.data?.stations || [];
+    const statusStations = statusRes.data.data?.stations || [];
+    if (!infoStations.length) return;
+    availableNetworks.push(networks[i].network);
+    const net = networks[i].network;
+    for (const s of infoStations) stations.push({ ...s, network: net });
+    for (const s of statusStations) statuses[s.station_id] = s;
+  });
+  const data = { stations, statuses, sources: availableNetworks };
   cache.set(cache.bikeShare.key, data, cache.bikeShare.ttl);
   return data;
 }
@@ -525,7 +541,7 @@ export async function findNearestBikeStations(stationName, userLocation = null, 
       .map(s => {
         const st = data.statuses[s.station_id];
         const name = typeof s.name === 'string' ? s.name : s.name?.ja || s.name?.[0]?.text || '?';
-        return { station_id: s.station_id, name, distance: haversineDistance(coord.lat, coord.lon, s.lat, s.lon), bikes_available: st.num_bikes_available, docks_available: st.num_docks_available, lat: s.lat, lon: s.lon, reference: baseLabel };
+        return { station_id: s.station_id, name, network: s.network, distance: haversineDistance(coord.lat, coord.lon, s.lat, s.lon), bikes_available: st.num_bikes_available, docks_available: st.num_docks_available, lat: s.lat, lon: s.lon, reference: baseLabel };
       })
       .filter(s => s.distance <= maxDistance)
       .sort((a, b) => a.distance - b.distance)
@@ -1092,7 +1108,7 @@ export async function searchRoute(args) {
       based_on: 'destination',
       stations: destinationBikeShareInfo,
       total_nearby: destinationBikeShareInfo.length,
-      data_source: "docomo-cycle-tokyo GBFS",
+      data_source: "docomo-cycle-tokyo GBFS + HELLOCYCLING GBFS (OpenStreet, CC BY 4.0)",
       caution: userLang === 'en' ? "Availability and return eligibility may change; check the official app." :
         userLang === 'zh' ? "可用车辆和还车状态可能变化，请通过官方应用确认。" :
         "利用可能台数・返却可否は変動するため、利用前に公式アプリでご確認ください。"
@@ -1114,7 +1130,7 @@ export async function searchRoute(args) {
            userLang === 'zh' ? "🚲 出发站附近的共享单车停靠点：" :
            "🚲 出発駅最寄りのシェアサイクルポート："),
       based_on: isUserLoc ? 'user_location' : 'origin_station',
-      stations: bikeShareInfo, total_nearby: bikeShareInfo.length, data_source: "docomo-cycle-tokyo GBFS"
+      stations: bikeShareInfo, total_nearby: bikeShareInfo.length, data_source: "docomo-cycle-tokyo GBFS + HELLOCYCLING GBFS (OpenStreet, CC BY 4.0)"
     };
   }
 

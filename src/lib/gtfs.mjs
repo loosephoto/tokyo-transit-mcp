@@ -12,10 +12,15 @@ export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
   let lastError = null;
   // #93: src.date が関数でない不正なオブジェクトでもクラッシュしないよう関数チェックを追加。
   // 関数でなければ gtfsFetchDates(undefined) により「今日」の日付で取得する。
+  // 🔴 v2.45.0: 固定URL（dateパラメータ不要）のソース（例: 都営バス ToeiBus-GTFS.zip）は
+  // src.noDate:true で date を付けずに取得する（date を付けると 404 になる）。
   const fixedDate = (src && typeof src.date === 'function') ? src.date() : undefined;
-  for (const d of gtfsFetchDates(fixedDate)) {
+  const dates = src && src.noDate ? [null] : gtfsFetchDates(fixedDate);
+  for (const d of dates) {
     try {
-      const res = await axios.get(src.url, { params: { date: d, 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: timeoutMs });
+      const params = { 'acl:consumerKey': API_KEY };
+      if (d) params.date = d;
+      const res = await axios.get(src.url, { params, responseType: 'arraybuffer', timeout: timeoutMs });
       return res.data;
     } catch (e) { lastError = e; }
   }

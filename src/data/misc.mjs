@@ -487,6 +487,8 @@ export const MULTILINGUAL_ADVICE = {
 };
 
 export const GBFS_BASE = 'https://api-public.odpt.org/api/v4/gbfs/docomo-cycle-tokyo';
+// 🔴 v2.45.0: ハローサイクリング（OpenStreet・日本全国）を追加。CC BY 4.0 クレジット表示必須。
+export const GBFS_BASE_HELLOCYCLING = 'https://api-public.odpt.org/api/v4/gbfs/hellocycling';
 
 export const LIMITED_EXPRESS_KEYWORDS = [
   // ja
