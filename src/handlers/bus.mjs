@@ -388,6 +388,42 @@ export function buildTrainNameGraph() {
   return adj;
 }
 
+// ---------- 標柱時刻表（odpt:BusstopPoleTimetable） ----------
+// バス停(標柱)ごとの発車時刻・ノンステップ有無を ODPT から取得・索引化（10分キャッシュ）。
+// 取得失敗時は空配列を返し、searchBus の stop検索モードで `stop_timetable` を補足する。
+let poleTimetableCache = { data: null, ts: 0 };
+const POLE_TT_TTL = 10 * 60 * 1000;
+export async function fetchBusstopPoleTimetables(signal) {
+  if (poleTimetableCache.data && Date.now() - poleTimetableCache.ts < POLE_TT_TTL) return poleTimetableCache.data;
+  const ops = BUS_OPERATORS.filter((o) => o && o.id);
+  const results = await Promise.allSettled(ops.map((o) =>
+    axios.get(`${API_BASE_URL}/odpt:BusstopPoleTimetable`, { params: getParams(o.id), timeout: 10000, signal })
+  ));
+  const entries = [];
+  results.forEach((res, idx) => {
+    if (res.status !== 'fulfilled') return;
+    const opId = ops[idx].id;
+    for (const e of res.value.data || []) {
+      const title = String(e['dc:title'] || e['odpt:note'] || '');
+      const parts = title.split(':');
+      const stop = parts.length >= 2 ? parts[1].trim() : '';
+      const direction = parts.length >= 3 ? parts[2].trim() : '';
+      if (!stop) continue;
+      const objects = Array.isArray(e['odpt:busstopPoleTimetableObject']) ? e['odpt:busstopPoleTimetableObject'] : [];
+      const departures = [...new Set(objects.map((o) => o['odpt:departureTime']).filter(Boolean))].sort();
+      entries.push({
+        operator: opId, stop, direction,
+        route: e['odpt:busroute'],
+        departures,
+        non_step: objects.length > 0 && objects.every((o) => o['odpt:isNonStepBus']),
+        non_step_known: objects.length > 0
+      });
+    }
+  });
+  poleTimetableCache = { data: entries, ts: Date.now() };
+  return entries;
+}
+
 export async function fetchBusStopGeo(signal) {
   const cached = cache.get(cache.busStopGeo.key);
   if (cached) return cached;
@@ -1380,12 +1416,36 @@ export async function searchBus(args) {
         }
       }
     }
+    // 🔴 標柱別時刻表（odpt:BusstopPoleTimetable）: 一致したバス停の標柱ごとの発車時刻を補足。
+    // 取得失敗や該当なしは従来どおり応答（stop_timetable を出さない）。
+    let stopTimetable;
+    if (matched.length > 0) {
+      try {
+        const poleEntries = await fetchBusstopPoleTimetables();
+        const stopKey = (resolvedBusstop || busstopName).replace(/(停留所|バス停|駅)$/, '');
+        const filtered = poleEntries.filter((e) => e.stop.includes(stopKey) || (stopKey.length >= 2 && stopKey.includes(e.stop)));
+        if (filtered.length) {
+          const poleOpLabel = (opId) => { const o = BUS_OPERATORS.find((x) => x.id === opId); return o ? (userLang === 'en' ? o.labelEn : userLang === 'zh' ? o.labelZh : o.label) : opId; };
+          stopTimetable = {
+            note: userLang === 'en' ? 'Per-bus-stop-pole timetable (odpt:BusstopPoleTimetable)'
+              : userLang === 'zh' ? '各公交站牌时刻表（odpt:BusstopPoleTimetable）'
+              : 'バス停(標柱)別の時刻表（odpt:BusstopPoleTimetable）',
+            entries: filtered.slice(0, 15).map((e) => ({
+              stop: e.stop, direction: e.direction, route: e.route, operator: poleOpLabel(e.operator),
+              departures: e.departures.slice(0, 12),
+              non_step_bus: e.non_step_known ? e.non_step : undefined
+            }))
+          };
+        }
+      } catch (_) { /* 標柱時刻表の取得失敗は無視（従来どおり応答） */ }
+    }
     return jsonResponse({
       status: "SUCCESS", detected_language: userLang,
       busstop: busstopName,
       resolved_busstop: resolvedBusstop !== busstopName ? resolvedBusstop : undefined,
       total: matched.length,
       nearby_suggestions: nearbySuggestions,
+      stop_timetable: stopTimetable,
       // 公的機関の検索案内: バス停名を基準に表示する（ご老人等が「バス停名」で公的機関を探すケースに対応。v2.36.3）
       // 多言語チェック（probe-all-lang）が英語・中国語応答に日本語名が残るのを弾くため、言語別表示名で渡す。
       gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, getDisplayStationName(resolvedBusstop || busstopName, userLang)),

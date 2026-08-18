@@ -198,8 +198,9 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.43.3（2026-08-18）— 天気の府県判定を駅座標から自動解決
+### v2.44.0（2026-08-18）— リアルタイム運行状況ツール追加
 
-- **座標→point-in-polygonで府県を自動判定**: `get_weather` の地域名解決（`stationToJmaArea`）で、手動辞書に無い駅名でも駅座標（ODPT geo・主要駅・JR検証済み駅）から 47都道府県ポリゴンへ point-in-polygon して JMA府県コードを自動導出（JIS府県コード×10000）。これまで「越谷レイクタウン」「鶴見」「東武動物公園」など非東京の駅が東京(130000)に縮退していた不具合を解消（越谷レイクタウン→埼玉110000、鶴見→神奈川140000 など）
-- **新規データ**: `src/data/prefecture-bounds.mjs`（47都道府県境界リング、Douglas-Peucker簡略化）、`src/data/station-coords-extra.mjs`（ODPT geo 352駅 + JR検証済み3駅）
-- **検証**: `npm run build`、`test-issue-88-89-90`（75/75 PASS）、`probe-all-lang`（26/26）、walk / check-integrity PASS
+- **`get_running_status` ツールを新設**: 事業者ごとの列車運行状況（平常/遅延/一部運休/運転見合わせ）を路線別で返す。JR東（52路線）・東武・京急は公式ページ/XML、東京メトロ・つくばEX・りんかい・多摩モノレールは **GTFS-RT（protobuf）** からライブ取得。取得不可の事業者は公式リンクへグレースフル縮退
+- **GTFS-RT protobuf デコーダ**: `src/lib/gtfs-realtime.mjs`（依存なしワイヤーデコーダ）。`odpt:TrainStatus` がキー未付与でも GTFS-RT alert は取得可能
+- **`search_bus` に標柱別バス時刻表**: `odpt:BusstopPoleTimetable`（発車時刻・ノンステップ有無）を `stop_timetable` で表示
+- **検証**: `npm run build`、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity PASS

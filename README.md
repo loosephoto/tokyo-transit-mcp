@@ -33,9 +33,9 @@
 
 ### 🛤️ 直近の更新内容
 
-- **天気の府県判定を駅座標から自動解決（v2.43.3）**
-  - **座標→point-in-polygonで府県を自動判定**: `get_weather` の地域名解決（`stationToJmaArea`）で、手動辞書に無い駅名でも駅座標（ODPT geo・主要駅・JR検証済み駅）から 47都道府県ポリゴンへ point-in-polygon して JMA府県コードを自動導出（JIS府県コード×10000）。これまで「越谷レイクタウン」「鶴見」「東武動物公園」など非東京の駅が東京(130000)に縮退していた不具合を解消（越谷レイクタウン→埼玉110000、鶴見→神奈川140000 など）
-  - **検証** — `npm run build`、`test-issue-88-89-90`（75/75 PASS）、`probe-all-lang`（26/26）、walk / check-integrity が PASS
+- **リアルタイム運行状況検索 `get_running_status` を追加（v2.44.0）**
+  - **運行状況ツールを新設**: 事業者ごとの列車運行状況（平常運転/遅延/一部運休/運転見合わせ）を公式ページ・GTFS-RTから取得し路線別で返す。JR東（52路線）・東武・京急は公式ページ/XML、東京メトロ・つくばEX・りんかい・多摩モノレールは **GTFS-RT（protobuf・依存なしデコーダでパース）** からライブ取得。ボット保護等で取得できない事業者は公式リンクへグレースフルに縮退。`search_bus` には **標柱別バス時刻表（odpt:BusstopPoleTimetable）** を追加（発車時刻・ノンステップ有無）
+  - **検証** — `npm run build`、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity が PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -607,9 +607,9 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Automated prefecture resolution for weather from station coordinates (v2.43.3)**
-  - **Point-in-polygon prefecture detection**: `get_weather` area resolution (`stationToJmaArea`) now derives the JMA prefecture code automatically for station names not in the manual dictionary, by running the station's coordinates (ODPT geo, major stations, verified JR stations) through a 47-prefecture point-in-polygon (JIS prefecture code ×10000). Fixes non-Tokyo stations like 越谷レイクタウン, 鶴見, 東武動物公園 previously falling back to Tokyo (130000) (e.g. 越谷レイクタウン→Saitama 110000, 鶴見→Kanagawa 140000)
-  - **Verification** — build, `test-issue-88-89-90` (75/75 PASS), `probe-all-lang` (26/26), walk / check-integrity PASS
+- **Added real-time running status search `get_running_status` (v2.44.0)**
+  - **New running-status tool**: fetches per-operator train operating status (normal / delayed / partial suspension / suspended) per line from official pages and GTFS-RT. JR East (52 lines), Tobu and Keikyu come from official pages/XML; Tokyo Metro, Tsukuba Express, Rinkai and Tama Monorail are fetched live from **GTFS-RT (protobuf, parsed by a dependency-free decoder)**. Operators blocked by bot protection gracefully fall back to their official link. `search_bus` also gains **per-bus-stop-pole timetables (odpt:BusstopPoleTimetable)** with departure times and non-step availability
+  - **Verification** — build, `probe-all-lang` (26/26), `test-issue-88-89-90` (75/75), walk / check-integrity PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1143,9 +1143,9 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **基于车站坐标自动解析天气的府县判定（v2.43.3）**
-  - **坐标→多边形自动判定府县**：`get_weather` 的地域名解析（`stationToJmaArea`）对手动词典中没有的站名，也会用车站坐标（ODPT geo、主要车站、已核验的JR车站）对47都道府县多边形做 point-in-polygon，自动导出 JMA 府县代码（JIS府县代码×10000）。修复此前「越谷レイクタウン」「鹤见」「东武动物园」等非东京车站回退到东京(130000)的问题（如越谷レイクタウン→埼玉110000、鹤见→神奈川140000）
-  - **验证** — 构建、`test-issue-88-89-90`（75/75 PASS）、`probe-all-lang`（26/26）、walk / check-integrity 通过
+- **新增实时运行状况检索 `get_running_status`（v2.44.0）**
+  - **新增运行状况工具**：从官方页面和 GTFS-RT 获取各事业者的列车运行状况（正常运行/晚点/部分停运/停运）并按路线返回。JR东（52条路线）、东武、京急来自官方页面/XML；东京地铁、筑波快线、临海线、多摩单轨则从 **GTFS-RT（protobuf，使用无依赖解码器解析）** 实时获取。受机器人防护等无法获取的事业者优雅回退到官方链接。`search_bus` 还新增了**各公交站牌时刻表（odpt:BusstopPoleTimetable）**，包含发车时间与无障碍（低地板）可用性
+  - **验证** — 构建、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity 通过
 
 ### 🤖 AI 智能建议
 

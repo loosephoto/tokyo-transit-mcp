@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.43.3 (Production Ready)
+ * Tokyo Transit MCP Server v2.44.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -30,11 +30,12 @@ import { searchFerry, listFerryPorts } from './handlers/ferry.mjs';
 import { searchBus } from './handlers/bus.mjs';
 import { searchFlight, calculateFlightDelayMinutes, normalizeAirportIata } from './handlers/flight.mjs';
 import { getStationInfo, listCommunityBuses, listTransitOperators, getOperatorRoutes } from './handlers/station-info.mjs';
+import { getRunningStatus } from './handlers/running-status.mjs';
 import { searchFare } from './handlers/fare.mjs';
 import { getTimetable } from './handlers/timetable.mjs';
 
 const server = new Server(
-  { name: 'tokyo-transit-mcp', version: '2.43.3' },
+  { name: 'tokyo-transit-mcp', version: '2.44.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -106,7 +107,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     { name: 'search_bus',
       description: '🚌🚃 バス路線・乗り継ぎ・横断乗り継ぎ検索 - 都営・西武・横浜市営バス（ODPT）。busstop_name でバス停/系統を検索、from+to で乗り継ぎ経路（バス内のみならず、バス→電車→バスの横断乗り継ぎも対応）を探索。足の悪い方へノンステップバス情報を含む。コミュニティバスは駅接続ルートで乗り継ぎ可能（JRバス関東は停留所順序データがなく対象外）。language（ja/en/zh）指定で応答言語を強制可能。',
-      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定・バス→電車→バスも可）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' }, vehicle: { type: 'string', enum: ['bus', 'train', 'community_bus', 'ferry', 'any'], description: '優先する乗り物（乗り継ぎ検索モードのみ）。bus=バス優先, train=電車優先, community_bus=コミュニティバス優先, ferry=水上バス優先, any=自動（最短）。指定乗り物が極端に遠回りになる場合は better_alternative でより良い経路を進言。' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時はバス停名から自動判定）' } }, required: [] } }
+      inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定・バス→電車→バスも可）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' }, vehicle: { type: 'string', enum: ['bus', 'train', 'community_bus', 'ferry', 'any'], description: '優先する乗り物（乗り継ぎ検索モードのみ）。bus=バス優先, train=電車優先, community_bus=コミュニティバス優先, ferry=水上バス優先, any=自動（最短）。指定乗り物が極端に遠回りになる場合は better_alternative でより良い経路を進言。' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時はバス停名から自動判定）' } }, required: [] } },
+    { name: 'get_running_status',
+      description: '🚦 リアルタイム運行状況検索 - 指定事業者（または全事業者）の列車運行状況を公式ページから取得し、路線別ステータス（平常運転/遅延/一部運休/運転見合わせ）で返す。operator（例: jreast, tokyometro, tobu, toei, seibu, sotetsu, keikyu, odakyu, tokyu, keisei）指定で絞り込み、省略/ all で全事業者。サイトがボット保護・JS描画等で直接取得できない事業者は「未取得＋公式リンク」でグレースフルに縮退。language（ja/en/zh）指定で応答言語を強制可能。',
+      inputSchema: { type: 'object', properties: { operator: { type: 'string', description: '事業者キー（例: jreast, tokyometro, tobu。省略 or all で全事業者）' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時は operator から自動判定）' } }, required: [] } }
   ])
 }));
 
@@ -139,6 +143,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'get_timetable': return await getTimetable(args);
       case 'search_bus': return await searchBus(args);
       case 'search_flight': return await searchFlight(args);
+      case 'get_running_status': return await getRunningStatus(args);
       default: return jsonResponse(buildErrorResponse('INVALID_INPUT', `Unknown tool: ${name}`, { userLang: errLang }));
     }
   } catch (error) {
@@ -146,7 +151,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES, calculateFlightDelayMinutes, parseCsvLine, validateFlightDate, normalizeAirportIata, gtfsFetchDates };
+export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES, calculateFlightDelayMinutes, parseCsvLine, validateFlightDate, normalizeAirportIata, gtfsFetchDates, getRunningStatus };
 
 async function main() {
   const transport = new StdioServerTransport();
