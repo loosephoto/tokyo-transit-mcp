@@ -76,6 +76,17 @@ export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCod
       windText = area?.winds?.[0] || '';
       waveText = area?.waves?.[0] || '';
       if (!weather) throw new Error(`JMA forecast area not found for ${areaCode}${subAreaCode ? `/${subAreaCode}` : ''}`);
+      // JMA天気文の全角スペース整形: 複合句（例: 「雨　で　雷を伴い　激しく　降る」）が
+      // スペースで分断されると translateWeather の最長一致辞書が効かない。
+      // 複合句の構成語（で/を伴い/激しく/降る 等）の前後の全角スペースのみ除去し、
+      // それ以外の全角スペースは半角スペース化して可読性を保つ。
+      {
+        // 複合句候補「雨/雪 で 雷を伴い 激しく 降る」パターンを一括結合
+        let t = weather.replace(/(雨|雪)(\u3000+)で(\u3000+)雷を伴い(\u3000+)激しく(\u3000+)降る/g, '$1で雷を伴い激しく降る')
+                       .replace(/(雨|雪)(\u3000+)で(\u3000+)雷を伴い/g, '$1で雷を伴い');
+        t = t.split('\u3000').join(' ');
+        weather = t;
+      }
       isRainy = weather.includes("雨") || weather.includes("雪");
       // #89: 強風・高波・特別警報を予報文（winds/waves）から検出。
       // #93: 警報・注意報の概況文（response.data[0].text）も突合して特別警報検出を強化。

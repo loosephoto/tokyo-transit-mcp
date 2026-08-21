@@ -21,11 +21,22 @@ export async function resolveFareStations(rawName) {
   if (cached) return cached;
   if (!odptBreaker.canExecute()) return [];
   const candidates = [];
-  const queries = [name, name.replace(/(駅|站)$/, ''), name.replace(/駅前$/, '')]
+  // ケ/ヶ・ノ/の 等の表記ゆれバリアントも検索対象にする。
+  // ODPT 側は事業者ごとに表記が異なる（例: 都営「市ヶ谷」/ 東京メトロ「市ケ谷」）ため、
+  // 1クエリで片方しかヒットしないケースを防ぐ。全クエリを実行して結果をマージする。
+  const baseQueries = [name, name.replace(/(駅|站)$/, ''), name.replace(/駅前$/, '')]
     .filter((v, i, a) => v && a.indexOf(v) === i);
+  const queries = [];
+  for (const q of baseQueries) {
+    queries.push(q);
+    if (q.includes('ヶ')) queries.push(q.replace(/ヶ/g, 'ケ'));
+    else if (q.includes('ケ')) queries.push(q.replace(/ケ/g, 'ヶ'));
+  }
+  const seenQ = new Set();
+  const uniqueQueries = queries.filter(q => (seenQ.has(q) ? false : (seenQ.add(q), true)));
   let anySuccess = false;
   let lastError = null;
-  for (const q of queries) {
+  for (const q of uniqueQueries) {
     try {
       const res = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: { 'acl:consumerKey': API_KEY, 'dc:title': q }, timeout: 15000 });
       odptBreaker.onSuccess();
@@ -38,7 +49,7 @@ export async function resolveFareStations(rawName) {
           }
         }
       }
-      if (candidates.length) break;
+      // 表記ゆれバリアントは別事業者の別表記を拾うために最後まで実行する
     } catch (e) { lastError = e; }
   }
   if (candidates.length === 0 && !anySuccess && lastError) {

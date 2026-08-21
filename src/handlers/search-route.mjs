@@ -845,6 +845,7 @@ export async function searchRoute(args) {
           const operators = ['TokyoMetro', 'Toei', 'TamaMonorail', 'MIR', 'TWR'];
           const results = await Promise.allSettled(operators.map(op => axios.get(`${API_BASE_URL}/odpt:TrainInformation`, { params: getParams(op), timeout: 15000 })));
           const allDelays = []; let fb = false, fd = '';
+          const transferCandidates = [];
           const fulfilledCount = results.filter(res => res.status === 'fulfilled').length;
           if (fulfilledCount === 0) {
             throw new Error('All ODPT train information requests failed');
@@ -854,15 +855,24 @@ export async function searchRoute(args) {
             for (const info of res.value.data) {
               if (!info['odpt:trainInformationStatus']) continue;
               const t = info['odpt:trainInformationText']?.ja || '';
+              const rw = info['odpt:railway'];
               // #92: 復旧検出は「運転を再開」等の肯定的表現のみ。TODO「再開は未定」は除外
               const resumed = /(運転を再開|運転再開|再開しました|復旧しました)/.test(t) && !/(再開は未定|再開未定|再開の見込み)/.test(t);
               if (!resumed && (t.includes("運転見合わせ") || t.includes("見合わせ") || t.includes("運休"))) {
-                allDelays.push({ railway: info['odpt:railway'], text: t });
-                for (const lineName of resolveSuspendedLineNames(info['odpt:railway'])) suspendedLineNames.add(lineName);
+                allDelays.push({ railway: rw, text: t });
+                for (const lineName of resolveSuspendedLineNames(rw)) suspendedLineNames.add(lineName);
               }
-              if (t.includes('バス') || t.includes('振替') || t.includes('代行') || t.includes('輸送')) { fb = true; fd = t; }
+              if (t.includes('バス') || t.includes('振替') || t.includes('代行') || t.includes('輸送')) {
+                transferCandidates.push({ railway: rw, text: t });
+              }
             }
           }
+          // 振替輸送は「現在停止中（suspendedLineNames に載った）路線」の情報のみ採用する。
+          // 復旧済み（resumed 判定）の路線は suspendedLineNames に入らないため、
+          // 無関係路線の「再開しました」案内が経路に混入する問題を防ぐ。
+          const relevantTransfer = transferCandidates.find(c =>
+            resolveSuspendedLineNames(c.railway).some(l => suspendedLineNames.has(l)));
+          if (relevantTransfer) { fb = true; fd = relevantTransfer.text; }
           busTransferDetected = fb; busTransferDetail = fd;
           odptBreaker.onSuccess();
           return { delays: allDelays, busTransfer: fb, busTransferDetail: fd, suspendedLineNames: [...suspendedLineNames] };
@@ -996,10 +1006,22 @@ export async function searchRoute(args) {
       }));
     }
     const errType = routeResult.error === 'STATION_NOT_FOUND' ? 'STATION_NOT_FOUND' : 'NO_ROUTE';
+    // 未収録の側（出発/到着）を特定して明示する（両方不明な場合は従来どおり併記）
+    const missingFrom = errType === 'STATION_NOT_FOUND' && !routeResult.from;
+    const missingTo = errType === 'STATION_NOT_FOUND' && !routeResult.to;
+    const sideMsg = (missingFrom && missingTo)
+      ? null
+      : missingFrom
+        ? (userLang === 'en' ? `Departure station "${displayFrom}" is not in the route search data.`
+           : userLang === 'zh' ? `出发站“${displayFrom}”不在路线检索数据中。`
+           : `出発駅「${displayFrom}」は経路検索データに含まれていません。`)
+        : (userLang === 'en' ? `Arrival station "${displayTo}" is not in the route search data.`
+           : userLang === 'zh' ? `到达站“${displayTo}”不在路线检索数据中。`
+           : `到着駅「${displayTo}」は経路検索データに含まれていません。`);
     const errMsg = errType === 'STATION_NOT_FOUND'
-      ? (userLang === 'en' ? `Station not found: ${displayFrom} / ${displayTo}`
+      ? (sideMsg || (userLang === 'en' ? `Station not found: ${displayFrom} / ${displayTo}`
          : userLang === 'zh' ? `未找到车站：${displayFrom} / ${displayTo}`
-         : `駅が見つかりません：${displayFrom} / ${displayTo}`)
+         : `駅が見つかりません：${displayFrom} / ${displayTo}`))
       : (userLang === 'en' ? `No route found from ${displayFrom} to ${displayTo}.`
          : userLang === 'zh' ? `未找到从 ${displayFrom} 到 ${displayTo} 的路线。`
          : `${displayFrom} から ${displayTo} への経路が見つかりません。`);

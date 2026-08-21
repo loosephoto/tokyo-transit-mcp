@@ -33,10 +33,13 @@
 
 ### 🛤️ 直近の更新内容
 
-- **運行状況・時刻表を都営GTFSで強化（v2.46.0）**
-  - **運行状況カバレッジ8社に拡大**: 都営を GTFS-RT alert でライブ取得（`toei_odpt_train_alert`）。JR東・東武・京急・東京メトロ・TX・りんかい・多摩モノレール・**都営** の8事業者がリアルタイム運行状況を返す
-  - **都営鉄道GTFSを時刻表のフォールバックに**: ODPT `odpt:TrainTimetable` が障害時でも、都営鉄道GTFS（浅草線・大江戸線・三田線・新宿線・都電荒川線・日暮里舎人ライナー）から時刻表を提供
-  - **検証** — `npm run build`、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity が PASS
+- **実データ突合で発見した5件の不具合を修正（v2.47.0）**
+  - **無関係路線の「振替輸送」案内を抑止**: 復旧済み（再開済み）の運行情報が、経路に関係しない路線の振替輸送案内として表示される問題を修正。現在停止中の路線に紐づく振替情報のみ表示
+  - **運行状況の重複行を排除**: JR東など公式ページで区間別に重複掲載される同一路線（京浜東北線・武蔵野線等）をユニーク化。平常運転と障害が混在する場合は障害側を優先
+  - **search_fare のヶ/ケ表記ゆれ対応**: 都営「市ヶ谷」/ 東京メトロ「市ケ谷」のように事業者ごとに表記が異なる駅でも全候補を解決し、「データが見つからない」誤応答を解消
+  - **STATION_NOT_FOUND エラーの明確化**: 出発・到着どちらの駅が経路検索データ未収録かを3言語で明示
+  - **英語天気文の自然化**: 気象庁原文の複合句（例:「雨　で　雷を伴い　激しく　降る」）が逐語訳化する問題を修正 → "rain, heavy at times, with thunderstorms" 等の自然な英文に
+  - **検証** — `npm test`（26/26）、`probe-all-lang`（26/26）、check-railway-integrity、AIアドバイス分離テストが PASS
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -609,10 +612,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Enhanced running status & timetables with Toei GTFS (v2.46.0)**
-  - **Running-status coverage expanded to 8 operators**: Toei now live via GTFS-RT alert (`toei_odpt_train_alert`). JR East, Tobu, Keikyu, Tokyo Metro, Tsukuba Express, Rinkai, Tama Monorail and **Toei** all return real-time operating status
-  - **Toei Train GTFS as timetable fallback**: `get_timetable` serves Toei timetables (Asakusa, Oedo, Mita, Shinjuku Lines, Arakawa Tram, Nippori-Toneri Liner) from GTFS even when ODPT `odpt:TrainTimetable` fails
-  - **Verification** — build, `probe-all-lang` (26/26), `test-issue-88-89-90` (75/75), walk / check-integrity PASS
+- **Five real-data defects fixed (v2.47.0)**
+  - **Suppressed irrelevant "substitute bus" notices**: fixed resumed-service train information leaking into routes as substitute-bus guidance for unrelated lines. Only transfers tied to currently suspended lines are shown
+  - **Deduplicated running-status rows**: same line listed multiple times per section (Keihin-Tohoku, Musashino, etc.) is now unique; disruptions take precedence over duplicate "normal" rows
+  - **Fare lookup handles ケ/ヶ spelling variants**: stations written differently per operator (Toei 「市ヶ谷」 vs Tokyo Metro 「市ケ谷」) now resolve all candidates, eliminating false "fare data not found" responses
+  - **Clearer STATION_NOT_FOUND errors**: which side (departure/arrival) is missing from the route graph is now stated in ja/en/zh
+  - **Natural English weather text**: JMA compound phrases no longer translate word-by-word — e.g. "rain, heavy at times, with thunderstorms"
+  - **Verification** — `npm test` (26/26), `probe-all-lang` (26/26), check-railway-integrity, AI-advice separation tests PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1147,10 +1153,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **使用都营 GTFS 强化运行状况与时刻表（v2.46.0）**
-  - **运行状况覆盖扩大到8家事业者**：都营通过 GTFS-RT alert（`toei_odpt_train_alert`）实时获取。JR东、东武、京急、东京地铁、筑波快线、临海线、多摩单轨及**都营**均返回实时运行状况
-  - **都营铁道 GTFS 作为时刻表回退**：`get_timetable` 在 ODPT `odpt:TrainTimetable` 故障时，也能从都营铁道 GTFS（浅草线、大江户线、三田线、新宿线、都电荒川线、日暮里舍人线）提供时刻表
-  - **验证** — 构建、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity 通过
+- **修复实测发现的5个问题（v2.47.0）**
+  - **抑制无关线路的"接驳换乘巴士"提示**：已恢复运行的运行信息不再作为无关线路的接驳提示显示，仅展示当前停运线路相关的换乘信息
+  - **去除运行状况重复行**：JR东等官网按区间重复列出的同一线路（京滨东北线、武藏野线等）已去重；故障信息优先于重复的"正常运行"行
+  - **search_fare 支持 ヶ/ケ 表记差异**：不同事业者写法不同的车站（都营「市ヶ谷」/ 东京地铁「市ケ谷」）现在可解析全部候选，消除"未找到票价数据"的误报
+  - **STATION_NOT_FOUND 错误更明确**：以日/英/中指明出发或到达哪一侧车站不在路线检索数据中
+  - **英文天气文本自然化**：气象厅原文的复合短语不再逐词翻译，例如 "rain, heavy at times, with thunderstorms"
+  - **验证** — `npm test`（26/26）、`probe-all-lang`（26/26）、check-railway-integrity、AI建议分离测试通过
 
 ### 🤖 AI 智能建议
 

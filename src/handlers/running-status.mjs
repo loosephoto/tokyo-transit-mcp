@@ -48,7 +48,29 @@ async function fetchJREast() {
     });
   }
   const updated = (html.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2})時(\d{1,2})分/) || []);
-  return { lines, updated: updated.length ? `${updated[1]}-${updated[2]}-${updated[3]} ${updated[4]}:${updated[5]}` : undefined };
+  // 同一路線が区間別に複数行掲載されるため、line+status+detail でユニーク化する。
+  // 平常運転の重複は先頭1件のみ残し、障害情報は detail 単位で保持。
+  const seen = new Set();
+  const deduped = [];
+  for (const l of lines) {
+    const key = `${l.line}|${l.status}|${l.detail || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(l);
+  }
+  // 同一路線で平常運転と障害が混在する場合、障害側を優先して平常の重複を落とす
+  const disrupted = new Set(deduped.filter(l => l.status !== 'normal').map(l => l.line));
+  const merged = [];
+  const normalSeen = new Set();
+  for (const l of deduped) {
+    if (l.status === 'normal' && disrupted.has(l.line)) continue;
+    if (l.status === 'normal') {
+      if (normalSeen.has(l.line)) continue;
+      normalSeen.add(l.line);
+    }
+    merged.push(l);
+  }
+  return { lines: merged, updated: updated.length ? `${updated[1]}-${updated[2]}-${updated[3]} ${updated[4]}:${updated[5]}` : undefined };
 }
 
 // ---------- アダプタ: 東武鉄道（trainop.xml） ----------

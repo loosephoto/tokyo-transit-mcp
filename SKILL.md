@@ -198,8 +198,11 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.46.0（2026-08-18）— 運行状況・時刻表を都営GTFSで強化
+### v2.47.0（2026-08-21）— 実データ突合で発見した5件の不具合修正
 
-- **運行状況カバレッジ8社に拡大**: 都営を GTFS-RT alert（`toei_odpt_train_alert`）でライブ取得。JR東・東武・京急・メトロ・TX・りんかい・多摩モノレール・都営の8事業者がリアルタイム運行状況を返す
-- **都営鉄道GTFSを時刻表のフォールバックに**: 新規 `src/lib/toei-gtfs-timetable.mjs` が `Toei-Train-GTFS.zip`（CC BY 4.0・`noDate`）をパースし、`get_timetable` の NO_DATA 分岐でフォールバック。浅草線・大江戸線・三田線・新宿線・都電荒川線・日暮里舎人ライナーをODPT障害時も提供
-- **検証**: `npm run build`、`probe-all-lang`（26/26）、`test-issue-88-89-90`（75/75）、walk / check-integrity PASS
+- **無関係路線の「振替輸送」案内を抑止**（search-route.mjs）: 復旧済み（再開済み）運行情報が経路無関係の振替案内として表示される問題を修正。`transferCandidates` を収集し、現在停止中の路線（suspendedLineNames）に紐づくもののみ採用
+- **運行状況の重複行排除**（running-status.mjs）: JR東など公式ページ区間別重複（同一路線×複数行）を line+status+detail でユニーク化。障害側を平常の重複より優先
+- **search_fare のヶ/ケ表記ゆれ対応**（fare.mjs）: ODPT は事業者ごとに表記が異なる（都営「市ヶ谷」/ メトロ「市ケ谷」）。ヶ⇔ケ バリアントクエリを追加し全クエリ実行・マージ（早期break廃止）
+- **STATION_NOT_FOUND の未収録側明示**（search-route.mjs）: 出発/到着どちらが経路グラフ未収録かを ja/en/zh で返す（routeResult.from/to の欠落で判定）
+- **英語天気文の自然化**（weather.mjs + data/misc.mjs）: JMA原文の全角スペースで分断される複合句（雨　で　雷を伴い　激しく　降る）を結合してから翻訳。辞書に「雨で雷を伴い激しく降る」→"rain, heavy at times, with thunderstorms" 等を追加
+- **検証**: `npm test`（26/26）、`probe-all-lang`（26/26）、check-railway-integrity、test-ai-transit-advice-presence PASS
