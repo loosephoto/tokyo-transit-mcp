@@ -4,22 +4,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import assert from 'assert';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(path.resolve(__dirname, '../src/index.mjs'), 'utf8');
-
-// detectLanguage 関数のソースを抽出して評価
-const fnStart = src.indexOf('function detectLanguage(text) {');
-assert.ok(fnStart > 0, 'detectLanguage 定義を発見');
-const braceStart = src.indexOf('{', fnStart);
-let depth = 0, end = -1;
-for (let i = braceStart; i < src.length; i++) {
-  if (src[i] === '{') depth++;
-  else if (src[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
-}
-const fnSrc = src.slice(fnStart, end + 1);
-const detectLanguage = eval('(' + fnSrc.replace('function detectLanguage', 'function') + ')');
-
+import { detectLanguage } from '../src/lib/lang.mjs';
 // ---- 中国語クエリ ----
 const zhCases = [
   '从浅草坐巴士去合羽桥道具街',     // ユーザー実クエリ（繁体混じり・簡体字専用字なし）

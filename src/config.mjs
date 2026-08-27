@@ -66,6 +66,10 @@ class CircuitBreaker {
   }
 
   onFailure(error) {
+    // 401/403 は一時障害ではなくAPIキー・権限設定の問題。設定不備で
+    // 全ODPT機能をCircuit Breaker OPENにしない。
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) return;
     this.failureCount++;
     if (this.state === 'HALF-OPEN' || this.failureCount >= this.failureThreshold) {
       // #93 修正: 段階的クールダウンは「サーキットを開放したエピソード回数」に応じて

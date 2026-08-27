@@ -14,6 +14,31 @@ import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } f
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import axios from 'axios';
 
+function buildInternalStationFallback(stationName, userLang) {
+  const localLines = STATION_TO_LINES[stationName] || [];
+  if (localLines.length === 0) return null;
+  const displayStation = getDisplayStationName(stationName, userLang);
+  const fallbackResults = localLines.map(entry => ({
+    id: `local:${entry.line}:${stationName}`,
+    name: displayStation,
+    code: `${entry.index + 1}`,
+    line: getLineDisplayName(entry.line, userLang),
+    source: 'internal_graph'
+  }));
+  return jsonResponse({
+    status: "SUCCESS", detected_language: userLang, station: displayStation,
+    source: "internal_graph_fallback", results: fallbackResults,
+    note: userLang === 'en'
+      ? "This station is not in the ODPT dataset or ODPT is unavailable; shown from the built-in route graph."
+      : userLang === 'zh'
+        ? "该车站不在ODPT数据集中或ODPT暂时不可用，已从内置路线图显示。"
+        : "この駅はODPTデータにないかODPTが利用できないため、内蔵路線グラフから表示しています。",
+    cultural_facilities: getDestinationCulturalFacilities(stationName, userLang).length
+      ? getDestinationCulturalFacilities(stationName, userLang) : undefined,
+    gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, displayStation)
+  });
+}
+
 export async function getStationInfo(args) {
   const rawStation = args.station_name || '';
   const stationName = normalizeStationName(rawStation);
@@ -23,7 +48,7 @@ export async function getStationInfo(args) {
     const msg = userLang === 'en' ? 'Please specify a station name.' : userLang === 'zh' ? '请指定车站名称。' : '駅名を指定してください。';
     return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
   }
-  if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, station: stationName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
+  if (!odptBreaker.canExecute()) return buildInternalStationFallback(stationName, userLang) || jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, station: stationName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
   try {
     const response = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(operator, { 'dc:title': stationName }), timeout: 15000 });
     const stations = response.data;
@@ -81,7 +106,12 @@ export async function getStationInfo(args) {
       gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, displayStation)
     });
   } catch (error) {
-    // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
+    // ODPTが認証/API障害中でも、内蔵グラフにある駅は案内を継続する。
+    const localFallback = buildInternalStationFallback(stationName, userLang);
+    if (localFallback) {
+      if (!isInternalError(error)) odptBreaker.onFailure(error);
+      return localFallback;
+    }
     if (!isInternalError(error)) odptBreaker.onFailure(error);
     return handleApiError(error, { userLang, station: stationName, api: 'ODPT' });
   }

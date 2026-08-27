@@ -198,11 +198,10 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.47.0（2026-08-21）— 実データ突合で発見した5件の不具合修正
+### v2.48.0（2026-08-27）— API障害時の堅牢性・テスト・依存関係を改善
 
-- **無関係路線の「振替輸送」案内を抑止**（search-route.mjs）: 復旧済み（再開済み）運行情報が経路無関係の振替案内として表示される問題を修正。`transferCandidates` を収集し、現在停止中の路線（suspendedLineNames）に紐づくもののみ採用
-- **運行状況の重複行排除**（running-status.mjs）: JR東など公式ページ区間別重複（同一路線×複数行）を line+status+detail でユニーク化。障害側を平常の重複より優先
-- **search_fare のヶ/ケ表記ゆれ対応**（fare.mjs）: ODPT は事業者ごとに表記が異なる（都営「市ヶ谷」/ メトロ「市ケ谷」）。ヶ⇔ケ バリアントクエリを追加し全クエリ実行・マージ（早期break廃止）
-- **STATION_NOT_FOUND の未収録側明示**（search-route.mjs）: 出発/到着どちらが経路グラフ未収録かを ja/en/zh で返す（routeResult.from/to の欠落で判定）
-- **英語天気文の自然化**（weather.mjs + data/misc.mjs）: JMA原文の全角スペースで分断される複合句（雨　で　雷を伴い　激しく　降る）を結合してから翻訳。辞書に「雨で雷を伴い激しく降る」→"rain, heavy at times, with thunderstorms" 等を追加
-- **検証**: `npm test`（26/26）、`probe-all-lang`（26/26）、check-railway-integrity、test-ai-transit-advice-presence PASS
+- **駅情報のGraceful Degradation**: ODPT API障害時も内蔵路線グラフに存在する駅を`internal_graph_fallback`で案内。未知駅はAPI正常時のみ`STATION_NOT_FOUND`と判定
+- **Circuit Breaker**: 401/403の認証・権限エラーを一時的障害としてカウントしない
+- **テスト基盤**: `.env`任意化、スクリプト位置基準のパス解決、GTFS外部疎通のSKIP分離、分離済み言語判定モジュールの直接検証
+- **依存関係**: MCP SDKと`adm-zip`を更新。`npm audit --omit=dev`で脆弱性0件
+- **検証**: 全モジュール構文検査、主要回帰テスト、`npm audit`、`git diff --check`を実行

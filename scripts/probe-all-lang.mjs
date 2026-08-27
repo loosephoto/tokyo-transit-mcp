@@ -2,9 +2,14 @@
 // 各ツールのレスポンスに「検索言語と不一致の文字」が残っていないか機械チェック
 // en: 漢字・かなが残ると NG / zh: かな（ひらがな・カタカナ）が残ると NG
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const loadEnv = () => {
-  const env = fs.readFileSync('.env', 'utf8');
+  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const envPath = path.join(rootDir, '.env');
+  if (!fs.existsSync(envPath)) return;
+  const env = fs.readFileSync(envPath, 'utf8');
   for (const line of env.split('\n')) {
     const m = line.match(/^([A-Z_]+)=(.*)$/);
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
