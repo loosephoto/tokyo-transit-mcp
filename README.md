@@ -613,13 +613,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Five real-data defects fixed (v2.47.0)**
-  - **Suppressed irrelevant "substitute bus" notices**: fixed resumed-service train information leaking into routes as substitute-bus guidance for unrelated lines. Only transfers tied to currently suspended lines are shown
-  - **Deduplicated running-status rows**: same line listed multiple times per section (Keihin-Tohoku, Musashino, etc.) is now unique; disruptions take precedence over duplicate "normal" rows
-  - **Fare lookup handles ケ/ヶ spelling variants**: stations written differently per operator (Toei 「市ヶ谷」 vs Tokyo Metro 「市ケ谷」) now resolve all candidates, eliminating false "fare data not found" responses
-  - **Clearer STATION_NOT_FOUND errors**: which side (departure/arrival) is missing from the route graph is now stated in ja/en/zh
-  - **Natural English weather text**: JMA compound phrases no longer translate word-by-word — e.g. "rain, heavy at times, with thunderstorms"
-  - **Verification** — `npm test` (26/26), `probe-all-lang` (26/26), check-railway-integrity, AI-advice separation tests PASS
+- **Improved resilience, tests, and dependencies for API failures (v2.48.0)**
+  - **Station information graceful degradation**: when ODPT is unavailable, stations present in the built-in route graph are served through `internal_graph_fallback`
+  - **Avoided false negatives**: an unknown station is reported as `STATION_NOT_FOUND` only when ODPT is healthy; during an outage, the response remains a network/API error
+  - **Circuit Breaker correction**: authentication and authorization errors (401/403) no longer open the transient-failure Circuit Breaker
+  - **More reliable tests**: multilingual probes work without `.env`; external GTFS connectivity failures are separated from implementation tests; language detection tests now import the split module directly
+  - **Dependency updates**: updated the MCP SDK and `adm-zip`; `npm audit --omit=dev` reports zero vulnerabilities
+  - **Verification** — all module syntax checks, major regression tests, `npm audit`, and `git diff --check` PASS
 
 ### 🤖 AI Intelligent Advice
 
@@ -1098,7 +1098,7 @@ tokyo-transit-mcp/
 ├── package-lock.json
 ├── README.md
 ├── CLAUDE.md            # Claude Code project guide
-├── SKILL.md             # Project skill definition (v2.25.4)
+├── SKILL.md             # Project skill definition (v2.48.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1154,13 +1154,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复实测发现的5个问题（v2.47.0）**
-  - **抑制无关线路的"接驳换乘巴士"提示**：已恢复运行的运行信息不再作为无关线路的接驳提示显示，仅展示当前停运线路相关的换乘信息
-  - **去除运行状况重复行**：JR东等官网按区间重复列出的同一线路（京滨东北线、武藏野线等）已去重；故障信息优先于重复的"正常运行"行
-  - **search_fare 支持 ヶ/ケ 表记差异**：不同事业者写法不同的车站（都营「市ヶ谷」/ 东京地铁「市ケ谷」）现在可解析全部候选，消除"未找到票价数据"的误报
-  - **STATION_NOT_FOUND 错误更明确**：以日/英/中指明出发或到达哪一侧车站不在路线检索数据中
-  - **英文天气文本自然化**：气象厅原文的复合短语不再逐词翻译，例如 "rain, heavy at times, with thunderstorms"
-  - **验证** — `npm test`（26/26）、`probe-all-lang`（26/26）、check-railway-integrity、AI建议分离测试通过
+- **改进API故障时的稳定性、测试和依赖关系（v2.48.0）**
+  - **车站信息优雅降级**：ODPT不可用时，内置路线图中存在的车站通过`internal_graph_fallback`继续提供信息
+  - **避免误判**：仅在ODPT正常时判定车站为`STATION_NOT_FOUND`；故障期间返回网络/API错误
+  - **改进断路器**：401/403认证或权限错误不会触发临时故障用Circuit Breaker
+  - **提高测试稳定性**：多语言探针不再要求`.env`；外部GTFS连接失败与实现测试分离；语言判定测试直接导入拆分后的模块
+  - **更新依赖关系**：更新MCP SDK和`adm-zip`；`npm audit --omit=dev`确认无漏洞
+  - **验证** — 全部模块语法检查、主要回归测试、`npm audit`和`git diff --check`均通过
 
 ### 🤖 AI 智能建议
 
