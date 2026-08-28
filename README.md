@@ -328,11 +328,16 @@ search_bus(from: "浅草", to: "上野", vehicle: "bus")
 
 ```bash
 npm run build       # node --check src/index.mjs
-npm test            # 全26ケースの日本語・英語・中国語回帰
+npm test            # tools/list検証 + 代表ツールテスト + 全26ケースの日英中回帰
+npm run test:tools  # MCP tools/list検証（13ツールのannotations）＋代表ツール正常系・エラー系
 npm run test:walk   # 近接異名駅（徒歩連絡）・同名別駅・路線データ整合性の回帰
 npm run test:bus    # バス乗り継ぎ実APIプローブ（API状況により長時間化）
 npm run test:vehicle # vehicle優先の決定的モック回帰
 ```
+
+`tests/` 配下の決定的テスト（`tests/tools-list.test.mjs`・`tests/handlers-basic.test.mjs`）は、
+外部スキャナーが認識できる通常のテストファイルとして、全13ツールの列挙・annotations・
+代表的な正常系/入力エラー系/多言語系を検証します。`scripts/` の実データプローブは補助検証として維持しています。
 
 `npm test` の終了コードをCIの品質ゲートに使用できます。実APIを使うバス乗り継ぎプローブがタイムアウトしても、決定的なモック回帰とは別に評価してください。
 

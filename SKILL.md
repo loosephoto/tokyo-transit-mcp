@@ -198,10 +198,10 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 品質監査・Issue追跡
 
-- MCP `tools/list` の全ツールに `annotations`（`readOnlyHint`、`destructiveHint`、`idempotentHint`、`openWorldHint`）を明示する課題は GitHub Issue #103 で追跡する。
-- 依存関係のOSV再監査、MIT `LICENSE` の追加、外部スキャナーが検出できるMCPツール自動テストの整備は GitHub Issue #109 で追跡する。
-- 現行の依存関係は `@modelcontextprotocol/sdk` 1.30.0、`axios` 1.19.0。`npm audit` の結果だけでOSV判定を代替せず、package.json / package-lock.json の実バージョンを対象に再監査する。
-- `scripts/` の実データプローブと、`tests/` または `test/` に置く決定的な自動テストを区別する。
+- ✅ 全13ツールの `annotations`（`readOnlyHint`、`destructiveHint`、`idempotentHint`、`openWorldHint`）は `src/index.mjs` の `DEFAULT_TOOL_ANNOTATIONS` で一括注入済み（#103/#109 対応完了）。全ツール読み取り専用・副作用なし・外部データ参照のため `true/false/true/true` で統一。個別ツールに `annotations` を明示すれば上書き可能。
+- ✅ MIT `LICENSE` 追加・依存関係のOSV再監査・`tests/` 配下のMCPツール自動テスト（`tests/tools-list.test.mjs`・`tests/handlers-basic.test.mjs`）は #109 で対応完了。`npm test` に統合済み。
+- 現行の依存関係は `@modelcontextprotocol/sdk` 1.30.0、`axios` 1.19.0、`adm-zip` 0.6.0、`dotenv` 17.4.2。`npm audit` の結果だけでOSV判定を代替せず、package.json / package-lock.json の実バージョンを対象に再監査する（OSV querybatch API で検証、現行は0脆弱性）。
+- `scripts/` の実データプローブと、`tests/` に置く決定的な自動テストを区別する。外部スキャナーが認識する通常テストは `tests/` に置く。
 - Issue本文を修正しただけではクローズせず、実装と受け入れ条件が検証済みの課題だけをクローズする。
 
 ## 更新履歴

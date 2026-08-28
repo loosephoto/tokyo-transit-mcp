@@ -42,6 +42,17 @@ const server = new Server(
 // ==========================================
 // 📋 ツール一覧
 // ==========================================
+// 🔴 #103/#109: 全ツールに annotations を付与する。
+// このサーバーの全ツールは検索・取得系（読み取り専用・副作用なし・外部データ参照）なので
+// readOnlyHint/destructiveHint/idempotentHint/openWorldHint = true/false/true/true で統一する。
+// ツール定義に annotations が明示されていればそれを尊重し、未設定のものだけデフォルトを注入する。
+const DEFAULT_TOOL_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true
+};
+
 function applyInputSchemaConstraints(tools) {
   const visit = (schema, key = '') => {
     if (!schema || typeof schema !== 'object') return;
@@ -57,7 +68,11 @@ function applyInputSchemaConstraints(tools) {
     if (key === 'lat' && schema.type === 'number') { schema.minimum = -90; schema.maximum = 90; }
     if (key === 'lon' && schema.type === 'number') { schema.minimum = -180; schema.maximum = 180; }
   };
-  for (const tool of tools) visit(tool.inputSchema);
+  for (const tool of tools) {
+    visit(tool.inputSchema);
+    // annotations 未設定のツールにのみデフォルトを注入（#103/#109）
+    if (!tool.annotations) tool.annotations = DEFAULT_TOOL_ANNOTATIONS;
+  }
   return tools;
 }
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -151,7 +166,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-export { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES, calculateFlightDelayMinutes, parseCsvLine, validateFlightDate, normalizeAirportIata, gtfsFetchDates, getRunningStatus };
+export { server, searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES, calculateFlightDelayMinutes, parseCsvLine, validateFlightDate, normalizeAirportIata, gtfsFetchDates, getRunningStatus };
 
 async function main() {
   const transport = new StdioServerTransport();
