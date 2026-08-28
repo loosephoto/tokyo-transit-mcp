@@ -39,7 +39,9 @@ async function main() {
   ]);
 
   // 🔴 #104: capabilities.logging が宣言されているか（sendLoggingMessage で通知可能）
-  const caps = server.getCapabilities ? server.getCapabilities() : null;
+  // McpServer は内部の低レベル Server（server.server）の getCapabilities() で capabilities を公開する
+  const innerServer = server.server || server;
+  const caps = innerServer.getCapabilities ? innerServer.getCapabilities() : null;
   const loggingDeclared = !!(caps && caps.logging);
   if (loggingDeclared) {
     ok('capabilities.logging が宣言されている');
@@ -119,6 +121,42 @@ async function main() {
     }
   }
   ok(`全${schemaOk}ツールに有効な inputSchema（type=object）`);
+
+  // 5) #102/#106: zod スキーマの制約が tools/list に反映されているか
+  //    （McpServer + registerTool 移行後のスキーマネイティブ化検証）
+  const byName = {};
+  for (const t of tools) byName[t.name] = t.inputSchema;
+
+  // additionalProperties: false が全ツールで付与されている
+  const allNoExtra = tools.every(t => t.inputSchema.additionalProperties === false);
+  if (allNoExtra) ok('全ツールの inputSchema に additionalProperties: false');
+  else fail('一部ツールに additionalProperties: false がない');
+
+  // required が zod から自動計算される（必須の from/to があるツール）
+  const sr = byName['search_route'];
+  const srReqOk = Array.isArray(sr.required) && sr.required.includes('from') && sr.required.includes('to');
+  if (srReqOk) ok('search_route の required に from/to が自動付与');
+  else fail(`search_route の required が不正: ${JSON.stringify(sr.required)}`);
+
+  // search_flight は全引数 optional → required が undefined/空
+  const sf = byName['search_flight'];
+  if (!sf.required || sf.required.length === 0) ok('search_flight は全引数 optional（required なし）');
+  else fail(`search_flight の required が不正: ${JSON.stringify(sf.required)}`);
+
+  // flight_date の日付パターン
+  const fdPattern = sf.properties && sf.properties.flight_date && sf.properties.flight_date.pattern;
+  if (fdPattern === '^\\d{4}-\\d{2}-\\d{2}$' || (fdPattern && /^\\d{4}/.test(fdPattern))) {
+    ok('search_flight.flight_date に日付パターンが付与');
+  } else {
+    fail(`search_flight.flight_date のパターンが不正: ${JSON.stringify(fdPattern)}`);
+  }
+
+  // user_location.lat/lon の範囲制約
+  const ul = byName['search_route'].properties && byName['search_route'].properties.user_location;
+  const latMinOk = ul && ul.properties && ul.properties.lat && ul.properties.lat.minimum === -90;
+  const lonMaxOk = ul && ul.properties && ul.properties.lon && ul.properties.lon.maximum === 180;
+  if (latMinOk && lonMaxOk) ok('search_route.user_location に lat/lon 範囲制約が付与');
+  else fail(`search_route.user_location の範囲制約が不正: ${JSON.stringify(ul)}`);
 
   await client.close();
   await server.close();

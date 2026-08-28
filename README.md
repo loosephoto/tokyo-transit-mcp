@@ -33,6 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
+- **McpServer + registerTool 移行・スキーマネイティブ化（#102/#106）**
+  - 低レベル Server + 手動 ListTools/CallTool ハンドラ + switch を廃止し、`McpServer` + `registerTool` へ移行
+  - 各ツールの inputSchema を zod スキーマに統一し、`applyInputSchemaConstraints` を廃止（#106）
+  - SDK が tools/list の JSON Schema を自動生成（additionalProperties:false・required 自動付与）
+  - `tests/tools-list.test.mjs` に zod スキーマ制約（pattern・範囲・required）の検証を追加
 - **MCPツール整備・イシュー対応（#101/#103/#104/#105/#109）**
   - エラー応答に `isError: true` を付与（失敗が成功扱いになる問題を修正・#101）
   - 全13ツールに `annotations` を付与（readOnlyHint/destructiveHint/idempotentHint/openWorldHint・#103）
