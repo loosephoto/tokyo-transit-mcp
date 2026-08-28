@@ -33,6 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
+- **MCPツール整備・イシュー対応（#101/#103/#104/#105/#109）**
+  - エラー応答に `isError: true` を付与（失敗が成功扱いになる問題を修正・#101）
+  - 全13ツールに `annotations` を付与（readOnlyHint/destructiveHint/idempotentHint/openWorldHint・#103）
+  - `capabilities.logging` を宣言しツール呼び出しの進捗を `sendLoggingMessage` で通知（#104）
+  - ツール description を簡潔化（#105）
+  - 依存関係の再監査（npm audit/OSV で脆弱性0件）・MIT LICENSE 追加・`tests/` に MCPツール自動テスト新設（#109）
 - **API障害時の堅牢性・テスト・依存関係を改善（v2.48.0）**
   - ODPT API障害時も、内蔵路線グラフに存在する駅を`internal_graph_fallback`で案内
   - API障害中の未知駅を`STATION_NOT_FOUND`と誤断定せず、API正常時のみ不存在と判定

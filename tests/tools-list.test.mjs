@@ -38,6 +38,15 @@ async function main() {
     client.connect(clientTransport),
   ]);
 
+  // 🔴 #104: capabilities.logging が宣言されているか（sendLoggingMessage で通知可能）
+  const caps = server.getCapabilities ? server.getCapabilities() : null;
+  const loggingDeclared = !!(caps && caps.logging);
+  if (loggingDeclared) {
+    ok('capabilities.logging が宣言されている');
+  } else {
+    fail('capabilities.logging が宣言されていない');
+  }
+
   const { tools } = await client.listTools();
   console.log(`listTools() が返したツール数: ${tools.length}`);
 

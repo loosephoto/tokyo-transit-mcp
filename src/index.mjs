@@ -36,7 +36,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 
 const server = new Server(
   { name: 'tokyo-transit-mcp', version: '2.48.0' },
-  { capabilities: { tools: {} } }
+  { capabilities: { tools: {}, logging: {} } }
 );
 
 // ==========================================
@@ -110,7 +110,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: { operator_name: { type: 'string', description: '事業者キー' }, language: { type: 'string', enum: ['ja', 'en', 'zh'] } }, required: ['operator_name'] }
     },
     { name: 'search_flight',
-      description: '✈️ 空港フライト時刻・到着時刻表示 - 羽田(HND)/成田(NRT)等の空港または便名で到着/出発フライトを検索。JAL/ANA のリアルタイム発着データ（ODPT・基本ライセンス）をプライマリに使用し、取得できない場合は AviationStack にフォールバック。海外からの来客・帰省時に最適: 到着フライト検索時に destination（例: 東京駅）を指定すると、到着ターミナルから目的地へのアクセス経路を自動提案。API キー未設定時はフライト時刻なしで空港アクセス経路のみ表示（graceful degradation）。language（ja/en/zh）指定で応答言語を強制可能。',
+      description: '✈️ 空港フライト時刻・到着時刻表示 - 羽田/成田等の空港または便名で到着/出発フライトを検索。destination 指定で到着ターミナル→目的地のアクセス経路を自動提案。language（ja/en/zh）指定で応答言語を強制可能。',
       inputSchema: { type: 'object', properties: { airport: { type: 'string', description: '空港名またはIATAコード（例: 羽田空港, 成田空港, HND, NRT）' }, flight_number: { type: 'string', description: '便名（例: NH001, JL000）' }, direction: { type: 'string', enum: ['arrival', 'departure'], description: '到着(arrival)または出発(departure)。省略時は到着。' }, flight_date: { type: 'string', description: 'フライト日付 YYYY-MM-DD（省略時は当日）' }, airline: { type: 'string', description: '航空会社IATAコード（任意・絞り込み）' }, destination: { type: 'string', description: '到着時の連携先（例: 東京駅）。指定すると到着ターミナル→目的地のアクセス経路を提案。' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時は空港名/便名から自動判定）' } }, required: [] } },
     { name: 'search_fare',
       description: '🚃 運賃検索 - 2駅間の運賃をODPTデータから検索します（東京メトロ・都営対応）。サーバー内で運賃を直接返します。language（ja/en/zh）指定で応答言語を強制可能。',
@@ -121,10 +121,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: { station_name: { type: 'string', description: '駅名' }, railway: { type: 'string', description: '路線名（省略可）' }, calendar: { type: 'string', enum: ['Weekday', 'SaturdayHoliday', '平日', '土休日'], description: '対象カレンダー（省略時は検索日/当日の曜日で自動判定。土日=SaturdayHoliday）' }, date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$', description: '検索日 YYYY-MM-DD（省略時は当日。calendar 未指定時の曜日判定に使用）' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時は駅名から自動判定）' } }, required: ['station_name'] }
     },
     { name: 'search_bus',
-      description: '🚌🚃 バス路線・乗り継ぎ・横断乗り継ぎ検索 - 都営・西武・横浜市営バス（ODPT）。busstop_name でバス停/系統を検索、from+to で乗り継ぎ経路（バス内のみならず、バス→電車→バスの横断乗り継ぎも対応）を探索。足の悪い方へノンステップバス情報を含む。コミュニティバスは駅接続ルートで乗り継ぎ可能（JRバス関東は停留所順序データがなく対象外）。language（ja/en/zh）指定で応答言語を強制可能。',
+      description: '🚌🚃 バス路線・乗り継ぎ・横断乗り継ぎ検索 - バス停/系統を検索、from+to でバス→電車→バスの乗り継ぎ経路を探索。ノンステップバス情報を含む。language（ja/en/zh）指定で応答言語を強制可能。',
       inputSchema: { type: 'object', properties: { busstop_name: { type: 'string', description: 'バス停名（部分一致・バス停検索モード）' }, from: { type: 'string', description: '出発バス停名（乗り継ぎ検索モード: to と共に指定・バス→電車→バスも可）' }, to: { type: 'string', description: '到着バス停名（乗り継ぎ検索モード: from と共に指定）' }, vehicle: { type: 'string', enum: ['bus', 'train', 'community_bus', 'ferry', 'any'], description: '優先する乗り物（乗り継ぎ検索モードのみ）。bus=バス優先, train=電車優先, community_bus=コミュニティバス優先, ferry=水上バス優先, any=自動（最短）。指定乗り物が極端に遠回りになる場合は better_alternative でより良い経路を進言。' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時はバス停名から自動判定）' } }, required: [] } },
     { name: 'get_running_status',
-      description: '🚦 リアルタイム運行状況検索 - 指定事業者（または全事業者）の列車運行状況を公式ページから取得し、路線別ステータス（平常運転/遅延/一部運休/運転見合わせ）で返す。operator（例: jreast, tokyometro, tobu, toei, seibu, sotetsu, keikyu, odakyu, tokyu, keisei）指定で絞り込み、省略/ all で全事業者。サイトがボット保護・JS描画等で直接取得できない事業者は「未取得＋公式リンク」でグレースフルに縮退。language（ja/en/zh）指定で応答言語を強制可能。',
+      description: '🚦 リアルタイム運行状況検索 - 指定事業者（または全事業者）の列車運行状況を公式ページから取得し、路線別ステータス（平常運転/遅延/一部運休/運転見合わせ）で返す。operator 指定で絞り込み、省略/ all で全事業者。language（ja/en/zh）指定で応答言語を強制可能。',
       inputSchema: { type: 'object', properties: { operator: { type: 'string', description: '事業者キー（例: jreast, tokyometro, tobu。省略 or all で全事業者）' }, language: { type: 'string', enum: ['ja', 'en', 'zh'], description: '応答言語の強制指定（省略時は operator から自動判定）' } }, required: [] } }
   ])
 }));
@@ -144,24 +144,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         : detectLanguage(args?.from_port) !== 'ja' ? detectLanguage(args?.from_port)
         : detectLanguage(args?.station_name) !== 'ja' ? detectLanguage(args?.station_name)
         : 'ja');
+  // 🔴 #104: capabilities.logging を宣言し、ツール呼び出しの開始・完了・失敗を
+  // sendLoggingMessage でクライアントへ通知する。クライアントが logging/setLevel で
+  // debug/info を有効にすると受け取れる。未接続・未対応クライアントでは無視される。
+  const log = (level, message) => {
+    server.sendLoggingMessage({ level, logger: 'tokyo-transit-mcp', data: message }).catch(() => {});
+  };
   try {
-    switch (name) {
-      case 'search_route': return await searchRoute(args);
-      case 'get_station_info': return await getStationInfo(args);
-      case 'get_weather': return await getWeather(args);
-      case 'list_ferry_ports': return await listFerryPorts(args);
-      case 'search_ferry': return await searchFerry(args);
-      case 'list_transit_operators': return await listTransitOperators(args);
-      case 'list_community_buses': return await listCommunityBuses(args);
-      case 'get_operator_routes': return await getOperatorRoutes(args);
-      case 'search_fare': return await searchFare(args);
-      case 'get_timetable': return await getTimetable(args);
-      case 'search_bus': return await searchBus(args);
-      case 'search_flight': return await searchFlight(args);
-      case 'get_running_status': return await getRunningStatus(args);
-      default: return jsonResponse(buildErrorResponse('INVALID_INPUT', `Unknown tool: ${name}`, { userLang: errLang }));
-    }
+    log('debug', `tool called: ${name}`);
+    const result = await (() => {
+      switch (name) {
+        case 'search_route': return searchRoute(args);
+        case 'get_station_info': return getStationInfo(args);
+        case 'get_weather': return getWeather(args);
+        case 'list_ferry_ports': return listFerryPorts(args);
+        case 'search_ferry': return searchFerry(args);
+        case 'list_transit_operators': return listTransitOperators(args);
+        case 'list_community_buses': return listCommunityBuses(args);
+        case 'get_operator_routes': return getOperatorRoutes(args);
+        case 'search_fare': return searchFare(args);
+        case 'get_timetable': return getTimetable(args);
+        case 'search_bus': return searchBus(args);
+        case 'search_flight': return searchFlight(args);
+        case 'get_running_status': return getRunningStatus(args);
+        default: return jsonResponse(buildErrorResponse('INVALID_INPUT', `Unknown tool: ${name}`, { userLang: errLang }));
+      }
+    })();
+    const isErr = !!(result && result.isError);
+    log('info', `tool finished: ${name} ${isErr ? '(error)' : '(ok)'}`);
+    return result;
   } catch (error) {
+    log('error', `tool failed: ${name}: ${error.message || String(error)}`);
     return jsonResponse(buildErrorResponse('UNKNOWN_ERROR', error.message || String(error), { userLang: errLang }));
   }
 });

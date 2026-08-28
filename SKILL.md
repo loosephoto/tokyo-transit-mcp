@@ -201,6 +201,8 @@ odpt:Railway:TokyoMetro.{路線名}
 - ✅ 全13ツールの `annotations`（`readOnlyHint`、`destructiveHint`、`idempotentHint`、`openWorldHint`）は `src/index.mjs` の `DEFAULT_TOOL_ANNOTATIONS` で一括注入済み（#103/#109 対応完了）。全ツール読み取り専用・副作用なし・外部データ参照のため `true/false/true/true` で統一。個別ツールに `annotations` を明示すれば上書き可能。
 - ✅ MIT `LICENSE` 追加・依存関係のOSV再監査・`tests/` 配下のMCPツール自動テスト（`tests/tools-list.test.mjs`・`tests/handlers-basic.test.mjs`）は #109 で対応完了。`npm test` に統合済み。
 - 現行の依存関係は `@modelcontextprotocol/sdk` 1.30.0、`axios` 1.19.0、`adm-zip` 0.6.0、`dotenv` 17.4.2。`npm audit` の結果だけでOSV判定を代替せず、package.json / package-lock.json の実バージョンを対象に再監査する（OSV querybatch API で検証、現行は0脆弱性）。
+- ✅ `capabilities` に `logging: {}` を宣言し、ツール呼び出しの開始・完了・失敗を `sendLoggingMessage` で通知（#104 対応完了）。未接続・未対応クライアントでは無視される。`tests/tools-list.test.mjs` で `server.getCapabilities().logging` を検証。
+- ✅ ツール description は簡潔（最大~150文字・合計~1,200文字）に保つ（#105 対応完了）。search_flight/search_bus/get_running_status を簡潔化済み。詳細ガイダンスは description に詰め込まず、必要なら annotations/_meta/resources へ。
 - ✅ エラー応答の `isError: true` は `src/lib/common.mjs` の `jsonResponse` で `data.status === 'ERROR'` を検知して自動付与（#101 対応完了）。`handleApiError` も isError 付きを返す。`jsonResponse(handleApiError(...))` のような二重ラップは isError が失われるため禁止（flight.mjs 修正済み）。正常応答には isError を付けない。
 - `scripts/` の実データプローブと、`tests/` に置く決定的な自動テストを区別する。外部スキャナーが認識する通常テストは `tests/` に置く。
 - Issue本文を修正しただけではクローズせず、実装と受け入れ条件が検証済みの課題だけをクローズする。
