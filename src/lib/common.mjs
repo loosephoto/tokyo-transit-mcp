@@ -109,7 +109,14 @@ export function buildErrorResponse(errorType, errorMessage, details = {}) {
   return response;
 }
 
-export function jsonResponse(data) {
+export function jsonResponse(data, options = {}) {
+  // 🔴 #101: エラー応答には isError: true を付与する。
+  // buildErrorResponse は status: 'ERROR' を返すため、それを検知して MCP クライアントに
+  // ツール失敗を伝える。これを付けないと失敗が「成功」として扱われてしまう（致命的）。
+  // options.isError で明示上書きも可能。成功応答（status が 'ERROR' 以外・無し）は isError を付けない。
+  const isError = options.isError === undefined
+    ? (data && typeof data === 'object' && data.status === 'ERROR')
+    : options.isError;
   // ai_transit_advice が含まれる場合、それを独立したテキストブロックとして最初に配置。
   // LLM が長い JSON を要約する際に後半を省略してしまうのを防ぐため。
   if (data && typeof data === 'object' && typeof data.ai_transit_advice === 'string' && data.ai_transit_advice) {
@@ -122,12 +129,14 @@ export function jsonResponse(data) {
       // 🔴 #94: structuredContent には ai_transit_advice も含めて公開する。
       // MCPクライアントが structuredContent のみを参照する実装でも
       // AIインテリジェントアドバイスが失われないようにする（従来は除外されていた）。
-      structuredContent: data
+      structuredContent: data,
+      ...(isError ? { isError: true } : {})
     };
   }
   return {
     content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-    structuredContent: data
+    structuredContent: data,
+    ...(isError ? { isError: true } : {})
   };
 }
 

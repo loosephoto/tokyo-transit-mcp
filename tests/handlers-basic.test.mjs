@@ -48,18 +48,42 @@ const client = new Client({ name: 'handlers-basic-test', version: '1.0.0' });
 const [ct, st] = InMemoryTransport.createLinkedPair();
 await Promise.all([server.connect(st), client.connect(ct)]);
 
-// 未知ツール名の呼び出し
+// 未知ツール名の呼び出し（#101: isError:true が付与されること）
 try {
   const res = await client.callTool({ name: 'no_such_tool', arguments: {} });
-  // 成功として返った場合は内容を精査
   const text = (res.content || []).map(c => c.text || '').join(' ');
-  if (res.isError || /error/i.test(text)) {
-    ok(`未知ツール呼び出し: エラーとして応答 (isError=${!!res.isError})`);
+  if (res.isError === true) {
+    ok(`未知ツール呼び出し: isError=true でエラー応答`);
   } else {
-    fail(`未知ツール呼び出しがエラーにならない: ${text.slice(0, 80)}`);
+    fail(`未知ツール呼び出しの isError が true でない: isError=${JSON.stringify(res.isError)} text=${text.slice(0, 80)}`);
   }
 } catch (e) {
   ok(`未知ツール呼び出し: 例外/エラー応答 (${e.message || 'thrown'})`);
+}
+
+// 必須引数欠落（search_route に from/to なし）→ INVALID_INPUT が isError:true で返る（#101）
+try {
+  const res = await client.callTool({ name: 'search_route', arguments: {} });
+  const text = (res.content || []).map(c => c.text || '').join(' ');
+  if (res.isError === true) {
+    ok(`search_route(引数欠落): isError=true でエラー応答`);
+  } else {
+    fail(`search_route(引数欠落)の isError が true でない: isError=${JSON.stringify(res.isError)} text=${text.slice(0, 80)}`);
+  }
+} catch (e) {
+  ok(`search_route(引数欠落): 例外/エラー応答 (${e.message || 'thrown'})`);
+}
+
+// 正常応答には isError が付かない（undefined であること）
+try {
+  const res = await client.callTool({ name: 'list_transit_operators', arguments: { language: 'ja' } });
+  if (res.isError === undefined || res.isError === false) {
+    ok(`正常応答 list_transit_operators: isError なし（成功扱い）`);
+  } else {
+    fail(`正常応答に isError=true が付いてしまった: ${JSON.stringify(res.isError)}`);
+  }
+} catch (e) {
+  fail(`正常応答 list_transit_operators が例外: ${e.message}`);
 }
 
 await client.close();

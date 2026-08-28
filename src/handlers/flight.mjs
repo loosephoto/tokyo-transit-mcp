@@ -278,7 +278,9 @@ export async function searchFlight(args) {
 
     // API障害と、APIが正常に空結果を返した場合を区別する。
     if ((!flights || flights.length === 0) && flightApiError && (API_KEY || FLIGHT_API_KEY)) {
-      return jsonResponse(handleApiError(flightApiError, { userLang, api: 'flight' }));
+      // handleApiError は jsonResponse（isError:true 付き）を返す。二重ラップを避けるため
+      // ここで再度 jsonResponse で包まない（#101）。包むと isError が失われる。
+      return handleApiError(flightApiError, { userLang, api: 'flight' });
     }
 
     // キーなし / データなし → graceful degradation: 空港アクセス経路のみ
