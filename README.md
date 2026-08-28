@@ -567,6 +567,16 @@ tokyo-transit-mcp/
 
 ---
 
+## 🐛 不具合・機能要望
+
+不具合・機能要望は [GitHub Issues に報告する](https://github.com/loosephoto/tokyo-transit-mcp/issues) から送信してください。
+
+### 🔍 品質・監査状況
+
+- MCP ツールの `annotations`（`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`）の不足は [Issue #103](https://github.com/loosephoto/tokyo-transit-mcp/issues/103) で追跡しています。
+- 依存関係のOSV監査、MIT `LICENSE`、MCPツールの自動テスト整備は [Issue #109](https://github.com/loosephoto/tokyo-transit-mcp/issues/109) で追跡しています。
+- 現行依存関係は SDK `1.30.0`、Axios `1.19.0`。ローカル `npm audit` では high / critical ともに0件ですが、OSVによる再監査を別途実施します。
+
 ## ⚠️ ライセンス
 
 MIT License
@@ -1108,6 +1118,16 @@ Dependency direction is one-way: `handlers → advice/data/lib → config` (v2.3
 
 ---
 
+## 🐛 Bug Reports and Feature Requests
+
+Please report bugs and feature requests through the [GitHub Issues tracker](https://github.com/loosephoto/tokyo-transit-mcp/issues).
+
+### 🔍 Quality and Audit Status
+
+- Missing MCP tool `annotations` (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`) is tracked in [Issue #103](https://github.com/loosephoto/tokyo-transit-mcp/issues/103).
+- OSV dependency auditing, the MIT `LICENSE`, and automated MCP tool tests are tracked in [Issue #109](https://github.com/loosephoto/tokyo-transit-mcp/issues/109).
+- Current dependencies are SDK `1.30.0` and Axios `1.19.0`. Local `npm audit` reports zero high and critical vulnerabilities; an OSV rescan remains required.
+
 ## ⚠️ License
 
 MIT License
@@ -1647,6 +1667,16 @@ tokyo-transit-mcp/
 依赖方向为 `handlers → advice/data/lib → config` 单向（v2.39.0 单体拆分・议题#75）。
 
 ---
+
+## 🐛 问题反馈与功能建议
+
+请通过 [GitHub Issues](https://github.com/loosephoto/tokyo-transit-mcp/issues) 提交问题报告和功能建议。
+
+### 🔍 质量与审计状态
+
+- MCP 工具 `annotations`（`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`）缺失问题见 [Issue #103](https://github.com/loosephoto/tokyo-transit-mcp/issues/103)。
+- OSV 依赖审计、MIT `LICENSE` 以及 MCP 工具自动化测试见 [Issue #109](https://github.com/loosephoto/tokyo-transit-mcp/issues/109)。
+- 当前依赖版本为 SDK `1.30.0`、Axios `1.19.0`。本地 `npm audit` 的 high / critical 均为0，但仍需单独执行 OSV 复审。
 
 ## ⚠️ 许可证
 

@@ -31,7 +31,7 @@ category: transportation
 - NAVITIME乗換検索API
 - Google Transit API
 
-## ツール一覧（12種）
+## ツール一覧（13種）
 
 | ツール | 説明 |
 |-------|------|
@@ -195,6 +195,14 @@ odpt:Railway:TokyoMetro.{路線名}
 - CKANデータカタログ: https://ckan.odpt.org/
 - APIドキュメント: https://developer.odpt.org/
 - AviationStack: https://aviationstack.com/
+
+## 品質監査・Issue追跡
+
+- MCP `tools/list` の全ツールに `annotations`（`readOnlyHint`、`destructiveHint`、`idempotentHint`、`openWorldHint`）を明示する課題は GitHub Issue #103 で追跡する。
+- 依存関係のOSV再監査、MIT `LICENSE` の追加、外部スキャナーが検出できるMCPツール自動テストの整備は GitHub Issue #109 で追跡する。
+- 現行の依存関係は `@modelcontextprotocol/sdk` 1.30.0、`axios` 1.19.0。`npm audit` の結果だけでOSV判定を代替せず、package.json / package-lock.json の実バージョンを対象に再監査する。
+- `scripts/` の実データプローブと、`tests/` または `test/` に置く決定的な自動テストを区別する。
+- Issue本文を修正しただけではクローズせず、実装と受け入れ条件が検証済みの課題だけをクローズする。
 
 ## 更新履歴
 
