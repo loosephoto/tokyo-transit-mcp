@@ -612,6 +612,12 @@ export function normalizeStationName(name) {
   if (STATION_NAME_MAP[trimmed]) return STATION_NAME_MAP[trimmed];
   const mapped = STATION_NAME_MAP_LOWER.get(trimmed.toLowerCase());
   if (mapped) return mapped;
+  // 英語・中国語の表示名も駅名解決に利用する（STATION_DISPLAY_NAMESは表示専用だが、
+  // 英語入力から日本語の路線グラフへ戻すため逆引きが必要）。
+  for (const [ja, display] of Object.entries(STATION_DISPLAY_NAMES)) {
+    if (display.en && display.en.toLowerCase() === trimmed.toLowerCase()) return ja;
+    if (display.zh && display.zh === trimmed) return ja;
+  }
   // 一般的な駅名サフィックスは辞書登録の有無にかかわらず除去する。
   // 先に完全一致と辞書を評価しているため、正式名称の一部を壊さない。
   const withoutSuffix = trimmed.replace(/(?:駅|站|station)$/iu, '').trim();
