@@ -20,6 +20,10 @@ export function getLineDisplayName(lineName, userLang) {
   if (userLang === 'ja') return lineName;
   const trans = LINE_DISPLAY_NAMES[lineName];
   if (trans && trans[userLang]) return trans[userLang];
+  const normalized = lineName.replace(/[・\s]/g, '');
+  for (const [key, value] of Object.entries(LINE_DISPLAY_NAMES)) {
+    if (key.replace(/[・\s]/g, '') === normalized && value[userLang]) return value[userLang];
+  }
   return lineName;
 }
 
