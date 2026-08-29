@@ -1,4 +1,4 @@
-// 全12ツール × ja/en/zh 一括検証プローブ（最終確認版）
+// 全13ツール × ja/en/zh 一括検証プローブ（最終確認版）
 // 各ツールのレスポンスに「検索言語と不一致の文字」が残っていないか機械チェック
 // en: 漢字・かなが残ると NG / zh: かな（ひらがな・カタカナ）が残ると NG
 import fs from 'fs';
@@ -18,7 +18,7 @@ const loadEnv = () => {
 loadEnv();
 
 const { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo,
-  listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, searchFlight } =
+  listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, searchFlight, getRunningStatus } =
   await import('../src/index.mjs');
 
 const KANA = /[\u3040-\u30ff]/;
@@ -101,6 +101,9 @@ await run('search_ferry', 'en', { from_port: 'Tokyo', to_port: 'Oshima', languag
 await run('search_ferry', 'zh', { from_port: '东京', to_port: '大岛', language: 'zh', __expectedStatuses: ['SUCCESS', 'NO_DATA', 'SEVERE_WEATHER_ADVISORY'] }, searchFerry);
 await run('search_flight', 'en', { airport: 'Haneda', direction: 'arrival', language: 'en' }, searchFlight);
 await run('search_flight', 'zh', { airport: '羽田机场', direction: 'arrival', language: 'zh' }, searchFlight);
+await run('get_running_status', 'ja', { operator: 'seibu', language: 'ja' }, getRunningStatus);
+await run('get_running_status', 'en', { operator: 'seibu', language: 'en' }, getRunningStatus);
+await run('get_running_status', 'zh', { operator: 'seibu', language: 'zh' }, getRunningStatus);
 
 console.log('\n===== サマリー =====');
 const fails = results.filter(r => !r.ok);
