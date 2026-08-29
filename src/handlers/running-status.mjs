@@ -7,7 +7,7 @@
  */
 import axios from 'axios';
 import { jsonResponse, buildErrorResponse } from '../lib/common.mjs';
-import { resolveLang, detectLanguage } from '../lib/lang.mjs';
+import { getDisplayLineName, translateTrainInfoDetail, resolveLang, detectLanguage } from '../lib/lang.mjs';
 import { API_KEY, API_BASE_URL } from '../config.mjs';
 import { parseGtfsRtFeed } from '../lib/gtfs-realtime.mjs';
 
@@ -23,10 +23,10 @@ const STATUS_MAP = {
   unknown:   { ja: '状況確認中', en: 'Status unknown', zh: '确认中' },
 };
 
-function classifyStatus(text) {
-  if (/見合わせ|運休/.test(text)) return 'suspended';
-  if (/一部|遅延/.test(text)) return 'partial';
-  if (/平常/.test(text)) return 'normal';
+export function classifyStatus(text) {
+  if (/見合わせ|運休|運転取りやめ|運行停止|運転停止/.test(text)) return 'suspended';
+  if (/一部|遅延|遅れ|ダイヤ乱れ|乱れ/.test(text)) return 'partial';
+  if (/平常|通常通り|通常どおり|運転再開|運行再開/.test(text)) return 'normal';
   if (/振替/.test(text)) return 'transfer';
   return 'unknown';
 }
@@ -274,36 +274,41 @@ const REGISTRY = {
 
 const ORDER = ['jreast', 'tokyometro', 'tobu', 'toei', 'seibu', 'sotetsu', 'keikyu', 'odakyu', 'tokyu', 'keisei', 'mir', 'twr', 'yokohamamunicipal', 'tamamonorail'];
 
+export function localizeStatusLine(line, userLang) {
+  return {
+    line: getDisplayLineName(line.line, userLang),
+    status: STATUS_MAP[line.status]?.[userLang] || line.status,
+    status_text: translateTrainInfoDetail(line.status_text, userLang),
+    detail: translateTrainInfoDetail(line.detail, userLang)
+  };
+}
+
 export async function getRunningStatus(args) {
   const userLang = resolveLang(args) || detectLanguage(args?.operator) || 'ja';
   const rawOp = String(args?.operator || 'all').trim().toLowerCase();
   const wanted = rawOp === 'all' || rawOp === '' ? ORDER : [rawOp];
 
   const result = { status: 'SUCCESS', detected_language: userLang, timestamp: new Date().toISOString(), operators: [] };
+  const operatorResults = new Map();
 
   // 並行フェッチ（一部失敗しても全体は成功を返す）
   await Promise.all(wanted.map(async (key) => {
     const def = REGISTRY[key];
     if (!def) {
-      result.operators.push({ operator: key, name: key, available: false, error: 'unknown_operator', message: userLang === 'en' ? 'Unknown operator.' : userLang === 'zh' ? '未知的事业者。' : '不明な事業者です。' });
+      operatorResults.set(key, { operator: key, name: key, available: false, error: 'unknown_operator', message: userLang === 'en' ? 'Unknown operator.' : userLang === 'zh' ? '未知的事业者。' : '不明な事業者です。' });
       return;
     }
     try {
       if (!def.fetch) throw new Error('NO_ADAPTER');
       const data = await def.fetch();
-      const lines = (data.lines || []).map((l) => ({
-        line: l.line,
-        status: STATUS_MAP[l.status]?.[userLang] || l.status,
-        status_text: l.status_text,
-        detail: l.detail
-      }));
-      result.operators.push({
+      const lines = (data.lines || []).map((l) => localizeStatusLine(l, userLang));
+      operatorResults.set(key, {
         operator: def.key, name: def.name[userLang] || def.name.ja, available: true, updated: data.updated,
         url: def.url, lines
       });
     } catch (error) {
       // ボット保護・JS描画・未実装アダプタ等は未取得として公式リンクへ縮退
-      result.operators.push({
+      operatorResults.set(key, {
         operator: def.key, name: def.name[userLang] || def.name.ja, available: false, url: def.url,
         message: userLang === 'en'
           ? 'Live status could not be retrieved from the operator. Please check the official page.'
@@ -311,6 +316,7 @@ export async function getRunningStatus(args) {
       });
     }
   }));
+  result.operators = wanted.map((key) => operatorResults.get(key)).filter(Boolean);
 
   return jsonResponse(result);
 }
