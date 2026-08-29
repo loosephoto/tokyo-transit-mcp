@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.48.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.49.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -38,7 +38,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 // 各ツールは registerTool で登録し、ListTools / CallTool の手動ハンドラと switch を廃止した。
 // SDK が zod スキーマから tools/list の JSON Schema を自動生成する（additionalProperties:false 等も自動付与）。
 const server = new McpServer(
-  { name: 'tokyo-transit-mcp', version: '2.48.0' },
+  { name: 'tokyo-transit-mcp', version: '2.49.0' },
   { capabilities: { tools: {}, logging: {} } }
 );
 

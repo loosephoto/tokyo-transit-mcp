@@ -33,25 +33,11 @@
 
 ### 🛤️ 直近の更新内容
 
-- **McpServer + registerTool 移行・スキーマネイティブ化（#102/#106）**
-  - 低レベル Server + 手動 ListTools/CallTool ハンドラ + switch を廃止し、`McpServer` + `registerTool` へ移行
-  - 各ツールの inputSchema を zod スキーマに統一し、`applyInputSchemaConstraints` を廃止（#106）
-  - SDK が tools/list の JSON Schema を自動生成（additionalProperties:false・required 自動付与）
-  - `tests/tools-list.test.mjs` に zod スキーマ制約（pattern・範囲・required）の検証を追加
-- **MCPツール整備・イシュー対応（#101/#103/#104/#105/#109）**
-  - エラー応答に `isError: true` を付与（失敗が成功扱いになる問題を修正・#101）
-  - 全13ツールに `annotations` を付与（readOnlyHint/destructiveHint/idempotentHint/openWorldHint・#103）
-  - `capabilities.logging` を宣言しツール呼び出しの進捗を `sendLoggingMessage` で通知（#104）
-  - ツール description を簡潔化（#105）
-  - 依存関係の再監査（npm audit/OSV で脆弱性0件）・MIT LICENSE 追加・`tests/` に MCPツール自動テスト新設（#109）
-- **API障害時の堅牢性・テスト・依存関係を改善（v2.48.0）**
-  - ODPT API障害時も、内蔵路線グラフに存在する駅を`internal_graph_fallback`で案内
-  - API障害中の未知駅を`STATION_NOT_FOUND`と誤断定せず、API正常時のみ不存在と判定
-  - 401/403の認証・権限エラーでCircuit BreakerをOPENにしないよう改善
-  - `.env`なしでも多言語プローブを実行可能化し、GTFS外部疎通失敗を実装テストから分離
-  - 分離済み言語判定テストを現行モジュール直接検証へ更新
-  - MCP SDKと`adm-zip`を更新し、`npm audit --omit=dev`で脆弱性0件を確認
-  - **検証** — 全モジュール構文検査、主要回帰テスト、`npm audit`、`git diff --check` PASS
+- **リアルタイム運行状況（`get_running_status`）の多言語化・安定化（#110/#111/#112）**
+  - 事業者別のリアルタイム運行状況を3言語（ja/en/zh）でローカライズ表示（路線表示名・状況・詳細）
+  - 状況判定ロジックを堅牢化（`classifyStatus`）：一部運休・見合わせ・運転取りやめ・遅延・平常・振替を正規表現で分類
+  - 事業者キーの正規化・未対応事業者の公式リンク案内・`全線`の多言語対応を改善
+  - `test:running-status` を新設し、`npm test` に組み込み
 
 ### 🤖 AI インテリジェントアドバイス
 

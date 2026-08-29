@@ -1,6 +1,6 @@
 {
   "name": "tokyo-transit-mcp",
-  "version": "2.48.0",
+  "version": "2.49.0",
   "description": "Tokyo public transportation API MCP server - ODPT, Tokyo Metro, Toei, JR East",
   "type": "module",
   "main": "src/index.mjs",

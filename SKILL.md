@@ -212,10 +212,9 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.48.0（2026-08-27）— API障害時の堅牢性・テスト・依存関係を改善
+### v2.49.0（2026-08-29）— リアルタイム運行状況（get_running_status）の多言語化・安定化
 
-- **駅情報のGraceful Degradation**: ODPT API障害時も内蔵路線グラフに存在する駅を`internal_graph_fallback`で案内。未知駅はAPI正常時のみ`STATION_NOT_FOUND`と判定
-- **Circuit Breaker**: 401/403の認証・権限エラーを一時的障害としてカウントしない
-- **テスト基盤**: `.env`任意化、スクリプト位置基準のパス解決、GTFS外部疎通のSKIP分離、分離済み言語判定モジュールの直接検証
-- **依存関係**: MCP SDKと`adm-zip`を更新。`npm audit --omit=dev`で脆弱性0件
-- **検証**: 全モジュール構文検査、主要回帰テスト、`npm audit`、`git diff --check`を実行
+- **多言語対応**: 事業者別のリアルタイム運行状況を3言語（ja/en/zh）でローカライズ表示（路線表示名・状況・詳細）
+- **状況判定の堅牢化**: `classifyStatus`で一部運休・見合わせ・運転取りやめ・遅延・平常・振替を正規表現で分類
+- **改善**: 事業者キー正規化・未対応事業者の公式リンク案内・`全線`の多言語対応
+- **テスト**: `test:running-status`を新設し、`npm test`に組み込み
