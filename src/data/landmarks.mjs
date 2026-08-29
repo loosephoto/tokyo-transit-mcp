@@ -16,6 +16,11 @@ export const LANDMARK_DEFS = {
     note: { ja: '舞浜駅からディズニーリゾートライン「リゾートゲートウェイ・ステーション」乗換', en: 'Transfer at Resort Gateway Stn on the Disney Resort Line from Maihama Stn', zh: '在舞滨站换乘迪士尼度假区线至度假区门户站' },
     names: { ja: ['東京ディズニーシー', 'ディズニーシー'], en: ['Tokyo DisneySea', 'DisneySea'], zh: ['东京迪士尼海洋', '迪士尼海洋'] }
   },
+  kappabashi: {
+    station: '田原町', walk_min: 15, category: '商店街',
+    note: { ja: '田原町駅から徒歩約15分（銀座線田原町・浅草間・台東区の道具街）', en: 'About 15 min walk from Tawaramachi Stn on the Ginza Line (kitchenware district in Taito ward)', zh: '从田原町站步行约15分钟（银座线田原町站・台东区的厨房用具街）' },
+    names: { ja: ['かっぱ橋', 'かっぱ橋道具街', '合羽橋'], en: ['Kappabashi', 'Kappabashi Street', 'Kappabashi Dogugai'], zh: ['河童桥', '合羽桥道具街'] }
+  },
   tokyo_skytree: {
     station: 'とうきょうスカイツリー', walk_min: 1, category: '展望・建築',
     note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },

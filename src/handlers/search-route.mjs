@@ -7,6 +7,7 @@
 import { cache, jmaBreaker, odptBreaker, API_BASE_URL } from '../config.mjs';
 import { RAILWAY_LINES, WALK_TRANSFERS, LIGHT_TRANSFER_EDGES, CIRCULAR_LINES,
          AMBIGUOUS_STATION_NAMES, AMBIGUOUS_STATION_LINES, STATION_COORDS } from '../data/railway-lines.mjs';
+import { STATION_COORDS_EXTRA } from '../data/station-coords-extra.mjs';
 import { STATION_NAME_MAP, STATION_DISPLAY_NAMES, RAILWAY_NAME_MAP, LINE_DISPLAY_NAMES } from '../data/station-names.mjs';
 import { LANDMARK_DEFS, LANDMARK_LOOKUP, DESTINATION_CULTURAL_FACILITIES,
          CULTURAL_CATEGORY_NAMES, DERIVED_CULTURAL_FACILITIES } from '../data/landmarks.mjs';
@@ -527,13 +528,21 @@ export function computeRoutes(fromRaw, toRaw, options = {}) {
   return { routes, from, to, fromLandmark: fromRes.landmark, toLandmark: toRes.landmark, fromLandmarkNote: fromRes.landmarkNote, toLandmarkNote: toRes.landmarkNote };
 }
 
+// STATION_COORDS（主要駅）と STATION_COORDS_EXTRA（ODPT geo + JR検証済み）を統合（weather.mjs と同一パターン）。
+const BIKE_COORD_LOOKUP = {};
+for (const [k, v] of Object.entries(STATION_COORDS)) BIKE_COORD_LOOKUP[k] = v;
+for (const [k, v] of Object.entries(STATION_COORDS_EXTRA)) {
+  const [lat, lon] = Array.isArray(v) ? v : [v.lat, v.lon];
+  if (!BIKE_COORD_LOOKUP[k]) BIKE_COORD_LOOKUP[k] = { lat, lon };
+}
+
 export async function findNearestBikeStations(stationName, userLocation = null, maxResults = 5, maxDistance = 2000) {
   try {
     const data = await fetchBikeShareData();
     // 基準座標: ユーザーの現在位置（GPS）が指定されていればそれを優先、なければ出発駅座標
     let coord = (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lon === 'number')
       ? { lat: userLocation.lat, lon: userLocation.lon }
-      : STATION_COORDS[stationName];
+      : BIKE_COORD_LOOKUP[stationName];
     if (!coord) return null;
     const baseLabel = (userLocation && typeof userLocation.lat === 'number') ? 'user_location' : 'station';
     const available = data.stations

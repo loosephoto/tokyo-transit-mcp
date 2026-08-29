@@ -6,7 +6,7 @@ export const STATION_NAME_CORE = {
   // English
   'Tokyo': '東京', 'Shinjuku': '新宿', 'Shibuya': '渋谷', 'Ikebukuro': '池袋', 'Ueno': '上野',
   'Akihabara': '秋葉原', 'Ginza': '銀座', 'Roppongi': '六本木', 'Harajuku': '原宿', 'Yokohama': '横浜',
-  'Asakusa': '浅草', 'Shinagawa': '品川', 'Odaiba': 'お台場', 'Osaki': '大崎', 'Ebisu': '恵比寿',
+  'Asakusa': '浅草', 'Shinagawa': '品川', 'Osaki': '大崎', 'Ebisu': '恵比寿',
   // #55: 関東鉄道（常総線・竜ヶ崎線）主要駅のローマ字エイリアス
   'Toride': '取手', 'Moriya': '守谷', 'Mitsukaido': '水海道', 'Shimodate': '下館',
   'Sanuki': '佐貫', 'Ryugasaki': '竜ヶ崎', 'Ryugasaki JR': '龍ケ崎市', 'Shimotsuma': '下妻',
@@ -17,11 +17,9 @@ export const STATION_NAME_CORE = {
   'Uchihara': '内原', 'Akatsuka': '赤塚', 'Mito': '水戸',
   'Meguro': '目黒', 'Kanda': '神田', 'Hamamatsucho': '浜松町', 'Shimbashi': '新橋', 'Shin-Okubo': '新大久保',
   'Takadanobaba': '高田馬場', 'Nippori': '日暮里', 'Ochanomizu': '御茶ノ水',
-  'Osaka': '大阪', 'Kyoto': '京都', 'Narita Airport': '成田空港', 'Haneda Airport': '羽田空港',
-  'Narita': '成田空港', 'Haneda': '羽田空港', 'HND': '羽田空港', 'NRT': '成田空港',
-  'Odaiba Seaside Park': 'お台場海浜公園', 'Hinode Pier': '日の出桟橋', 'Toyosu': '豊洲',
-  '合羽橋': 'かっぱ橋', 'Kappabashi': 'かっぱ橋', 'Kappabashi Dori': 'かっぱ橋',
-  // コミュニティバス駅接続の主要駅（ローマ字）
+    'NRT': '成田空港',
+  'Odaiba Seaside Park': 'お台場海浜公園', 'Toyosu': '豊洲',
+    // コミュニティバス駅接続の主要駅（ローマ字）
   'Kichijoji': '吉祥寺', 'Mitaka': '三鷹', 'Musashisakai': '武蔵境', 'Musashi-Sakai': '武蔵境',
   'Tanashi': '田無', 'Hibarigaoka': 'ひばりヶ丘', 'Houya': '保谷', 'Hoya': '保谷', 'Higashifushimi': '東伏見', 'Hanakoganei': '花小金井',
   'Ogikubo': '荻窪', 'Nishiogikubo': '西荻窪', 'Koenji': '高円寺', 'Asagaya': '阿佐ヶ谷', 'Honancho': '方南町',

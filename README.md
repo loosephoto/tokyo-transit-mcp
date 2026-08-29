@@ -17,7 +17,7 @@
 
 ### 🚉 全交通機関を統合
 
-**計124路線・1,430駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
+**計124路線・1,431駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
 
 | 種別 | 対応事業者（対応路線） |
 |:---|:---|
@@ -33,11 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **リアルタイム運行状況（`get_running_status`）の多言語化・安定化（#110/#111/#112）**
-  - 事業者別のリアルタイム運行状況を3言語（ja/en/zh）でローカライズ表示（路線表示名・状況・詳細）
-  - 状況判定ロジックを堅牢化（`classifyStatus`）：一部運休・見合わせ・運転取りやめ・遅延・平常・振替を正規表現で分類
-  - 事業者キーの正規化・未対応事業者の公式リンク案内・`全線`の多言語対応を改善
-  - `test:running-status` を新設し、`npm test` に組み込み
+- **レンタサイクル案内の座標統合・駅名辞書の品質向上（#115/#116/#117）**
+  - `search_route` の到着地周辺レンタサイクル案内が `STATION_COORDS_EXTRA` を参照せず約1,000駅で無音欠落していたのを修正（weather.mjs と同じ統合パターン）
+  - 駅座標を OpenStreetMap（Overpass API）から一括取得し `STATION_COORDS_EXTRA` に1,018駅追加（座標カバー 1,391/1,431駅・97%）
+  - `STATION_NAME_MAP` のデッド参照22件を解消（landmarks/ferry 重複エイリアス削除・関西スコープ外削除・`Yokosuka→横須賀中央` 修正・東急新横浜線に新綱島駅追加）
+  - かっぱ橋をランドマーク登録（田原町駅徒歩15分）
+  - `STATION_DISPLAY_NAMES` の多言語表示名を502駅追加し全1,431駅の65%→100%カバレッジ達成（ODPT `odpt:stationTitle` の en 値と突合）
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -628,7 +629,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🚉 Integrated Transit Agencies
 
-**Covers 124 lines / 1,430 stations** (route search runs on the built-in graph without an API key):
+**Covers 124 lines / 1,431 stations** (route search runs on the built-in graph without an API key):
 
 | Type | Supported Operators (Lines) |
 |:---|:---|
@@ -644,13 +645,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Improved resilience, tests, and dependencies for API failures (v2.48.0)**
-  - **Station information graceful degradation**: when ODPT is unavailable, stations present in the built-in route graph are served through `internal_graph_fallback`
-  - **Avoided false negatives**: an unknown station is reported as `STATION_NOT_FOUND` only when ODPT is healthy; during an outage, the response remains a network/API error
-  - **Circuit Breaker correction**: authentication and authorization errors (401/403) no longer open the transient-failure Circuit Breaker
-  - **More reliable tests**: multilingual probes work without `.env`; external GTFS connectivity failures are separated from implementation tests; language detection tests now import the split module directly
-  - **Dependency updates**: updated the MCP SDK and `adm-zip`; `npm audit --omit=dev` reports zero vulnerabilities
-  - **Verification** — all module syntax checks, major regression tests, `npm audit`, and `git diff --check` PASS
+- **Bike-share coverage, station dictionary quality, and multilingual display names (#115/#116/#117)**
+  - Fixed the destination bike-share guide silently missing for ~1,000 stations: `findNearestBikeStations` now merges `STATION_COORDS_EXTRA` (same pattern as weather.mjs)
+  - Bulk-imported station coordinates from OpenStreetMap (Overpass API) into `STATION_COORDS_EXTRA` (+1,018 stations; coordinate coverage 1,391/1,431 = 97%)
+  - Resolved all 22 dead references in `STATION_NAME_MAP` (removed duplicates covered by landmarks/ferry, removed out-of-scope Kansai entries, fixed `Yokosuka→横須賀中央`, added Shin-Tsunashima station to the Tokyu Shin-Yokohama Line)
+  - Registered Kappabashi as a landmark (15 min walk from Tawaramachi Stn)
+  - Added 502 multilingual display names to `STATION_DISPLAY_NAMES`, reaching 100% coverage of all 1,431 stations (cross-checked with ODPT `odpt:stationTitle` en values)
 
 ### 🤖 AI Intelligent Advice
 
@@ -1197,7 +1197,7 @@ MIT License
 
 ### 🚉 整合所有公共交通工具
 
-**共覆盖124条线路/1,430站**（路线搜索由无需 API 密钥的内置图执行）：
+**共覆盖124条线路/1,431站**（路线搜索由无需 API 密钥的内置图执行）：
 
 | 类别 | 支持的运营商（线路） |
 |:---|:---|
@@ -1213,13 +1213,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **改进API故障时的稳定性、测试和依赖关系（v2.48.0）**
-  - **车站信息优雅降级**：ODPT不可用时，内置路线图中存在的车站通过`internal_graph_fallback`继续提供信息
-  - **避免误判**：仅在ODPT正常时判定车站为`STATION_NOT_FOUND`；故障期间返回网络/API错误
-  - **改进断路器**：401/403认证或权限错误不会触发临时故障用Circuit Breaker
-  - **提高测试稳定性**：多语言探针不再要求`.env`；外部GTFS连接失败与实现测试分离；语言判定测试直接导入拆分后的模块
-  - **更新依赖关系**：更新MCP SDK和`adm-zip`；`npm audit --omit=dev`确认无漏洞
-  - **验证** — 全部模块语法检查、主要回归测试、`npm audit`和`git diff --check`均通过
+- **共享单车覆盖、站名字典质量与多语言显示名（#115/#116/#117）**
+  - **修复共享单车指引静默缺失**：约1,000个车站因未整合`STATION_COORDS_EXTRA`而无法显示周边租车点，现已修复（与weather.mjs相同的整合模式）
+  - **批量导入车站坐标**：从OpenStreetMap（Overpass API）导入1,018站坐标（覆盖1,391/1,431站・97%）
+  - **清除站名映射死引用22件**：删除landmarks/ferry已覆盖的重复别名、删除范围外的关西条目、修正`Yokosuka→横須賀中央`、东急新横滨线新增新纲岛站
+  - **河童桥登录为地标**（田原町站步行15分钟）
+  - **多语言显示名补全**：`STATION_DISPLAY_NAMES`新增502站，全1,431站覆盖率65%→100%（与ODPT `odpt:stationTitle`英文值交叉核对）
 
 ### 🤖 AI 智能建议
 
