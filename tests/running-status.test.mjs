@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { classifyStatus, localizeStatusLine } from '../src/handlers/running-status.mjs';
 
 const cases = [
-  ['運転見合わせ', 'suspended'], ['運休', 'suspended'], ['運転取りやめ', 'suspended'],
+  ['運転見合わせ', 'suspended'],
+  ['一部運休・一部列車遅延', 'partial'], ['運休', 'suspended'], ['運転取りやめ', 'suspended'],
   ['運行停止', 'suspended'], ['遅れが発生しています', 'partial'],
   ['ダイヤ乱れが発生しています', 'partial'], ['通常どおり運転しています', 'normal'],
   ['運転再開しました', 'normal'],

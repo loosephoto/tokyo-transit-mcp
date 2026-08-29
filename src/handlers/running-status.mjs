@@ -24,6 +24,7 @@ const STATUS_MAP = {
 };
 
 export function classifyStatus(text) {
+  if (/一部運休|一部.*見合わせ|一部.*運転取りやめ/.test(text)) return 'partial';
   if (/見合わせ|運休|運転取りやめ|運行停止|運転停止/.test(text)) return 'suspended';
   if (/一部|遅延|遅れ|ダイヤ乱れ|乱れ/.test(text)) return 'partial';
   if (/平常|通常通り|通常どおり|運転再開|運行再開/.test(text)) return 'normal';
@@ -275,11 +276,22 @@ const REGISTRY = {
 const ORDER = ['jreast', 'tokyometro', 'tobu', 'toei', 'seibu', 'sotetsu', 'keikyu', 'odakyu', 'tokyu', 'keisei', 'mir', 'twr', 'yokohamamunicipal', 'tamamonorail'];
 
 export function localizeStatusLine(line, userLang) {
+  const status = STATUS_MAP[line.status]?.[userLang] || line.status;
+  const localizedStatusText = line.status === 'normal' && userLang === 'en'
+    ? 'Normal operation.'
+    : line.status === 'normal' && userLang === 'zh'
+      ? '正常运行。'
+      : translateTrainInfoDetail(line.status_text, userLang);
+  const localizedDetail = line.status === 'normal' && userLang === 'en'
+    ? 'No delays reported.'
+    : line.status === 'normal' && userLang === 'zh'
+      ? '目前没有延误。'
+      : translateTrainInfoDetail(line.detail, userLang);
   return {
     line: getDisplayLineName(line.line, userLang),
-    status: STATUS_MAP[line.status]?.[userLang] || line.status,
-    status_text: translateTrainInfoDetail(line.status_text, userLang),
-    detail: translateTrainInfoDetail(line.detail, userLang)
+    status,
+    status_text: localizedStatusText,
+    detail: localizedDetail
   };
 }
 
