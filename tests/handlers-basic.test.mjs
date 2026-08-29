@@ -26,7 +26,7 @@ for (const [input, expected] of langCases) {
 // 駅解決（resolveStation）
 console.log('-- 駅名解決 --');
 const stCases = [
-  ['東京', true], ['渋谷', true], ['新宿', true], ['これは存在しない駅名XYZ', false],
+  ['東京', true], ['渋谷', true], ['新宿', true], ['Asakusa', true], ['Tsukishima', true], ['これは存在しない駅名XYZ', false],
 ];
 for (const [input, shouldResolve] of stCases) {
   try {

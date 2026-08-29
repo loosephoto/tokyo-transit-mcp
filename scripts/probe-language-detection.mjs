@@ -43,8 +43,8 @@ check('route zh: advice block in Chinese', /AI智能出行建议/.test(r3.conten
 
 // --- English station names still work (bug V regression) ---
 const r4 = await searchRoute({ from: 'Asakusa', to: 'Tsukishima' });
-const r4text = JSON.stringify(r4);
-check('route en station names: STATION_NOT_FOUND in English', /Station not found/.test(r4text), r4text.slice(0, 200));
+const r4json = r4.structuredContent || (r4.content?.[1] ? JSON.parse(r4.content[1].text) : JSON.parse(r4.content[0].text));
+check('route en station names: English aliases resolve successfully', r4json.status === 'SUCCESS' && r4json.detected_language === 'en', JSON.stringify(r4json).slice(0, 200));
 
 // --- other tools honor language ---
 const f1 = await searchFare({ from: '赤坂', to: '渋谷', language: 'en' });
