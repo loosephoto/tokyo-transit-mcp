@@ -13,6 +13,9 @@ for (const [text, expected] of cases) assert.equal(classifyStatus(text), expecte
 const en = localizeStatusLine({ line: '京急線', status: 'normal', status_text: '京急線は平常通り運転しています。', detail: '遅れはありません。' }, 'en');
 assert.equal(en.line, 'Keikyu Line');
 assert.equal(en.status, 'Normal operation');
+const synthetic = localizeStatusLine({ line: '全線', status: 'normal', status_text: '平常運転', detail: undefined }, 'en');
+assert.equal(synthetic.line, 'All lines');
+assert.equal(synthetic.status_text, 'Normal operation.');
 assert.doesNotMatch(`${en.line} ${en.status} ${en.status_text} ${en.detail}`, /[぀-ヿ一-鿿]/);
 
 const zh = localizeStatusLine({ line: '京急線', status: 'partial', status_text: '京急線で遅れが発生しています。', detail: '運転を見合わせています。' }, 'zh');

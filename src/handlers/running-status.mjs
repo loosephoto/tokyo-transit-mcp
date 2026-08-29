@@ -177,7 +177,7 @@ async function fetchGtfsRtAlerts(feedName) {
     });
     return {
       line: routeNames.length ? routeNames.join('・') : '全線',
-      status: /見合わせ|運休/.test(text) ? 'suspended' : (/遅延|遅れ/.test(text) ? 'delay' : (/平常/.test(text) ? 'normal' : 'unknown')),
+      status: classifyStatus(text),
       status_text: text,
       detail: a.description && a.description !== text ? a.description.trim() : undefined
     };
@@ -277,6 +277,7 @@ const ORDER = ['jreast', 'tokyometro', 'tobu', 'toei', 'seibu', 'sotetsu', 'keik
 
 export function localizeStatusLine(line, userLang) {
   const status = STATUS_MAP[line.status]?.[userLang] || line.status;
+  const localizedLine = line.line === '全線' ? (userLang === 'en' ? 'All lines' : userLang === 'zh' ? '全线' : '全線') : getDisplayLineName(line.line, userLang);
   const localizedStatusText = line.status === 'normal' && userLang === 'en'
     ? 'Normal operation.'
     : line.status === 'normal' && userLang === 'zh'
@@ -288,7 +289,7 @@ export function localizeStatusLine(line, userLang) {
       ? '目前没有延误。'
       : translateTrainInfoDetail(line.detail, userLang);
   return {
-    line: getDisplayLineName(line.line, userLang),
+    line: localizedLine,
     status,
     status_text: localizedStatusText,
     detail: localizedDetail
