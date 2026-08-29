@@ -1382,6 +1382,7 @@ export const LINE_DISPLAY_NAMES = {
   '東武日光線': { en: 'Tobu Nikko Line', zh: '东武日光线' },
   '東武大師線': { en: 'Tobu Daishi Line', zh: '东武大师线' },
   '京急本線': { en: 'Keikyu Main Line', zh: '京急本线' },
+  '京急線': { en: 'Keikyu Line', zh: '京急线' },
   '京成押上線': { en: 'Keisei Oshiage Line', zh: '京成押上线' },
   '京成本線': { en: 'Keisei Main Line', zh: '京成本线' },
   '京成本線支線': { en: 'Keisei Main Line (Branch)', zh: '京成本线支线' },
