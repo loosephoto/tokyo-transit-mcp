@@ -193,7 +193,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 
 ## 🛠 使用可能ツール
 
-本MCPサーバーは**12種類のツール**を提供します。概要は早見表、詳細は各セクションを参照してください。
+本MCPサーバーは**13種類のツール**を提供します。概要は早見表、詳細は各セクションを参照してください。
 
 | # | ツール | 機能 | 主な引数 |
 |:--|:--|:--|:--|
@@ -209,6 +209,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 | 10 | `list_ferry_ports` | フェリー/水上バス港一覧 | `language` |
 | 11 | `search_ferry` | 港間の航路・時刻表検索 | `from_port`, `to_port` |
 | 12 | `list_community_buses` | 東京都コミュニティバス一覧（41自治体） | `language` |
+| 13 | `get_running_status` | 交通事業者別のリアルタイム運行状況 | `operator`, `language` |
 
 ### 1. `search_route` — 乗換ルート検索（メイン機能）
 
@@ -424,6 +425,22 @@ search_ferry(from_port: "浅草", to_port: "浜離宮")
 list_community_buses(language: "ja")   # ja / en / zh
 ```
 
+### 13. `get_running_status` — リアルタイム運行状況
+
+指定した交通事業者、または全事業者の公式運行状況を取得します。取得できない事業者は、公式ページへのリンク付きで案内します。
+
+```text
+get_running_status(operator: "tokyometro", language: "ja")
+get_running_status(operator: "all", language: "en")
+```
+
+- `operator` (string, 任意) — 事業者キー（例: `jreast`, `tokyometro`, `toei`, `keikyu`）。省略または `all` で全事業者を検索します。
+- `language` (string, 任意) — 応答言語 `ja` / `en` / `zh`。
+
+レスポンスには事業者ごとの `available`、公式 `url`、更新時刻、路線別の `status` / `status_text` / `detail` を含みます。
+
+
+
 ---
 
 <a id="ja-test"></a>
@@ -503,6 +520,7 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 │  get_station_info  get_operator_routes │
 │  list_transit_operators  list_ferry_ports │
 │  search_ferry   list_community_buses   │
+│  get_running_status                     │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │
@@ -752,7 +770,7 @@ Do not share or commit `.env`; it contains secrets.
 
 ## 🛠 Available Tools
 
-This MCP server provides **12 tools**. See the quick-reference table for an overview and the sections below for details.
+This MCP server provides **13 tools**. See the quick-reference table for an overview and the sections below for details.
 
 | # | Tool | Function | Main params |
 |:--|:--|:--|:--|
@@ -768,6 +786,7 @@ This MCP server provides **12 tools**. See the quick-reference table for an over
 | 10 | `list_ferry_ports` | Ferry / water bus ports list | `language` |
 | 11 | `search_ferry` | Ferry / water bus route search | `from_port`, `to_port` |
 | 12 | `list_community_buses` | Tokyo community buses (41 municipalities) | `language` |
+| 13 | `get_running_status` | Real-time service status by operator | `operator`, `language` |
 
 ### 1. `search_route` — Route Search (Main Feature)
 
@@ -975,6 +994,22 @@ Lists **41 community buses across Tokyo wards/cities** published by the Tokyo Bu
 list_community_buses(language: "ja")   # ja / en / zh
 ```
 
+### 13. `get_running_status` — Real-time Service Status
+
+Retrieves official service status for a specified operator or all operators. If live data cannot be retrieved, the response falls back gracefully with the official page link.
+
+```text
+get_running_status(operator: "tokyometro", language: "en")
+get_running_status(operator: "all", language: "en")
+```
+
+- `operator` (string, optional) — Operator key such as `jreast`, `tokyometro`, `toei`, or `keikyu`. Omit it or use `all` to query all operators.
+- `language` (string, optional) — Response language: `ja`, `en`, or `zh`.
+
+The response includes each operators `available` flag, official `url`, update time, and line-level `status`, `status_text`, and `detail`.
+
+
+
 ---
 
 <a id="en-test"></a>
@@ -1054,6 +1089,7 @@ Architecture overview showing context requests from MCP clients routed to open A
 │  get_station_info  get_operator_routes │
 │  list_transit_operators  list_ferry_ports │
 │  search_ferry   list_community_buses   │
+│  get_running_status                     │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │
@@ -1303,7 +1339,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 
 ## 🛠 可用工具
 
-本 MCP 服务器共提供 **12 个工具**。概览请参考速查表，详细说明请参考各小节。
+本 MCP 服务器共提供 **13 个工具**。概览请参考速查表，详细说明请参考各小节。
 
 | # | 工具 | 功能 | 主要参数 |
 |:--|:--|:--|:--|
@@ -1319,6 +1355,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 | 10 | `list_ferry_ports` | 轮渡/水上巴士港口列表 | `language` |
 | 11 | `search_ferry` | 港口间航线与时刻表查询 | `from_port`, `to_port` |
 | 12 | `list_community_buses` | 东京都社区公交一览（41 个自治体） | `language` |
+| 13 | `get_running_status` | 按运营商查询实时运行状况 | `operator`, `language` |
 
 ### 1. `search_route` — 换乘路线搜索（核心功能）
 
@@ -1525,6 +1562,22 @@ search_ferry(from_port: "浅草", to_port: "滨离宫")
 list_community_buses(language: "ja")   # ja / en / zh
 ```
 
+### 13. `get_running_status` — 实时运行状况
+
+查询指定运营商或全部运营商的官方实时运行状况。无法直接获取实时数据时，会附带官网链接并优雅降级。
+
+```text
+get_running_status(operator: "tokyometro", language: "zh")
+get_running_status(operator: "all", language: "zh")
+```
+
+- `operator`（字符串，可选）— 运营商键，例如 `jreast`、`tokyometro`、`toei`、`keikyu`。省略或使用 `all` 时查询全部运营商。
+- `language`（字符串，可选）— 响应语言：`ja`、`en` 或 `zh`。
+
+响应包含各运营商的 `available`、官网 `url`、更新时间，以及按线路列出的 `status`、`status_text` 和 `detail`。
+
+
+
 ---
 
 <a id="zh-test"></a>
@@ -1604,6 +1657,7 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 │  get_station_info  get_operator_routes │
 │  list_transit_operators  list_ferry_ports │
 │  search_ferry   list_community_buses   │
+│  get_running_status                     │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │

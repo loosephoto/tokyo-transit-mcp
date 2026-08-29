@@ -47,6 +47,7 @@ category: transportation
 | `list_ferry_ports` | フェリー/水上バス港一覧 |
 | `search_ferry` | 港間の航路・時刻表検索 |
 | `list_community_buses` | 東京都コミュニティバス一覧（41自治体） |
+| `get_running_status` | 交通事業者別のリアルタイム運行状況 |
 
 ## 使い方
 
