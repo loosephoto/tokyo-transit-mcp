@@ -3,7 +3,7 @@
  * 依存: config / data/misc / lib/lang / lib/common
  */
 import { jmaBreaker, cache } from '../config.mjs';
-import { MULTILINGUAL_ADVICE, JMA_AREA_MAP, JMA_AREA_LABELS, PLACE_MUNICIPALITY, PLACE_SUBAREA } from '../data/misc.mjs';
+import { MULTILINGUAL_ADVICE, JMA_AREA_MAP, JMA_AREA_LABELS, PLACE_MUNICIPALITY, PLACE_SUBAREA, TEMP_AREA_BY_SUBAREA } from '../data/misc.mjs';
 import { STATION_COORDS } from '../data/railway-lines.mjs';
 import { STATION_COORDS_EXTRA } from '../data/station-coords-extra.mjs';
 import { PREFECTURE_BOUNDS } from '../data/prefecture-bounds.mjs';
@@ -95,9 +95,9 @@ export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCod
       isSpecial = sev.isSpecial;    // 特別警報・津波（経路抑止用）
       isSevereWind = sev.isSevereWind;
       isHighWave = sev.isHighWave;
-      for (const ts of response.data[0]?.timeSeries || []) {
-        if (ts.areas?.[0]?.temps) { maxTemp = Math.max(...ts.areas[0].temps.map(t => parseInt(t) || 0)); if (maxTemp >= 33) isHot = true; }
-      }
+      // 🔴 v2.50.1: 最高気温は pickMaxTemp 純関数で抽出（subAreaCode 対応・詳細は関数コメント参照）
+      maxTemp = pickMaxTemp(response.data[0]?.timeSeries, subAreaCode);
+      if (maxTemp >= 33) isHot = true;
       // 🔴 #94/#95: maxTemp もキャッシュに保存・復元する。
       // 従来は maxTemp をキャッシュ保存せず、キャッシュヒット時に max_temp が応答から消えていた。
       cache.set(cacheKey, { weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave, areaRegionName, maxTemp }, cache.jmaWeather.ttl);
@@ -111,6 +111,23 @@ export async function getWeatherAdvice(userLang, areaCode = '130000', subAreaCod
   const adviceKey = isSevere ? 'typhoon' : (isHot ? 'hot' : (isRainy ? 'rainy' : 'fair'));
   const advice = (MULTILINGUAL_ADVICE[adviceKey] && (MULTILINGUAL_ADVICE[adviceKey][userLang] || MULTILINGUAL_ADVICE[adviceKey].ja)) || '';
   return { advice, weather, windText, waveText, isRainy, isHot, isSevere, isSpecial, isSevereWind, isHighWave, areaRegionName, maxTemp: maxTemp || undefined };
+}
+
+// 🔴 v2.50.1: 気象庁府県予報 JSON から最高気温を抽出する純関数（単体テスト可能）。
+// temps は専用の timeSeries（東京は index 2）に「観測地点名」エリアで入る。
+// 従来は ts.areas?.[0]?.temps 固定だったため、父島・八丈島等を指定しても常に先頭地点
+// （東京）の気温を返していた（実測で父島 32℃ が 30℃ = 東京値と表示されたバグ）。
+// subAreaCode 指定時は TEMP_AREA_BY_SUBAREA で該当予報区の観測地点を選択する。
+export function pickMaxTemp(timeSeries, subAreaCode = null) {
+  const tempAreaName = subAreaCode ? TEMP_AREA_BY_SUBAREA[subAreaCode] : null;
+  for (const ts of timeSeries || []) {
+    const withTemps = (ts.areas || []).filter(a => a.temps);
+    if (!withTemps.length) continue;
+    const tempArea = (tempAreaName && withTemps.find(a => a.area?.name === tempAreaName)) || withTemps[0];
+    if (!tempArea?.temps) return 0;
+    return Math.max(...tempArea.temps.map(t => parseInt(t) || 0));
+  }
+  return 0;
 }
 
 // #89: 予報文（weather/winds/waves）から強風・高波・特別警報を検出

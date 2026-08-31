@@ -76,7 +76,7 @@ export const FERRY_PORT_NAMES = {
 };
 
 export const FERRY_GTFS_SOURCES = [
-  { name: '東海汽船', url: `${API_BASE_URL}/files/odpt/TokaiKisen/AllLines.zip`, date: () => new Date().toISOString().slice(0, 10).replace(/-/g, '') },
+  { name: '東海汽船', url: `${API_BASE_URL}/files/odpt/TokaiKisen/AllLines.zip`, date: () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, '') }, // 🔴 v2.50.1: JST日付（JST 0:00-9:00のUTC日付1日ずれ修正。lib/time.mjs getJstDateCompact と同一ロジック）
   { name: '東京クルーズ（水上バス）', url: 'https://api-public.odpt.org/api/v4/files/odpt/TokyoCruiseShip/AllLines.zip', date: () => '20250402' },
   // 東海汽船 GTFS エンドポイント（files/odpt/...）が ODPT 側で 404/500 となる場合のフォールバック。
   // ハードコード港リストを stop として展開し、伊豆諸島航路等を検索可能にする。

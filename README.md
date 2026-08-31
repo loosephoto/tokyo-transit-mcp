@@ -33,12 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **レンタサイクル案内の座標統合・駅名辞書の品質向上（#115/#116/#117）**
-  - `search_route` の到着地周辺レンタサイクル案内が `STATION_COORDS_EXTRA` を参照せず約1,000駅で無音欠落していたのを修正（weather.mjs と同じ統合パターン）
-  - 駅座標を OpenStreetMap（Overpass API）から一括取得し `STATION_COORDS_EXTRA` に1,018駅追加（座標カバー 1,391/1,431駅・97%）
-  - `STATION_NAME_MAP` のデッド参照22件を解消（landmarks/ferry 重複エイリアス削除・関西スコープ外削除・`Yokosuka→横須賀中央` 修正・東急新横浜線に新綱島駅追加）
-  - かっぱ橋をランドマーク登録（田原町駅徒歩15分）
-  - `STATION_DISPLAY_NAMES` の多言語表示名を502駅追加し全1,431駅の65%→100%カバレッジ達成（ODPT `odpt:stationTitle` の en 値と突合）
+- **時刻表の駅マッチング厳格化・天気気温の地域対応・JST日付の修正（v2.50.1）**
+  - `get_timetable` の駅マッチングを完全一致に厳格化し、他駅の列車が混入する問題を修正（例:「上野」クエリに上野広小路・上野御徒町が混入しマッチ件数が1,628件に膨張していた → 修正後1,229件）
+  - `get_weather` の最高気温が地域指定に関係なく常に東京の値を返していた問題を修正。`TEMP_AREA_BY_SUBAREA` 対応表で伊豆諸島・小笠原・埼玉・千葉・神奈川の正しい観測地点の気温を返す（例: 父島指定で東京30℃ではなく父島32℃を返す）
+  - 「小笠原」が天気地域コードに未登録で東京地方にサイレントフォールバックしていた問題を修正
+  - 日付処理を UTC 基準から JST 基準に修正（`getJstDateStr`/`getJstDay`/`getJstDateCompact` 追加）。JST 0:00〜9:00 の時間帯にフェリーGTFS取得日・時刻表の曜日判定・サービス日付表示が1日ずれていた問題を解消
+  - 回帰テスト `tests/v2501-regression.test.mjs` を追加し `npm test` に組み込み
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -645,12 +645,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Bike-share coverage, station dictionary quality, and multilingual display names (#115/#116/#117)**
-  - Fixed the destination bike-share guide silently missing for ~1,000 stations: `findNearestBikeStations` now merges `STATION_COORDS_EXTRA` (same pattern as weather.mjs)
-  - Bulk-imported station coordinates from OpenStreetMap (Overpass API) into `STATION_COORDS_EXTRA` (+1,018 stations; coordinate coverage 1,391/1,431 = 97%)
-  - Resolved all 22 dead references in `STATION_NAME_MAP` (removed duplicates covered by landmarks/ferry, removed out-of-scope Kansai entries, fixed `Yokosuka→横須賀中央`, added Shin-Tsunashima station to the Tokyu Shin-Yokohama Line)
-  - Registered Kappabashi as a landmark (15 min walk from Tawaramachi Stn)
-  - Added 502 multilingual display names to `STATION_DISPLAY_NAMES`, reaching 100% coverage of all 1,431 stations (cross-checked with ODPT `odpt:stationTitle` en values)
+- **Timetable station matching strictness, localized weather temperatures, and JST date fixes (v2.50.1)**
+  - Strictified `get_timetable` station matching to exact match only, fixing cross-station leakage (e.g. an "Ueno" query previously also matched Ueno-Hirokoji and Ueno-Okachimachi, inflating results to 1,628 → now 1,229)
+  - Fixed `get_weather` always returning Tokyo's temperature regardless of the requested area. A `TEMP_AREA_BY_SUBAREA` mapping now returns the correct observation-site temperature for the Izu Islands, Ogasawara, Saitama, Chiba, and Kanagawa (e.g. Chichijima now returns its own 32°C instead of Tokyo's 30°C)
+  - Registered "Ogasawara" in the weather area codes (previously fell back silently to the Tokyo region)
+  - Switched date handling from UTC to JST (`getJstDateStr`/`getJstDay`/`getJstDateCompact`). This eliminates the one-day drift that affected ferry GTFS fetch dates, timetable weekday detection, and service-date display between 0:00 and 9:00 JST
+  - Added regression tests (`tests/v2501-regression.test.mjs`) integrated into `npm test`
 
 ### 🤖 AI Intelligent Advice
 
@@ -1213,12 +1213,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **共享单车覆盖、站名字典质量与多语言显示名（#115/#116/#117）**
-  - **修复共享单车指引静默缺失**：约1,000个车站因未整合`STATION_COORDS_EXTRA`而无法显示周边租车点，现已修复（与weather.mjs相同的整合模式）
-  - **批量导入车站坐标**：从OpenStreetMap（Overpass API）导入1,018站坐标（覆盖1,391/1,431站・97%）
-  - **清除站名映射死引用22件**：删除landmarks/ferry已覆盖的重复别名、删除范围外的关西条目、修正`Yokosuka→横須賀中央`、东急新横滨线新增新纲岛站
-  - **河童桥登录为地标**（田原町站步行15分钟）
-  - **多语言显示名补全**：`STATION_DISPLAY_NAMES`新增502站，全1,431站覆盖率65%→100%（与ODPT `odpt:stationTitle`英文值交叉核对）
+- **时刻表站名匹配严格化、天气气温按地区返回、JST日期修正（v2.50.1）**
+  - 将`get_timetable`的站名匹配改为完全一致，修复他站列车混入问题（例：查询「上野」时曾混入上野広小路・上野御徒町，匹配数膨胀至1,628条→修正后1,229条）
+  - 修复`get_weather`无论指定哪个地区都返回东京气温的问题。通过`TEMP_AREA_BY_SUBAREA`对应表，伊豆诸岛・小笠原・埼玉・千叶・神奈川现在返回正确观测点的气温（例：指定父岛时返回父岛的32℃，而非东京的30℃）
+  - 将「小笠原」登录到天气地区代码中（此前会静默回退到东京地方）
+  - 将日期处理从UTC改为JST（新增`getJstDateStr`/`getJstDay`/`getJstDateCompact`）。消除了JST 0:00〜9:00时段渡轮GTFS获取日期、时刻表星期判定、服务日期显示偏差一天的问题
+  - 新增回归测试`tests/v2501-regression.test.mjs`并集成到`npm test`
 
 ### 🤖 AI 智能建议
 
