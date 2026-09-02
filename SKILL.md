@@ -212,10 +212,8 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.50.1（2026-08-31）— 時刻表厳格化・天気気温の地域対応・JST日付修正
+### v2.51.0（2026-09-02）— 旧路線名フォールバック（resolveSuspendedLineNames）の修正・ODPT実ID対応
 
-- **時刻表駅マッチング厳格化**: `recordMatchesStation` の `startsWith`/`includes` 判定を完全一致に置換（純関数 `stationIdMatchesStation`/`stationRecordMatches` をエクスポート）。「上野」クエリに上野広小路・上野御徒町が混入し1,628件に膨張していた問題を修正（→1,229件）。路線グラフ内の接頭辞衝突ペア132組に同種リスクがあった
-- **天気気温の地域対応**: `get_weather` の最高気温が常に東京（areas[0]）の値を返していたバグを修正。`pickMaxTemp` 純関数＋`TEMP_AREA_BY_SUBAREA` 対応表（misc.mjs）で subAreaCode 指定時に正しい観測地点の気温を返す（東京/伊豆諸島北部→大島/伊豆諸島南部→八丈島/小笠原諸島→父島/埼玉・千葉・神奈川の各地点）。実測で父島32℃が東京値30℃と表示されていた問題を解消
-- **小笠原登録**: `PLACE_SUBAREA` に「小笠原」「小笠原諸島」を追加（未登録で東京地方へサイレントフォールバックしていた）
-- **JST日付**: `lib/time.mjs` に `getJstDateStr`/`getJstDay`/`getJstDateCompact` を追加。`gtfsFetchDates`・`resolveTimetableCalendar`・`service_date` フォールバック・東海汽船GTFS日付を UTC→JST に修正（JST 0:00〜9:00 の1日ずれ解消）
-- **回帰テスト**: `tests/v2501-regression.test.mjs` を追加し `npm test` に組み込み（全30ケース合格）
+- **旧路線名フォールバック修正**: `resolveSuspendedLineNames`（get_running_status の停止路線→グラフ内路線名解決）が、ODPT 鉄道ID末尾ローマ字（例 `TobuSkytree`）と `RAILWAY_NAME_MAP` の値（日本語・ローマ字混在）を直接比較し常に `[]` を返す構造バグを修正。既存の `ODPT_RAILWAY_NAME_MAP`（ODPT鉄道ID→日本語標準路線名）を第一参照に変更。東武スカイツリーラインは実質伊勢崎線として正しく解決
+- **ODPT実ID網羅**: `ODPT_RAILWAY_NAME_MAP` を ODPT 全94鉄道IDと突合して拡充（93エントリ）。JR東日本（青梅・高崎・宇都宮・横浜・埼京(川越)・湘南新宿・相鉄直通等）・京急・京王・京成・小田急・西武・東急・相鉄・北総・関東鉄道・埼玉高速・東葉・東京モノレール等を追加。グラフに存在する全路線を100%カバー（新幹線・競馬場線はグラフ非対応のため解決不可が正しい）
+- **回帰テスト**: `tests/resolve-suspended.test.mjs` を追加し `npm test` に組み込み（東武スカイツリーライン→伊勢崎線 等を固定）

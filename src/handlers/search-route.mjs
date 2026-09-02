@@ -8,7 +8,7 @@ import { cache, jmaBreaker, odptBreaker, API_BASE_URL } from '../config.mjs';
 import { RAILWAY_LINES, WALK_TRANSFERS, LIGHT_TRANSFER_EDGES, CIRCULAR_LINES,
          AMBIGUOUS_STATION_NAMES, AMBIGUOUS_STATION_LINES, STATION_COORDS } from '../data/railway-lines.mjs';
 import { STATION_COORDS_EXTRA } from '../data/station-coords-extra.mjs';
-import { STATION_NAME_MAP, STATION_DISPLAY_NAMES, RAILWAY_NAME_MAP, LINE_DISPLAY_NAMES } from '../data/station-names.mjs';
+import { STATION_NAME_MAP, STATION_DISPLAY_NAMES, RAILWAY_NAME_MAP, LINE_DISPLAY_NAMES, ODPT_RAILWAY_NAME_MAP } from '../data/station-names.mjs';
 import { LANDMARK_DEFS, LANDMARK_LOOKUP, DESTINATION_CULTURAL_FACILITIES,
          CULTURAL_CATEGORY_NAMES, DERIVED_CULTURAL_FACILITIES } from '../data/landmarks.mjs';
 import { COMMUNITY_BUS_STATION_ACCESS } from '../data/bus-routes.mjs';
@@ -54,13 +54,17 @@ export async function getStationRomanToJa() {
 };
 
 export function resolveSuspendedLineNames(railwayId) {
-  const suffix = String(railwayId || '').split('.').pop().toLowerCase();
-  if (!suffix) return [];
-  const aliases = Object.entries(RAILWAY_NAME_MAP)
-    .filter(([, value]) => String(value).toLowerCase() === suffix)
-    .map(([name]) => name);
-  const graphLines = new Set(Object.values(STATION_TO_LINES).flat().map(entry => entry.line));
-  return [...graphLines].filter(line => aliases.some(alias => line === alias || line.includes(alias)));
+  // 🔴 旧実装は ODPT 鉄道ID末尾ローマ字（例: TobuSkytree）と RAILWAY_NAME_MAP の値
+  // （日本語路線名とローマ字が混在）を直接比較しており、決して一致しないため常に [] を返していた。
+  // ODPT 鉄道ID → 日本語標準路線名の明示辞書 ODPT_RAILWAY_NAME_MAP を第一参照に修正（v2.51.0）。
+  const rwKey = String(railwayId || '').replace(/^odpt\.Railway:/, '');
+  if (!rwKey) return [];
+  const canonicalName = ODPT_RAILWAY_NAME_MAP[rwKey];
+  if (!canonicalName) return [];
+  // グラフ内路線名（RAILWAY_LINES のキー）と一致するものを返す。
+  // ODPT の路線IDがグラフの1路線に厳密対応する前提。RAILWAY_NAME_MAP は
+  // 「駅名エイリアス／入力正規化」用なので、ここでは使わない（旧実装の混在値が原因）。
+  return Object.keys(RAILWAY_LINES).filter(line => line === canonicalName);
 }
 
 export async function fetchBikeShareData() {

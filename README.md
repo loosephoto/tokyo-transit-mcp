@@ -33,12 +33,10 @@
 
 ### 🛤️ 直近の更新内容
 
-- **時刻表の駅マッチング厳格化・天気気温の地域対応・JST日付の修正（v2.50.1）**
-  - `get_timetable` の駅マッチングを完全一致に厳格化し、他駅の列車が混入する問題を修正（例:「上野」クエリに上野広小路・上野御徒町が混入しマッチ件数が1,628件に膨張していた → 修正後1,229件）
-  - `get_weather` の最高気温が地域指定に関係なく常に東京の値を返していた問題を修正。`TEMP_AREA_BY_SUBAREA` 対応表で伊豆諸島・小笠原・埼玉・千葉・神奈川の正しい観測地点の気温を返す（例: 父島指定で東京30℃ではなく父島32℃を返す）
-  - 「小笠原」が天気地域コードに未登録で東京地方にサイレントフォールバックしていた問題を修正
-  - 日付処理を UTC 基準から JST 基準に修正（`getJstDateStr`/`getJstDay`/`getJstDateCompact` 追加）。JST 0:00〜9:00 の時間帯にフェリーGTFS取得日・時刻表の曜日判定・サービス日付表示が1日ずれていた問題を解消
-  - 回帰テスト `tests/v2501-regression.test.mjs` を追加し `npm test` に組み込み
+- **旧路線名フォールバック（resolveSuspendedLineNames）の修正・ODPT実ID対応（v2.51.0）**
+  - `resolveSuspendedLineNames`（運行状況の停止路線をグラフ内路線名に解決する処理）が、ODPT鉄道ID末尾ローマ字と `RAILWAY_NAME_MAP` の値（日本語・ローマ字混在）を直接比較し常に空を返す構造バグを修正。既存の `ODPT_RAILWAY_NAME_MAP`（ODPT鉄道ID→日本語標準路線名）を第一参照に変更。東武スカイツリーラインは実質伊勢崎線として正しく解決
+  - `ODPT_RAILWAY_NAME_MAP` を ODPT 全94鉄道IDと突合して93エントリに拡充。JR東日本（青梅・高崎・宇都宮・横浜・埼京(川越)・湘南新宿・相鉄直通等）・京急・京王・京成・小田急・西武・東急・相鉄・北総・関東鉄道・埼玉高速・東葉・東京モノレール等を追加。グラフに存在する全路線を100%カバー（新幹線・競馬場線はグラフ非対応のため解決不可が正しい）
+  - 回帰テスト `tests/resolve-suspended.test.mjs` を追加し `npm test` に組み込み
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -645,12 +643,10 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Timetable station matching strictness, localized weather temperatures, and JST date fixes (v2.50.1)**
-  - Strictified `get_timetable` station matching to exact match only, fixing cross-station leakage (e.g. an "Ueno" query previously also matched Ueno-Hirokoji and Ueno-Okachimachi, inflating results to 1,628 → now 1,229)
-  - Fixed `get_weather` always returning Tokyo's temperature regardless of the requested area. A `TEMP_AREA_BY_SUBAREA` mapping now returns the correct observation-site temperature for the Izu Islands, Ogasawara, Saitama, Chiba, and Kanagawa (e.g. Chichijima now returns its own 32°C instead of Tokyo's 30°C)
-  - Registered "Ogasawara" in the weather area codes (previously fell back silently to the Tokyo region)
-  - Switched date handling from UTC to JST (`getJstDateStr`/`getJstDay`/`getJstDateCompact`). This eliminates the one-day drift that affected ferry GTFS fetch dates, timetable weekday detection, and service-date display between 0:00 and 9:00 JST
-  - Added regression tests (`tests/v2501-regression.test.mjs`) integrated into `npm test`
+- **Fix and ODPT-ID coverage for the legacy line-name fallback (`resolveSuspendedLineNames`) (v2.51.0)**
+  - Fixed a structural bug where `resolveSuspendedLineNames` (resolving suspended lines to in-graph line names in running-status) compared the ODPT railway-ID suffix (e.g. `TobuSkytree`) directly against `RAILWAY_NAME_MAP` values (a mix of Japanese and romanized names), always returning an empty result. It now uses the existing `ODPT_RAILWAY_NAME_MAP` (ODPT railway ID → standard Japanese line name) as the primary lookup. The Tobu Skytree Line is correctly resolved as the (effectively same) Isesaki Line
+  - Expanded `ODPT_RAILWAY_NAME_MAP` to 93 entries by reconciling against all 94 ODPT railway IDs. Added JR-East (Ome, Takasaki, Utsunomiya, Yokohama, Saikyo/Kawagoe, Shonan-Shinjuku, Sotetsu-direct, etc.), Keikyu, Keio, Keisei, Odakyu, Seibu, Tokyu, Sotetsu, Hokuso, Kanto Railway, Saitama Railway, Toyo Rapid, Tokyo Monorail, and more — 100% coverage of lines present in the graph (Shinkansen and Keio Keibajo remain unresolvable by design)
+  - Added regression tests (`tests/resolve-suspended.test.mjs`) integrated into `npm test`
 
 ### 🤖 AI Intelligent Advice
 
@@ -1213,12 +1209,10 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **时刻表站名匹配严格化、天气气温按地区返回、JST日期修正（v2.50.1）**
-  - 将`get_timetable`的站名匹配改为完全一致，修复他站列车混入问题（例：查询「上野」时曾混入上野広小路・上野御徒町，匹配数膨胀至1,628条→修正后1,229条）
-  - 修复`get_weather`无论指定哪个地区都返回东京气温的问题。通过`TEMP_AREA_BY_SUBAREA`对应表，伊豆诸岛・小笠原・埼玉・千叶・神奈川现在返回正确观测点的气温（例：指定父岛时返回父岛的32℃，而非东京的30℃）
-  - 将「小笠原」登录到天气地区代码中（此前会静默回退到东京地方）
-  - 将日期处理从UTC改为JST（新增`getJstDateStr`/`getJstDay`/`getJstDateCompact`）。消除了JST 0:00〜9:00时段渡轮GTFS获取日期、时刻表星期判定、服务日期显示偏差一天的问题
-  - 新增回归测试`tests/v2501-regression.test.mjs`并集成到`npm test`
+- **修复旧线路名回退（resolveSuspendedLineNames）并覆盖ODPT实际ID（v2.51.0）**
+  - 修复`resolveSuspendedLineNames`（将运行中断线路解析为图内线路名）的结构性缺陷：它曾把ODPT铁路ID末位罗马字（如`TobuSkytree`）与`RAILWAY_NAME_MAP`的值（日文・罗马字混杂）直接比较而恒返回空。现改为优先使用既有的`ODPT_RAILWAY_NAME_MAP`（ODPT铁路ID→标准日文线路名）。东武晴空塔线现能正确解析为（实质相同的）伊势崎线
+  - 与ODPT全部94个铁路ID对照，将`ODPT_RAILWAY_NAME_MAP`扩充至93项。新增JR东日本（青梅・高崎・宇都宫・横滨・埼京(川越)・湘南新宿・相铁直通等）、京急・京王・京成・小田急・西武・东急・相铁・北总・关东铁道・埼玉高速・东叶・东京单轨等。图内全部线路100%覆盖（新干线・京王竞马场线因图内无此线路，解析为空属正常）
+  - 新增回归测试`tests/resolve-suspended.test.mjs`并集成到`npm test`
 
 ### 🤖 AI 智能建议
 

@@ -5,3 +5,6 @@ _tmp*
 scripts/_tmp-*
 coverage/
 *.log
+
+# Claude IDE worktrees (transient)
+.claude/worktrees/
