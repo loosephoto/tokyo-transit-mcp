@@ -212,8 +212,10 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.52.0（2026-09-03）— get_operator_routes の0駅バグ修正・検索結果表示の改善
+### v2.53.0（2026-09-03）— 路線指定・水上バス案内・運行情報の信頼性改善
 
-- **get_operator_routes の0駅バグ修正**: ODPT が `odpt:stationOrder` を返さない愛称路線（東武スカイツリーライン `TobuSkytree`・東武アーバンパークライン `TobuUrbanPark`・押上-曳舟ブランチ `TobuSkytreeBranch`）が `station_count: 0` で表示されるバグを修正。ODPT路線ID→内部グラフ路線名の `ODPT_RAILWAY_NAME_MAP` で解決し、内蔵 `RAILWAY_LINES` の駅で補完（スカイツリーライン=浅草〜東武動物公園の30駅・アーバンパークライン=大宮〜船橋の35駅・ブランチ=押上・曳舟の2駅）。タイトル文字列比較では愛称と正式名が不一致で補完されないため、IDベース判定に変更。fallback の既存マッチにも `_internalName` 一致を追加し、東武野田線の local 重複追加も解消
-- **東武なし表記の解決**: 「スカイツリーライン」「アーバンパークライン」など東武プレフィックスなしの路線名でも事業者を逆引きできるよう修正。`RAILWAY_NAME_MAP` に `スカイツリーライン` を追加し、`getOperatorRoutes` の解決チェーンで `LOCAL_LINE_PREFIX`（事業者ID→日本語プレフィックス）による前方一致逆引きを実装（アーバンパークライン→東武野田線→Tobu）。`LOCAL_LINE_PREFIX` をモジュール直下にhoisting
-- **search_route の表示・JSON改善**: 表示順を「実ルート→AIインテリジェントアドバイス→その他（緊急アラート等）」に変更。JSON（structuredContent）側も `ai_transit_advice` を実ルート直後に移動（先頭配置は不要になったため）。`route_note`（経路は自己完結型エンジンで算出。）の後に空行を追加。`jsonResponse` に `displayText` オプションを追加（#122: content に表示済みマークダウンを返し、ホストLLMの要約による安全情報喪失を防止）
+- `search_route` の片側路線指定で出発側・到着側のノードを同一フィルタして `NO_ROUTE` になる問題を修正
+- 「山手」単体を路線ヒントと誤認する問題を修正し、根岸線の山手駅を一意解決
+- 浅草〜お台場などで `ferry_alternative` を生成し、表示済みテキストにも水上バス案内を復活
+- 運行情報の英語・中国語フォールバックを中立化し、工事・お知らせを振替輸送と誤認させないよう修正。JR東日本の `notice` 分類とHTMLタグ除去を追加
+- `fare.mjs` の未使用importを削除し、路線指定・山手駅・フェリー案内・運行情報の回帰テストを追加

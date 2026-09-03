@@ -7,8 +7,6 @@ import { OPERATOR_MAP, NON_RAIL_OPERATORS } from '../data/misc.mjs';
 import { getParams, jsonResponse, buildErrorResponse, handleApiError, isInternalError } from '../lib/common.mjs';
 import { resolveLang, detectLanguage, getDisplayStationName } from '../lib/lang.mjs';
 import { getStationRomanToJa, normalizeStationName } from './search-route.mjs';
-import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
-import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
 import axios from 'axios';
 
 export const FARE_STATION_NEGATIVE_TTL = 5 * 60 * 1000; // 取得成功・0件のみ 5分

@@ -16,6 +16,7 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 // ステータス分類（英語・中国語翻訳付き）
 const STATUS_MAP = {
   normal:    { ja: '平常運転', en: 'Normal operation', zh: '正常运行' },
+  notice:    { ja: 'お知らせ', en: 'Notice / Information', zh: '公告' },
   delay:     { ja: '遅延', en: 'Delayed', zh: '晚点' },
   partial:   { ja: '一部運休・一部列車遅延', en: 'Partial suspension / delayed', zh: '部分停运/晚点' },
   suspended: { ja: '運転見合わせ', en: 'Suspended', zh: '停运' },
@@ -29,6 +30,7 @@ export function classifyStatus(text) {
   if (/一部|遅延|遅れ|ダイヤ乱れ|乱れ/.test(text)) return 'partial';
   if (/平常|通常通り|通常どおり|運転再開|運行再開/.test(text)) return 'normal';
   if (/振替/.test(text)) return 'transfer';
+  if (/お知らせ|案内|告知/.test(text)) return 'notice';
   return 'unknown';
 }
 
@@ -40,12 +42,14 @@ async function fetchJREast() {
   const lines = [];
   for (const m of html.matchAll(re)) {
     const statusText = m[2].trim();
-    const detail = m[3].match(/traininfo-routes__note">(.*?)<\/p>/s);
+    const detailMatch = m[3].match(/traininfo-routes__note">(.*?)<\/p>/s) || (m[3].includes('traininfo-routes__note') ? [null, m[3].split('traininfo-routes__note">')[1]] : null);
+    const rawDetail = detailMatch ? detailMatch[1] : null;
+    const cleanedDetail = rawDetail ? rawDetail.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : undefined;
     lines.push({
       line: m[1].trim(),
       status: classifyStatus(statusText),
       status_text: statusText || undefined,
-      detail: detail ? detail[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : undefined
+      detail: cleanedDetail || undefined
     });
   }
   const updated = (html.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2})時(\d{1,2})分/) || []);

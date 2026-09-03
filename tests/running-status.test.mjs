@@ -7,6 +7,7 @@ const cases = [
   ['運行停止', 'suspended'], ['遅れが発生しています', 'partial'],
   ['ダイヤ乱れが発生しています', 'partial'], ['通常どおり運転しています', 'normal'],
   ['運転再開しました', 'normal'],
+  ['お知らせがあります', 'notice'],
 ];
 for (const [text, expected] of cases) assert.equal(classifyStatus(text), expected, text);
 

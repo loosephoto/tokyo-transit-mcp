@@ -130,9 +130,21 @@ export function translateTrainInfoDetail(text, userLang) {
   let t = pattern ? text.replace(new RegExp(pattern, 'g'), m => dict.get(m)) : text;
   // 日本語が残れば汎用メッセージにフォールバック（en はかな・漢字とも NG、zh はかなのみ NG）
   if (userLang === 'en' ? /[\u3040-\u30ff\u4e00-\u9fff]/.test(t) : /[\u3040-\u30ff]/.test(t)) {
-    t = userLang === 'en'
-      ? 'Train services are disrupted; substitute bus transport may be in operation. Please follow station staff guidance.'
-      : '列车运行受到影响，可能正在实施接驳换乘巴士。请遵从车站工作人员的指引。';
+    const isNotice = /お知らせ|工事|計画|予告|メンテナンス/i.test(text);
+    const isDisruption = !isNotice && /遅れ|遅延|見合わせ|運休|乱れ|事故|トラブル|振替|disrupt|suspend/i.test(text);
+    if (isDisruption) {
+      t = userLang === 'en'
+        ? 'Train services are disrupted; substitute bus transport may be in operation. Please follow station staff guidance.'
+        : '列车运行受到影响，可能正在实施接驳换乘巴士。请遵从车站工作人员的指引。';
+    } else if (isNotice) {
+      t = userLang === 'en'
+        ? 'Notice / planned maintenance announcement is available in Japanese (see official operator page).'
+        : '计划施工/运营公告请参阅官方日语网页。';
+    } else {
+      t = userLang === 'en'
+        ? 'Detailed service status is available in Japanese (see official notice).'
+        : '详细运行信息请参阅官方日语公告。';
+    }
   }
   return t.replace(/[ \t]+/g, ' ').replace(/\s*([,.])\s*/g, '$1 ').trim();
 }

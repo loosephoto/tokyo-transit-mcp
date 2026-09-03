@@ -43,6 +43,75 @@ for (const [input, shouldResolve] of stCases) {
 }
 
 // ---- MCP経由のエラー応答検証（isError / エラー種別）----
+// 江ノ電の路線指定付き駅名（#江ノ電対応）
+console.log('-- 江ノ電 路線指定 --');
+for (const [from, to] of [['江ノ電 藤沢', '江ノ電 鎌倉'], ['藤沢 江ノ電', '鎌倉 江ノ電']]) {
+  const result = (await searchRoute({ from, to, language: 'ja' }));
+  const text = (result.content || []).map(c => c.text || '').join(' ');
+  const payload = result.structuredContent || {};
+  const route = payload.routes?.[0];
+  if (route?.summary?.main_line === '江ノ島電鉄' && route.summary.transfers === 0) {
+    ok(`江ノ電指定 ${from} → ${to}: 江ノ島電鉄直通`);
+  } else {
+    fail(`江ノ電指定 ${from} → ${to}: ${text.slice(0, 200)}`);
+  }
+}
+
+// 山手線・京浜東北線の略称／表記ゆれ付き路線指定
+console.log('-- 山手線・京浜東北線 路線指定 --');
+for (const [from, to, expected, label] of [
+  ['山の手 東京', '山の手 新宿', 'JR山手線', '山の手'],
+  ['山手 東京', '山手 新宿', 'JR山手線', '山手'],
+  ['京浜東北 大宮', '京浜東北 東京', '京浜東北線', '京浜東北']
+]) {
+  const result = await searchRoute({ from, to, language: 'ja' });
+  const text = (result.content || []).map(c => c.text || '').join(' ');
+  const payload = result.structuredContent || {};
+  const route = payload.routes?.[0];
+  if (route?.summary?.main_line === expected && route.summary.transfers === 0) {
+    ok(`${label}指定 ${from} → ${to}: ${expected}直通`);
+  } else {
+    fail(`${label}指定 ${from} → ${to}: ${text.slice(0, 200)}`);
+  }
+}
+
+// 片側のみ路線指定時の乗換経路探索（NO_ROUTE 回避）
+console.log('-- 片側路線指定の乗換経路 --');
+const enoToTokyo = await searchRoute({ from: '江ノ電 鎌倉', to: '東京', language: 'ja' });
+const enoPayload = enoToTokyo.structuredContent || {};
+if (enoPayload.routes && enoPayload.routes.length > 0 && enoPayload.routes[0].segments?.length > 0) {
+  ok('江ノ電 鎌倉 → 東京: 乗換経路が正常に算出される');
+} else {
+  fail('江ノ電 鎌倉 → 東京: 経路が見つからない');
+}
+
+// JR根岸線「山手駅」単体解決（路線指定との誤認防止）
+console.log('-- 山手駅 単体解決 --');
+const yamateRes = resolveStation('山手');
+if (yamateRes.station === '山手' && yamateRes.exact && !yamateRes.ambiguous) {
+  ok('山手駅単体: 根岸線山手駅として一意解決される');
+} else {
+  fail(`山手駅単体: 誤解決 (${JSON.stringify(yamateRes)})`);
+}
+const yamateRoute = await searchRoute({ from: '山手', to: '東京', language: 'ja' });
+const yamatePayload = yamateRoute.structuredContent || {};
+if (yamatePayload.routes && yamatePayload.routes.length > 0) {
+  ok('山手 → 東京: 経路が正常に算出される');
+} else {
+  fail('山手 → 東京: 経路が見つからない');
+}
+
+// フェリー代替案内の存在確認
+console.log('-- フェリー代替案内 --');
+const ferryRoute = await searchRoute({ from: '浅草', to: 'お台場', language: 'ja' });
+const ferryPayload = ferryRoute.structuredContent || {};
+const ferryText = (ferryRoute.content || []).map(c => c.text || '').join(' ');
+if (ferryPayload.ferry_alternative && ferryText.includes('フェリー航路のご案内')) {
+  ok('浅草 → お台場: ferry_alternative が正しく付与される');
+} else {
+  fail('浅草 → お台場: ferry_alternative が欠落している');
+}
+
 console.log('-- MCPエラー応答（未知ツール・必須引数欠落）--');
 const client = new Client({ name: 'handlers-basic-test', version: '1.0.0' });
 const [ct, st] = InMemoryTransport.createLinkedPair();

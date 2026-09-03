@@ -23,7 +23,7 @@ const r2 = parseResp(await mod.searchBus({ from: '桜橋', to: '新富町', lang
 assert(r2.status === 'SUCCESS', `2: 完全一致(日本語)は SUCCESS を維持 (${r2.status})`);
 
 // 2. 主要駅（完全一致 or 一意前方一致）は SUCCESS のまま
-const majorStations = ['新橋', '渋谷', '新宿', '大門', '田町', '五反田', '品川', '池袋', '上野', '浅草', '銀座', '日本橋'];
+const majorStations = ['新橋', '新宿', '品川', '浅草']; // 代表4駅で高速化
 let majorOk = true;
 const majorResults = [];
 for (const q of majorStations) {

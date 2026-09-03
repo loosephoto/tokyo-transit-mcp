@@ -12,9 +12,9 @@ import { STATION_NAME_MAP, STATION_DISPLAY_NAMES, RAILWAY_NAME_MAP, LINE_DISPLAY
 import { LANDMARK_DEFS, LANDMARK_LOOKUP, DESTINATION_CULTURAL_FACILITIES,
          CULTURAL_CATEGORY_NAMES, DERIVED_CULTURAL_FACILITIES } from '../data/landmarks.mjs';
 import { COMMUNITY_BUS_STATION_ACCESS } from '../data/bus-routes.mjs';
+import { FERRY_PORT_MAP } from '../data/ferry-ports.mjs';
 import { MULTILINGUAL_ADVICE, EMERGENCY_EVACUATION_SEARCH_URL, GBFS_BASE, GBFS_BASE_HELLOCYCLING,
          LIMITED_EXPRESS_KEYWORDS, LIMITED_EXPRESS_STATION_GUIDE, PRIVATE_EXPRESS_GUIDE, JMA_AREA_LABELS } from '../data/misc.mjs';
-import { FERRY_PORT_MAP } from '../data/ferry-ports.mjs';
 import { getDisplayStationName, getDisplayLineName, getLineDisplayName, getCommunityBusDisplayName,
          getCommunityBusStopDisplayName, detectLanguage, resolveLang, translateWeather, translateTrainInfoDetail } from '../lib/lang.mjs';
 import { jsonResponse, buildErrorResponse, getParams, buildGovFacilitySearchSupport, isInternalError } from '../lib/common.mjs';
@@ -215,9 +215,45 @@ export function normalizeLineHint(s) {
   return s.replace(/線$/, '').replace(/jr/i, '').replace(/東京メトロ/g, '').trim().toLowerCase();
 }
 
+// 路線指定付き駅名（例:「江ノ電 藤沢」「藤沢 江ノ電」）を扱う。
+// 江ノ電はJR線と駅名が重なるため、路線指定がある場合は必ず江ノ電を優先する。
+const RAILWAY_HINT_ALIASES = [
+  { line: '江ノ島電鉄', aliases: ['江ノ電', '江ノ島電鉄', '江の島電鉄', '江ノ電線'] },
+  { line: 'JR山手線', aliases: ['山手線', '山の手線', '山の手', '山手'] },
+  { line: '京浜東北線', aliases: ['京浜東北線', '京浜東北'] }
+];
+
+export function extractRailwayHint(rawName) {
+  const input = String(rawName || '').trim();
+  // 「山手」「山手駅」単体はJR根岸線の実在駅なので、路線指定と誤認しない
+  if (input === '山手' || input === '山手駅') {
+    return { line: null, stationName: input };
+  }
+  for (const { line, aliases } of RAILWAY_HINT_ALIASES) {
+    for (const alias of aliases) {
+      if (alias === '山手' && (input === '山手' || input === '山手駅')) continue;
+      if (input.toLowerCase().includes(alias.toLowerCase())) {
+        const cleaned = aliases.reduce((v, a) => v.replace(new RegExp('(^|\\s|・)' + a + '($|\\s|・)', 'ig'), ' ').replace(new RegExp(a, 'ig'), ' '), input).replace(/[\\s・]+/g, ' ').trim();
+        if (cleaned) {
+          return { line, stationName: cleaned };
+        }
+      }
+    }
+  }
+  return { line: null, stationName: input };
+}
+
 export function resolveStation(rawName) {
   if (!rawName) return { station: null, candidates: [], ambiguous: false, exact: false, landmark: null };
-  const key = rawName.trim();
+  const hint = extractRailwayHint(rawName);
+  const key = hint.stationName || rawName.trim();
+
+  if (hint.line) {
+    const normalized = normalizeStationName(key);
+    const candidates = Object.keys(STATION_TO_LINES).filter(st => st === normalized &&
+      (STATION_TO_LINES[st] || []).some(e => e.line === hint.line));
+    if (candidates.length === 1) return { station: candidates[0], candidates, ambiguous: false, exact: true, landmark: null, railwayHint: hint.line };
+  }
 
   // #64: 「駅名＋路線名」のスペース区切り指定（例: 入谷 相模線 / 入谷 日比谷線）で、
   // 曖昧駅を路線名から一意に解決する。候補が1件に絞れた場合のみ解決し、
@@ -352,8 +388,18 @@ class MinHeap {
 
 export function findShortestPath(start, goal, options = {}) {
   const blockedLines = options.blockedLines instanceof Set ? options.blockedLines : new Set(options.blockedLines || []);
-  const startNodes = (STATION_TO_LINES[start] || []).map(e => `${start}@${e.line}`);
-  const goalNodes = (STATION_TO_LINES[goal] || []).map(e => `${goal}@${e.line}`);
+  const startLine = options.preferredStartLine;
+  const goalLine = options.preferredGoalLine;
+  let startNodes = (STATION_TO_LINES[start] || []).map(e => `${start}@${e.line}`);
+  let goalNodes = (STATION_TO_LINES[goal] || []).map(e => `${goal}@${e.line}`);
+  if (startLine) {
+    const filtered = startNodes.filter(n => n.split('@')[1] === startLine);
+    if (filtered.length > 0) startNodes = filtered;
+  }
+  if (goalLine) {
+    const filtered = goalNodes.filter(n => n.split('@')[1] === goalLine);
+    if (filtered.length > 0) goalNodes = filtered;
+  }
   if (!startNodes.length || !goalNodes.length) return null;
   const goalSet = new Set(goalNodes);
   if (start === goal) return { path: [start], lines: [] };
@@ -479,8 +525,12 @@ export function commonLines(a, b) {
 }
 
 export function computeRoutes(fromRaw, toRaw, options = {}) {
-  const fromRes = resolveStation(fromRaw);
-  const toRes = resolveStation(toRaw);
+  const fromHint = extractRailwayHint(fromRaw);
+  const toHint = extractRailwayHint(toRaw);
+  const fromRes = resolveStation(fromHint.stationName || fromRaw);
+  const toRes = resolveStation(toHint.stationName || toRaw);
+  const preferredStartLine = fromHint.line || options.preferredStartLine;
+  const preferredGoalLine = toHint.line || options.preferredGoalLine;
   // 曖昧（複数候補がありどれが正解か確定できない）の場合は検索を中断し選択を促す
   if (fromRes.ambiguous) {
     return { error: 'AMBIGUOUS_STATION', side: 'from', input: fromRaw, candidates: fromRes.candidates };
@@ -493,7 +543,7 @@ export function computeRoutes(fromRaw, toRaw, options = {}) {
   if (!from || !to) {
     return { error: 'STATION_NOT_FOUND', from, to, suggestion_from: fromRaw, suggestion_to: toRaw };
   }
-  const result = findShortestPath(from, to, options);
+  const result = findShortestPath(from, to, { ...options, preferredStartLine, preferredGoalLine });
   if (!result || !result.path) {
     return { error: 'NO_ROUTE', from, to, fromLandmark: fromRes.landmark, toLandmark: toRes.landmark };
   }
@@ -1119,9 +1169,6 @@ export async function searchRoute(args) {
     destination_cultural_facilities: getDestinationCulturalFacilities(routeResult.to, userLang).length
       ? getDestinationCulturalFacilities(routeResult.to, userLang)
       : undefined,
-    route_note: userLang === 'en' ? "Route computed by the built-in route engine." :
-                userLang === 'zh' ? "路线由内置路线引擎计算。" :
-                "経路は自己完結型エンジンで算出。",
     // #88: weatherText は出発・到着駅の県コードから組み立て済み（「地域名: 予報」形式）。地域プレフィックスは weatherText 側に含まれる
     weather_text: translateWeather(weatherText, userLang),
     // 路線情報の外部検索URLはフォールバックとして維持
@@ -1322,9 +1369,6 @@ export function buildDisplayText(payload, lang) {
     }
     lines.push('');
   }
-  if (payload.route_note) add(payload.route_note);
-  lines.push('');
-
   // ② AIインテリジェントアドバイス（原文そのまま）
   if (typeof payload.ai_transit_advice === 'string' && payload.ai_transit_advice) {
     add(payload.ai_transit_advice);
