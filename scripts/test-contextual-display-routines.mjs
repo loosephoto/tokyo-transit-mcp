@@ -11,14 +11,24 @@ function assert(condition, message) {
 }
 
 function payload(response) {
+  // #122: content は「表示済みマークダウン」、JSON は structuredContent に格納される。
   const texts = (response?.content || []).map(item => item.text || '');
-  const jsonText = texts.find(text => text.trim().startsWith('{')) || '{}';
-  return { data: JSON.parse(jsonText), texts };
+  const data = (response && response.structuredContent && typeof response.structuredContent === 'object')
+    ? response.structuredContent
+    : (JSON.parse(texts.find(text => text.trim().startsWith('{')) || '{}'));
+  return { data, texts };
 }
 
 const normal = payload(await mod.searchRoute({ from: '押上', to: '上野', '-test': '猛暑', language: 'ja' }));
-assert(normal.texts[0]?.includes('AIからのインテリジェントアドバイス'), '通常検索: AIアドバイスを先頭の独立テキストで返す');
-assert(!Object.hasOwn(normal.data, 'ai_transit_advice'), '通常検索: JSON本体からAIアドバイスを分離する');
+assert(normal.data.ai_transit_advice, '通常検索: JSONにAIインテリジェントアドバイスを含む');
+assert(normal.texts.join('\n').includes('AIからのインテリジェントアドバイス'), '通常検索: 表示テキストにAIアドバイスを含む');
+// #122 以降: content は表示済みマークダウン（実ルート→AIアドバイス→…の順）。
+// 表示順の検証は LIVE モードで行う（-test モードは障害シミュレーションのため routes が省略される仕様）。
+const live = payload(await mod.searchRoute({ from: '押上', to: '上野', language: 'ja' }));
+const liveText = live.texts.join('\n');
+const routeIdx = liveText.indexOf('押上 から 上野');
+const adviceIdx = liveText.indexOf('AIからのインテリジェントアドバイス');
+assert(routeIdx >= 0 && adviceIdx > routeIdx, '通常検索: 表示順は実ルート→AIアドバイスの順（LIVEモード）');
 assert(normal.data.gov_facility_search_support?.based_on === 'place_name', '通常検索: 現在地未指定では到着駅名ベースで公的機関検索を表示する（v2.36.3）');
 assert(normal.data.gov_facility_search_support?.place_name === '上野', '通常検索: 公的機関検索は到着駅を基準にする');
 assert(!normal.data.station_bus_stops || ['community_bus_access', 'substitute_transport', 'destination'].includes(normal.data.station_bus_stops.basis), '通常検索: バス停案内は関連情報としてのみ表示する');

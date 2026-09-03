@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.51.0 (Production Ready)
+ * Tokyo Transit MCP Server v2.52.0 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -38,7 +38,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 // 各ツールは registerTool で登録し、ListTools / CallTool の手動ハンドラと switch を廃止した。
 // SDK が zod スキーマから tools/list の JSON Schema を自動生成する（additionalProperties:false 等も自動付与）。
 const server = new McpServer(
-  { name: 'tokyo-transit-mcp', version: '2.51.0' },
+  { name: 'tokyo-transit-mcp', version: '2.52.0' },
   { capabilities: { tools: {}, logging: {} } }
 );
 
@@ -94,7 +94,7 @@ async function runTool(name, args, handler) {
 // search_route
 server.registerTool('search_route', {
   title: 'Search Route',
-  description: '乗り換えルート検索 - 出発駅から到着駅までのルートを検索。日本語・英語・中国語自動識別、天候/高温/運休を検出しAIアドバイスを返答。language（ja/en/zh）を指定すると応答言語を強制（ユーザーのクエリ言語に合わせて指定推奨）。荒天・降雪・凍結時を除き、到着地点周辺のレンタサイクル案内を表示。user_location（緯度経度）指定時は運転見合わせ時の代替シェアサイクル案内を現在地基準で表示。',
+  description: '乗り換えルート検索 - 出発駅から到着駅までのルートを検索。日本語・英語・中国語自動識別、天候/高温/運休を検出しAIアドバイスを返答。language（ja/en/zh）を指定すると応答言語を強制（ユーザーのクエリ言語に合わせて指定推奨）。荒天・降雪・凍結時を除き、到着地点周辺のレンタサイクル案内を表示。user_location（緯度経度）指定時は運転見合わせ時の代替シェアサイクル案内を現在地基準で表示。\n\n【出力指示/OUTPUT RULE】ツールの content には「表示済みの完成テキスト」が既に日本語・英語・中国語のどれかで含まれている。この content をそのままユーザーへ提示すること。要約・再構成・言い換え・省略・見出しの書き換えを一切しないこと。特に運転見合わせ・特別警報・緊急避難・振替輸送・シェアサイクル代替（emergency_alert / cycling_alternative / bus_transfer_alternative / suspended_lines / ai_transit_advice）など運行障害時の安全情報は、原文のまま必ずすべて表示すること。追加の説明は content の後に補足として付け加えてもよい。',
   inputSchema: {
     from: z.string().describe('出発駅名'),
     to: z.string().describe('到着駅名'),

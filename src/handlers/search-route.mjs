@@ -12,7 +12,7 @@ import { STATION_NAME_MAP, STATION_DISPLAY_NAMES, RAILWAY_NAME_MAP, LINE_DISPLAY
 import { LANDMARK_DEFS, LANDMARK_LOOKUP, DESTINATION_CULTURAL_FACILITIES,
          CULTURAL_CATEGORY_NAMES, DERIVED_CULTURAL_FACILITIES } from '../data/landmarks.mjs';
 import { COMMUNITY_BUS_STATION_ACCESS } from '../data/bus-routes.mjs';
-import { MULTILINGUAL_ADVICE, NON_RAIL_OPERATORS, EMERGENCY_EVACUATION_SEARCH_URL, GBFS_BASE, GBFS_BASE_HELLOCYCLING,
+import { MULTILINGUAL_ADVICE, EMERGENCY_EVACUATION_SEARCH_URL, GBFS_BASE, GBFS_BASE_HELLOCYCLING,
          LIMITED_EXPRESS_KEYWORDS, LIMITED_EXPRESS_STATION_GUIDE, PRIVATE_EXPRESS_GUIDE, JMA_AREA_LABELS } from '../data/misc.mjs';
 import { FERRY_PORT_MAP } from '../data/ferry-ports.mjs';
 import { getDisplayStationName, getDisplayLineName, getLineDisplayName, getCommunityBusDisplayName,
@@ -1103,14 +1103,14 @@ export async function searchRoute(args) {
 
   const resultPayload = {
     status: simulatedFailure ? (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "TEST_MODE") : (isEmergencyActive ? "EMERGENCY_MODE_ACTIVE" : "SUCCESS"),
-    // AIインテリジェントアドバイスを先頭に配置（LLMが後半を省略しないよう）
-    ai_transit_advice: aiAdvice,
     from: displayFrom, to: displayTo, mode: simulatedFailure ? "TEST_MODE" : "LIVE",
     detected_language: userLang,
     detected_user_language: userLang,
     degraded_mode: apiDegraded ? true : undefined,
     // 実ルート（自己完結型経路エンジンで算出）
     routes: routesPayload,
+    // AIインテリジェントアドバイス（実ルートの直後に配置）
+    ai_transit_advice: aiAdvice,
     route_operational: routeOperational && (!isTrainSuspended || suspendedLineNames.size > 0),
     suspended_lines: suspendedLineNames.size ? [...suspendedLineNames].map(line => getDisplayLineName(line, userLang)) : undefined,
     // ランドマーク（施設名）入力時の最寄り駅案内
@@ -1187,17 +1187,6 @@ export async function searchRoute(args) {
     };
   }
 
-  // 非鉄道系
-  resultPayload.non_rail_transit_support = {
-    note: userLang === 'en' ? "🚃 Non-rail transit also available" :
-          userLang === 'zh' ? "🚃 非铁路交通工具亦可使用" :
-          "🚃 非鉄道系交通機関も利用可能",
-    operators: Object.values(NON_RAIL_OPERATORS).map(op => userLang === 'en' ? op.labelEn : userLang === 'zh' ? op.labelZh : op.label).join(userLang === 'en' ? ', ' : '、'),
-    suggestion: userLang === 'en' ? "Check list_transit_operators tool for details" :
-                userLang === 'zh' ? "详情请使用 list_transit_operators 工具" :
-                "詳細は list_transit_operators ツールを"
-  };
-
   // 🚉 目的地（降車駅）周辺のバス停を案内する。降車後の移動手段として、コミュニティ
   // バスや振替輸送の有無に関わらず表示する。
   if (toName) {
@@ -1260,7 +1249,9 @@ export async function searchRoute(args) {
   }
 
   if (simulatedFailure) { resultPayload.test_mode = true; resultPayload.simulated_failure_type = simulatedFailure; }
-  return jsonResponse(resultPayload);
+  // ✅ #122: content に「表示済みマークダウン」を返し、structuredContent には従来通りJSONを維持。
+  // ホストLLMがJSONを要約して安全情報（運転見合わせ・緊急避難・振替輸送）を失うのを防ぐ。
+  return jsonResponse(resultPayload, { displayText: buildDisplayText(resultPayload, userLang) });
 }
 
 export function findCommunityBusAccess(stationInput) {
@@ -1297,3 +1288,164 @@ export function buildCommunityBusAccessBlock(stationInput, userLang) {
       : "時刻表・全ルートは各自治体公式サイトでご確認ください。"
   };
 }
+
+
+// ✅ #122: ホストLLMがJSONを要約・省略して安全情報を失うのを防ぐため、
+// 「表示済みマークダウンの単一テキスト」を組み立てる。安全優先の順序で各ブロックを
+// 既存の note/label/hint をそのまま用いて並べる。見出しはサーバー定義のものを流用し、
+// LLMに再構成させない。①実ルート→②AIアドバイス→③緊急アラート→④代替手段→…の順。
+export function buildDisplayText(payload, lang) {
+  const L = lang || 'ja';
+  const lines = [];
+  const add = (s) => { if (s !== undefined && s !== null && String(s).trim() !== '') lines.push(String(s).trim()); };
+
+  // ① 経路本体（実ルートを最優先表示）
+  if (payload.routes && payload.routes.length) {
+    const r = payload.routes[0];
+    if (r.summary) {
+      const s_ = r.summary;
+      const label = L === 'en' ? `Route: ${s_.from} → ${s_.to}`
+        : L === 'zh' ? `路线：${s_.from} → ${s_.to}`
+        : `${s_.from} から ${s_.to} までの経路`;
+      const meta = [];
+      if (typeof s_.estimated_minutes === 'number') meta.push(L === 'en' ? `${s_.estimated_minutes} min` : `約${s_.estimated_minutes}分`);
+      if (typeof s_.transfers === 'number') meta.push(L === 'en' ? `${s_.transfers} transfers` : `乗換${s_.transfers}回`);
+      add(`${label}${meta.length ? `（${meta.join(' / ')}）` : ''}`);
+    }
+    for (const seg of r.segments || []) {
+      const walk = seg.walk_minutes !== undefined;
+      if (walk) {
+        add(`${seg.line}: ${seg.from} → ${seg.to}${seg.walk_minutes ? `（約${seg.walk_minutes}分徒歩）` : ''}`);
+      } else {
+        add(`${seg.line}: ${seg.from} → ${seg.to}${seg.stops ? `（${seg.stops}駅）` : ''}`);
+      }
+    }
+    lines.push('');
+  }
+  if (payload.route_note) add(payload.route_note);
+  lines.push('');
+
+  // ② AIインテリジェントアドバイス（原文そのまま）
+  if (typeof payload.ai_transit_advice === 'string' && payload.ai_transit_advice) {
+    add(payload.ai_transit_advice);
+    lines.push('');
+  }
+
+  // ③ 緊急アラート（運転見合わせ・特別警報・緊急避難）
+  if (payload.emergency_alert) {
+    const e = payload.emergency_alert;
+    add(`🚨 ${e.reason}`);
+    if (e.detail) add(e.detail);
+    if (e.note) add(e.note);
+    if (e.evacuation_search) {
+      add(`[${e.evacuation_search.label}](${e.evacuation_search.link})`);
+      if (e.evacuation_search.disclaimer) add(e.evacuation_search.disclaimer);
+    }
+    lines.push('');
+  }
+
+  // ④ 運転見合わせ中の代替手段（シェアサイクル・振替輸送）・見合わせ路線
+  if (payload.cycling_alternative) {
+    const c = payload.cycling_alternative;
+    if (c.note) add(c.note);
+    if (c.recommendation) add(c.recommendation);
+    if (c.stations && c.stations.length) {
+      for (const st of c.stations.slice(0, 8)) {
+        const nm = (st.name || st.port || st.station || '');
+        const d = (st.distance_m || st.distance || '');
+        add(`・${nm}${d ? ` (${d})` : ''}`);
+      }
+    }
+    if (c.caution) add(c.caution);
+    lines.push('');
+  }
+  if (payload.bus_transfer_alternative) {
+    const b = payload.bus_transfer_alternative;
+    if (b.note) add(b.note);
+    if (b.detail) add(b.detail);
+    if (b.suggestion) add(b.suggestion);
+    lines.push('');
+  }
+  if (payload.suspended_lines && payload.suspended_lines.length) {
+    add(L === 'en' ? `⛔ Suspended lines: ${payload.suspended_lines.join(', ')}`
+      : L === 'zh' ? `⛔ 停运线路：${payload.suspended_lines.join('、')}`
+      : `⛔ 運転見合わせ路線：${payload.suspended_lines.join('、')}`);
+    lines.push('');
+  }
+
+  // ⑤ 天気
+  if (payload.weather_text) {
+    add(payload.weather_text);
+    lines.push('');
+  }
+
+  // ⑥ コミュニティバス接続（駅までの足）
+  if (payload.community_bus_access) {
+    const cb = payload.community_bus_access;
+    if (cb.note) add(cb.note);
+    if (cb.station) add(cb.station);
+    for (const b of cb.buses || []) {
+      const parts = [b.bus, b.municipality, b.stop].filter(Boolean).join(' / ');
+      if (parts) add(`・${parts}`);
+    }
+    if (cb.timetable_note) add(cb.timetable_note);
+    lines.push('');
+  }
+
+  // ⑦ 目的地駅周辺バス停
+  if (payload.station_bus_stops) {
+    const sb = payload.station_bus_stops;
+    if (sb.note) add(sb.note);
+    if (sb.hint) add(sb.hint);
+    if (sb.link_label && sb.link) add(`[${sb.link_label}](${sb.link})`);
+    lines.push('');
+  }
+
+  // ⑧ 公的機関（実リンク必須）
+  if (payload.gov_facility_search_support) {
+    const g = payload.gov_facility_search_support;
+    if (g.note) add(g.note);
+    if (g.link_label && g.link) add(`[${g.link_label}](${g.link})`);
+    if (g.disclaimer) add(g.disclaimer);
+    lines.push('');
+  }
+
+  // ⑨ 到着地周辺の文化施設
+  if (payload.destination_cultural_facilities && payload.destination_cultural_facilities.length) {
+    add(L === 'en' ? '🏛️ [Culture / Landmarks near destination]'
+      : L === 'zh' ? '🏛️ 【目的地附近的文化・地标】'
+      : '🏛️ 【目的地周辺の文化・ランドマーク】');
+    for (const f of payload.destination_cultural_facilities.slice(0, 10)) {
+      const nm = f.name || f.facility || '';
+      const walk = f.walk_minutes !== undefined ? `（徒歩約${f.walk_minutes}分）` : '';
+      if (nm) add(`・${nm}${walk}`);
+    }
+    lines.push('');
+  }
+
+  // ⑩ フェリー
+  if (payload.ferry_alternative) {
+    if (payload.ferry_alternative.note) add(payload.ferry_alternative.note);
+    if (payload.ferry_alternative.suggestion) add(payload.ferry_alternative.suggestion);
+    lines.push('');
+  }
+
+  // ⑪ 到着地レンタサイクル（荒天時は非表示のはず）
+  if (payload.destination_bike_share) {
+    const db = payload.destination_bike_share;
+    if (db.note) add(db.note);
+    if (db.recommendation) add(db.recommendation);
+    if (db.caution) add(db.caution);
+    lines.push('');
+  }
+
+  // ⑫ 外部検索URL（フォールバック）
+  if (payload.direct_search_url) {
+    add(L === 'en' ? `[Open route search in Yahoo Transit](${payload.direct_search_url})`
+      : L === 'zh' ? `[在雅虎乘换案内中查看详情](${payload.direct_search_url})`
+      : `[Yahoo!乗換案内で詳細を確認](${payload.direct_search_url})`);
+  }
+
+  return lines.join('\n');
+}
+

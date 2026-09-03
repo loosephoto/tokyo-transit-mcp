@@ -117,6 +117,17 @@ export function jsonResponse(data, options = {}) {
   const isError = options.isError === undefined
     ? (data && typeof data === 'object' && data.status === 'ERROR')
     : options.isError;
+  // ✅ #122: options.displayText 指定時、content は「表示済みマークダウンの単一テキスト」にする。
+  // ホストLLMがJSONを再構成して要約・省略するのを防ぎ、運行障害時の安全情報
+  // （運転見合わせ・緊急避難・振替輸送など）を原文のまま確実にユーザーへ届ける。
+  // 機械向けJSONは structuredContent に維持する。
+  if (options.displayText && typeof options.displayText === 'string' && options.displayText) {
+    return {
+      content: [{ type: 'text', text: options.displayText }],
+      structuredContent: data,
+      ...(isError ? { isError: true } : {})
+    };
+  }
   // ai_transit_advice が含まれる場合、それを独立したテキストブロックとして最初に配置。
   // LLM が長い JSON を要約する際に後半を省略してしまうのを防ぐため。
   if (data && typeof data === 'object' && typeof data.ai_transit_advice === 'string' && data.ai_transit_advice) {

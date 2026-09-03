@@ -212,8 +212,8 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.51.0（2026-09-02）— 旧路線名フォールバック（resolveSuspendedLineNames）の修正・ODPT実ID対応
+### v2.52.0（2026-09-03）— get_operator_routes の0駅バグ修正・検索結果表示の改善
 
-- **旧路線名フォールバック修正**: `resolveSuspendedLineNames`（get_running_status の停止路線→グラフ内路線名解決）が、ODPT 鉄道ID末尾ローマ字（例 `TobuSkytree`）と `RAILWAY_NAME_MAP` の値（日本語・ローマ字混在）を直接比較し常に `[]` を返す構造バグを修正。既存の `ODPT_RAILWAY_NAME_MAP`（ODPT鉄道ID→日本語標準路線名）を第一参照に変更。東武スカイツリーラインは実質伊勢崎線として正しく解決
-- **ODPT実ID網羅**: `ODPT_RAILWAY_NAME_MAP` を ODPT 全94鉄道IDと突合して拡充（93エントリ）。JR東日本（青梅・高崎・宇都宮・横浜・埼京(川越)・湘南新宿・相鉄直通等）・京急・京王・京成・小田急・西武・東急・相鉄・北総・関東鉄道・埼玉高速・東葉・東京モノレール等を追加。グラフに存在する全路線を100%カバー（新幹線・競馬場線はグラフ非対応のため解決不可が正しい）
-- **回帰テスト**: `tests/resolve-suspended.test.mjs` を追加し `npm test` に組み込み（東武スカイツリーライン→伊勢崎線 等を固定）
+- **get_operator_routes の0駅バグ修正**: ODPT が `odpt:stationOrder` を返さない愛称路線（東武スカイツリーライン `TobuSkytree`・東武アーバンパークライン `TobuUrbanPark`・押上-曳舟ブランチ `TobuSkytreeBranch`）が `station_count: 0` で表示されるバグを修正。ODPT路線ID→内部グラフ路線名の `ODPT_RAILWAY_NAME_MAP` で解決し、内蔵 `RAILWAY_LINES` の駅で補完（スカイツリーライン=浅草〜東武動物公園の30駅・アーバンパークライン=大宮〜船橋の35駅・ブランチ=押上・曳舟の2駅）。タイトル文字列比較では愛称と正式名が不一致で補完されないため、IDベース判定に変更。fallback の既存マッチにも `_internalName` 一致を追加し、東武野田線の local 重複追加も解消
+- **東武なし表記の解決**: 「スカイツリーライン」「アーバンパークライン」など東武プレフィックスなしの路線名でも事業者を逆引きできるよう修正。`RAILWAY_NAME_MAP` に `スカイツリーライン` を追加し、`getOperatorRoutes` の解決チェーンで `LOCAL_LINE_PREFIX`（事業者ID→日本語プレフィックス）による前方一致逆引きを実装（アーバンパークライン→東武野田線→Tobu）。`LOCAL_LINE_PREFIX` をモジュール直下にhoisting
+- **search_route の表示・JSON改善**: 表示順を「実ルート→AIインテリジェントアドバイス→その他（緊急アラート等）」に変更。JSON（structuredContent）側も `ai_transit_advice` を実ルート直後に移動（先頭配置は不要になったため）。`route_note`（経路は自己完結型エンジンで算出。）の後に空行を追加。`jsonResponse` に `displayText` オプションを追加（#122: content に表示済みマークダウンを返し、ホストLLMの要約による安全情報喪失を防止）
