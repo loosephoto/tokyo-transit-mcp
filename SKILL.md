@@ -212,10 +212,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.53.0（2026-09-03）— 路線指定・水上バス案内・運行情報の信頼性改善
+### v2.54.0（2026-09-04）— コード監査に基づく不具合・データ不整合の修正（#119）
 
-- `search_route` の片側路線指定で出発側・到着側のノードを同一フィルタして `NO_ROUTE` になる問題を修正
-- 「山手」単体を路線ヒントと誤認する問題を修正し、根岸線の山手駅を一意解決
-- 浅草〜お台場などで `ferry_alternative` を生成し、表示済みテキストにも水上バス案内を復活
-- 運行情報の英語・中国語フォールバックを中立化し、工事・お知らせを振替輸送と誤認させないよう修正。JR東日本の `notice` 分類とHTMLタグ除去を追加
-- `fare.mjs` の未使用importを削除し、路線指定・山手駅・フェリー案内・運行情報の回帰テスト（`tests/handlers-basic.test.mjs`・`tests/running-status.test.mjs`）を追加
+- `MULTILINGUAL_ADVICE.emergency` の改行エスケープ（`\\n` → `\n`）を修正し、緊急時安全情報が正しく改行表示されるように
+- `buildDisplayText` の文化施設徒歩表記を `walk_min ?? walk_minutes` 参照に修正し、ja/en/zh の言語別表記（徒歩約◯分 / approx. N min walk / 步行约N分钟）に対応
+- `LANDMARK_DEFS` のデッド参照を解消（筑波実験植物園→`つくば`、東京競馬場→`府中本町`）し、ルート検索が `STATION_NOT_FOUND` にならないように
+- `search_flight` の成田空港第2・第3ターミナル到着時のアクセス駅を「空港第2ビル」に修正
+- `get_running_status` に日本語・英語の事業者名エイリアス（JR東日本/JR East/東京メトロ/京急/相鉄等）を追加し、正式キーへ正規化
+- `extractRailwayHint` の正規表現リテラルの二重バックスラッシュを修正
+- モノリス分割後の `RAILWAY_LINES` 参照を `src/data/railway-lines.mjs` に更新（`check-station-reality.mjs`・`check-station-wikipedia.mjs`・`dump-railway-lines.mjs`）

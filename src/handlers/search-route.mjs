@@ -233,7 +233,7 @@ export function extractRailwayHint(rawName) {
     for (const alias of aliases) {
       if (alias === '山手' && (input === '山手' || input === '山手駅')) continue;
       if (input.toLowerCase().includes(alias.toLowerCase())) {
-        const cleaned = aliases.reduce((v, a) => v.replace(new RegExp('(^|\\s|・)' + a + '($|\\s|・)', 'ig'), ' ').replace(new RegExp(a, 'ig'), ' '), input).replace(/[\\s・]+/g, ' ').trim();
+        const cleaned = aliases.reduce((v, a) => v.replace(new RegExp('(^|\\s|・)' + a + '($|\\s|・)', 'ig'), ' ').replace(new RegExp(a, 'ig'), ' '), input).replace(/[\s・]+/g, ' ').trim();
         if (cleaned) {
           return { line, stationName: cleaned };
         }
@@ -1461,7 +1461,10 @@ export function buildDisplayText(payload, lang) {
       : '🏛️ 【目的地周辺の文化・ランドマーク】');
     for (const f of payload.destination_cultural_facilities.slice(0, 10)) {
       const nm = f.name || f.facility || '';
-      const walk = f.walk_minutes !== undefined ? `（徒歩約${f.walk_minutes}分）` : '';
+      const m = f.walk_min ?? f.walk_minutes;
+      const walk = m !== undefined
+        ? (L === 'en' ? ` (approx. ${m} min walk)` : L === 'zh' ? ` (步行约${m}分钟)` : `（徒歩約${m}分）`)
+        : '';
       if (nm) add(`・${nm}${walk}`);
     }
     lines.push('');

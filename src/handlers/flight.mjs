@@ -355,7 +355,7 @@ export async function searchFlight(args) {
     if (direction === 'arrival' && normalized.length > 0) {
       const top = normalized[0];
       const stationName = top.terminal
-        ? (top.airport_iata === 'HND' ? `羽田空港第${top.terminal}ターミナル` : top.airport_iata === 'NRT' ? `成田空港第${top.terminal}ターミナル` : (IATA_TO_TERMINAL_STATION[top.airport_iata] || top.airport_name))
+        ? (top.airport_iata === 'HND' ? `羽田空港第${top.terminal}ターミナル` : top.airport_iata === 'NRT' ? (top.terminal === '1' ? '成田空港' : '空港第2ビル') : (IATA_TO_TERMINAL_STATION[top.airport_iata] || top.airport_name))
         : (IATA_TO_TERMINAL_STATION[top.airport_iata] || top.airport_name);
       const destList = destination ? [destination]
         : (top.airport_iata && DEFAULT_ACCESS_DESTINATIONS[top.airport_iata]) ? DEFAULT_ACCESS_DESTINATIONS[top.airport_iata]
