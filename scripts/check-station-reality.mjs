@@ -9,8 +9,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // ---------- 内蔵 RAILWAY_LINES をパース ----------
-const src = fs.readFileSync(new URL('../src/index.mjs', import.meta.url), 'utf-8');
-const seg = src.match(/const RAILWAY_LINES = \{(.*?)\n\};/s);
+const src = fs.readFileSync(new URL('../src/data/railway-lines.mjs', import.meta.url), 'utf-8');
+const seg = src.match(/export const RAILWAY_LINES = \{(.*?)\n\};/s);
 const lines = [];
 for (const m of seg[1].matchAll(/'([^']+)':\s*\[([^\]]*)\]/g)) {
   lines.push({ name: m[1], stations: m[2].split(',').map(s => s.trim().replace(/^'(.*)'$/, '$1')).filter(Boolean) });

@@ -33,12 +33,13 @@
 
 ### 🛤️ 直近の更新内容
 
-- **路線指定・水上バス案内・運行情報の信頼性を改善（v2.53.0）**
-  - 片側だけ路線指定した検索でも乗換経路を失わないよう、出発側と到着側の路線ヒントを分離
-  - 「山手」単体をJR山手線の路線ヒントと誤認せず、根岸線の山手駅として解決
-  - 浅草〜お台場などの検索結果にフェリー／水上バス案内を復活
-  - 英語・中国語の運行情報フォールバックを中立化し、工事・お知らせを振替輸送と誤表示しないよう修正。JR東日本の「お知らせ」分類とHTMLタグ除去にも対応
-  - 未使用importを整理し、路線指定・山手駅・フェリー案内・運行情報の回帰テストを追加
+- **コード監査に基づく不具合・データ不整合を修正（v2.54.0）**
+  - 緊急時AIアドバイスの改行エスケープを修正し、安全情報が見出しの下に正しく改行表示されるように
+  - 到着駅周辺の文化施設に徒歩目安（徒歩約◯分）を日英中で表示
+  - 筑波実験植物園→つくば駅・東京競馬場→府中本町駅など、存在しない駅を参照していたランドマークを修正しルート検索が可能に
+  - 成田空港第2・第3ターミナル到着時のアクセス駅を「空港第2ビル」に修正
+  - 運行状況検索で「JR東日本」「東京メトロ」「JR East」など日本語・英語の事業者名指定に対応
+  - 検証・監査スクリプトをモノリス分割後の構成（src/data/railway-lines.mjs）に対応
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -645,12 +646,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Improved reliability of line hints, water-bus guidance, and service status (v2.53.0)**
-  - Separate origin and destination line hints so a route is not lost when only one side specifies a line
-  - Prevent standalone “Yamate” from being misidentified as a JR Yamanote Line hint; resolve it as Yamate Station on the Negishi Line
-  - Restore ferry/water-bus alternatives in results such as Asakusa–Odaiba
-  - Neutralize English/Chinese service-status fallbacks so construction and notices are not misrepresented as substitute transport; add JR East “notice” classification and HTML-tag removal
-  - Remove unused imports and add regression tests for line hints, Yamate Station, ferry guidance, and service status
+- **Bug and data-integrity fixes based on a code audit (v2.54.0)**
+  - Fix the newline escape in emergency AI advice so safety information renders on a new line under the heading
+  - Show walking estimates (approx. N min walk) for cultural facilities near the destination station in JA/EN/ZH
+  - Fix landmarks referencing non-existent stations (Tsukuba Botanical Garden → Tsukuba Stn, Tokyo Racecourse → Fuchu-Hommachi Stn) so route search works again
+  - Use “Airport Terminal 2” station for NRT Terminal 2/3 arrivals
+  - Accept Japanese/English operator names (e.g. “JR東日本”, “東京メトロ”, “JR East”) in service-status search
+  - Update verification/audit scripts for the post-monolith-split layout (src/data/railway-lines.mjs)
 
 ### 🤖 AI Intelligent Advice
 
@@ -1213,12 +1215,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **提升线路指定、水上巴士指引和运行信息的可靠性（v2.53.0）**
-  - 分离出发地和到达地的线路提示，即使只指定一侧线路也不会丢失换乘路线
-  - 防止将单独的“山手”误识别为JR山手线提示，并将其解析为根岸线的山手站
-  - 恢复浅草〜台场等搜索结果中的渡轮/水上巴士替代方案
-  - 中立化英文/中文运行信息回退文本，避免将施工和公告误显示为接驳交通；新增JR东日本“公告”分类和HTML标签清理
-  - 清理未使用的import，并为线路提示、山手站、渡轮指引和运行信息添加回归测试
+- **基于代码审计修复缺陷与数据不一致（v2.54.0）**
+  - 修复紧急AI建议的换行转义，使安全信息在标题下正确换行显示
+  - 在到达站周边的文化设施中显示步行参考时间（步行约N分钟），支持日英中
+  - 修复引用不存在车站的地标（筑波实验植物园→筑波站、东京赛马场→府中本町站），使路线搜索恢复正常
+  - 成田机场第2、第3航站楼到达时的接驳车站修正为“机场第2大楼”站
+  - 运行状况搜索支持日文/英文的运营商名称（如“JR东日本”“东京地铁”“JR East”）
+  - 更新验证/审计脚本以适配模块拆分后的结构（src/data/railway-lines.mjs）
 
 ### 🤖 AI 智能建议
 

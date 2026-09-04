@@ -1,7 +1,7 @@
 // 全RAILWAY_LINESをダンプして現状把握するスクリプト
 import { readFileSync } from 'fs';
-const src = readFileSync('src/index.mjs', 'utf8');
-const m = src.match(/RAILWAY_LINES\s*=\s*\{([\s\S]*?)\n\};/);
+const src = readFileSync('src/data/railway-lines.mjs', 'utf8');
+const m = src.match(/export const RAILWAY_LINES\s*=\s*\{([\s\S]*?)\n\};/);
 if (!m) { console.log('RAILWAY_LINES block not found'); process.exit(1); }
 const block = m[1];
 

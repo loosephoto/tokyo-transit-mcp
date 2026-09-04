@@ -467,9 +467,9 @@ export const MULTILINGUAL_ADVICE = {
     zh: "🤖 【AI智能出行建议 (设备故障)】\n⚡ 信号或供电故障影响列车运行，请考虑其他路线。"
   },
   emergency: {
-    ja: "🤖 【AIからのインテリジェントアドバイス (緊急アラート)】\\n🚨 重大な災害または交通機関の運行不能を検知しました。身の安全を最優先とし、以下のリンクから最寄りの指定緊急避難場所を確認してください。",
-    en: "🤖 [AI Intelligent Transit Advice (Emergency Alert)]\\n🚨 Major disaster or transit suspension detected. Check the link for nearest evacuation shelters.",
-    zh: "🤖 【AI智能出行建议 (紧急避难)】\\n🚨 检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
+    ja: "🤖 【AIからのインテリジェントアドバイス (緊急アラート)】\n🚨 重大な災害または交通機関の運行不能を検知しました。身の安全を最優先とし、以下のリンクから最寄りの指定緊急避難場所を確認してください。",
+    en: "🤖 [AI Intelligent Transit Advice (Emergency Alert)]\n🚨 Major disaster or transit suspension detected. Check the link for nearest evacuation shelters.",
+    zh: "🤖 【AI智能出行建议 (紧急避难)】\n🚨 检测到重大灾害或交通中断，请点击下方链接查看最近的指定紧急避难场所。"
   },
   service_suspension: {
     ja: "🤖 【AIからのインテリジェントアドバイス (運転見合わせ)】\n🚨 一部路線が運転を見合わせています。最新の運行情報と振替輸送の有無を確認してください。お急ぎの場合は代替ルート（他社線・バス）をご検討ください。",

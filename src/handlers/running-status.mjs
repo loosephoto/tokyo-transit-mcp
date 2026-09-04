@@ -277,6 +277,24 @@ const REGISTRY = {
   }
 };
 
+// 事業者名エイリアス（日本語・英語・中国語 → 正式キーへ正規化。get_running_status の operator 指定用）
+const OPERATOR_ALIASES = {
+  'jr東日本': 'jreast', 'jr east': 'jreast', 'jr': 'jreast', 'jreast': 'jreast',
+  '東京メトロ': 'tokyometro', 'tokyo metro': 'tokyometro', 'メトロ': 'tokyometro', 'metro': 'tokyometro',
+  '東武鉄道': 'tobu', '東武': 'tobu', 'tobu railway': 'tobu',
+  '都営交通': 'toei', '都営': 'toei', '都営地下鉄': 'toei', '都営三田線': 'toei', 'toei': 'toei',
+  'つくばエクスプレス': 'mir', 'tsukuba express': 'mir', 'tx': 'mir',
+  'りんかい線': 'twr', 'りんかい': 'twr', 'rinkai line': 'twr', 'rinkai': 'twr',
+  '横浜市営地下鉄': 'yokohamamunicipal', '横浜市営': 'yokohamamunicipal', 'yokohama municipal subway': 'yokohamamunicipal', 'yokohama subway': 'yokohamamunicipal',
+  '多摩モノレール': 'tamamonorail', '多摩都市モノレール': 'tamamonorail', 'tama monorail': 'tamamonorail', 'tama toshi monorail': 'tamamonorail',
+  '西武鉄道': 'seibu', '西武': 'seibu', 'seibu railway': 'seibu',
+  '相模鉄道': 'sotetsu', '相鉄': 'sotetsu', 'sotetsu': 'sotetsu',
+  '京浜急行': 'keikyu', '京急': 'keikyu', 'keikyu': 'keikyu', 'keihin kyuko': 'keikyu',
+  '小田急': 'odakyu', 'odakyu': 'odakyu', 'odakyu railway': 'odakyu',
+  '東急': 'tokyu', 'tokyu': 'tokyu', 'tokyu railway': 'tokyu',
+  '京成電鉄': 'keisei', '京成': 'keisei', 'keisei': 'keisei', 'keisei railway': 'keisei'
+};
+
 const ORDER = ['jreast', 'tokyometro', 'tobu', 'toei', 'seibu', 'sotetsu', 'keikyu', 'odakyu', 'tokyu', 'keisei', 'mir', 'twr', 'yokohamamunicipal', 'tamamonorail'];
 
 export function localizeStatusLine(line, userLang) {
@@ -303,7 +321,8 @@ export function localizeStatusLine(line, userLang) {
 export async function getRunningStatus(args) {
   const userLang = resolveLang(args) || detectLanguage(args?.operator) || 'ja';
   const rawOp = String(args?.operator || 'all').trim().toLowerCase();
-  const wanted = rawOp === 'all' || rawOp === '' ? ORDER : [rawOp];
+  const opKey = OPERATOR_ALIASES[rawOp] || rawOp;
+  const wanted = opKey === 'all' || opKey === '' ? ORDER : [opKey];
 
   const result = { status: 'SUCCESS', detected_language: userLang, timestamp: new Date().toISOString(), operators: [] };
   const operatorResults = new Map();

@@ -77,8 +77,8 @@ export const LANDMARK_DEFS = {
     names: { ja: ['上野動物園'], en: ['Ueno Zoo'], zh: ['上野动物园'] }
   },
   tskuba_botanical: {
-    station: 'うしく', walk_min: 15,
-    note: { ja: '駅から路線バス・タクシー', en: 'Local bus / taxi from the station', zh: '从车站乘坐路线巴士或出租车' },
+    station: 'つくば', walk_min: 15,
+    note: { ja: 'つくば駅から路線バス・タクシー', en: 'Local bus / taxi from Tsukuba Stn', zh: '从筑波站乘坐路线巴士或出租车' },
     names: { ja: ['筑波実験植物園'], en: ['Tsukuba Botanical Garden'], zh: ['筑波实验植物园'] }
   },
   kasairinkai_park: {
@@ -97,8 +97,8 @@ export const LANDMARK_DEFS = {
     names: { ja: ['多摩動物公園'], en: ['Tama Zoological Park', 'Tama Zoo'], zh: ['多摩动物园'] }
   },
   tokyo_racecourse: {
-    station: '府中競馬正門前', walk_min: 1,
-    note: { ja: '駅直結', en: 'Directly connected to the station', zh: '与车站直接连通' },
+    station: '府中本町', walk_min: 5,
+    note: { ja: '府中本町駅から専用歩道橋で徒歩約5分', en: 'About 5 min walk from Fuchu-Hommachi Stn via dedicated walkway', zh: '从府中本町站经专用步行桥步行约5分钟' },
     names: { ja: ['東京競馬場'], en: ['Tokyo Racecourse'], zh: ['东京赛马场'] }
   },
   yokohama_chinatown: {
