@@ -645,10 +645,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Fix and ODPT-ID coverage for the legacy line-name fallback (`resolveSuspendedLineNames`) (v2.51.0)**
-  - Fixed a structural bug where `resolveSuspendedLineNames` (resolving suspended lines to in-graph line names in running-status) compared the ODPT railway-ID suffix (e.g. `TobuSkytree`) directly against `RAILWAY_NAME_MAP` values (a mix of Japanese and romanized names), always returning an empty result. It now uses the existing `ODPT_RAILWAY_NAME_MAP` (ODPT railway ID → standard Japanese line name) as the primary lookup. The Tobu Skytree Line is correctly resolved as the (effectively same) Isesaki Line
-  - Expanded `ODPT_RAILWAY_NAME_MAP` to 93 entries by reconciling against all 94 ODPT railway IDs. Added JR-East (Ome, Takasaki, Utsunomiya, Yokohama, Saikyo/Kawagoe, Shonan-Shinjuku, Sotetsu-direct, etc.), Keikyu, Keio, Keisei, Odakyu, Seibu, Tokyu, Sotetsu, Hokuso, Kanto Railway, Saitama Railway, Toyo Rapid, Tokyo Monorail, and more — 100% coverage of lines present in the graph (Shinkansen and Keio Keibajo remain unresolvable by design)
-  - Added regression tests (`tests/resolve-suspended.test.mjs`) integrated into `npm test`
+- **Improved reliability of line hints, water-bus guidance, and service status (v2.53.0)**
+  - Separate origin and destination line hints so a route is not lost when only one side specifies a line
+  - Prevent standalone “Yamate” from being misidentified as a JR Yamanote Line hint; resolve it as Yamate Station on the Negishi Line
+  - Restore ferry/water-bus alternatives in results such as Asakusa–Odaiba
+  - Neutralize English/Chinese service-status fallbacks so construction and notices are not misrepresented as substitute transport; add JR East “notice” classification and HTML-tag removal
+  - Remove unused imports and add regression tests for line hints, Yamate Station, ferry guidance, and service status
 
 ### 🤖 AI Intelligent Advice
 
@@ -1211,10 +1213,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **修复旧线路名回退（resolveSuspendedLineNames）并覆盖ODPT实际ID（v2.51.0）**
-  - 修复`resolveSuspendedLineNames`（将运行中断线路解析为图内线路名）的结构性缺陷：它曾把ODPT铁路ID末位罗马字（如`TobuSkytree`）与`RAILWAY_NAME_MAP`的值（日文・罗马字混杂）直接比较而恒返回空。现改为优先使用既有的`ODPT_RAILWAY_NAME_MAP`（ODPT铁路ID→标准日文线路名）。东武晴空塔线现能正确解析为（实质相同的）伊势崎线
-  - 与ODPT全部94个铁路ID对照，将`ODPT_RAILWAY_NAME_MAP`扩充至93项。新增JR东日本（青梅・高崎・宇都宫・横滨・埼京(川越)・湘南新宿・相铁直通等）、京急・京王・京成・小田急・西武・东急・相铁・北总・关东铁道・埼玉高速・东叶・东京单轨等。图内全部线路100%覆盖（新干线・京王竞马场线因图内无此线路，解析为空属正常）
-  - 新增回归测试`tests/resolve-suspended.test.mjs`并集成到`npm test`
+- **提升线路指定、水上巴士指引和运行信息的可靠性（v2.53.0）**
+  - 分离出发地和到达地的线路提示，即使只指定一侧线路也不会丢失换乘路线
+  - 防止将单独的“山手”误识别为JR山手线提示，并将其解析为根岸线的山手站
+  - 恢复浅草〜台场等搜索结果中的渡轮/水上巴士替代方案
+  - 中立化英文/中文运行信息回退文本，避免将施工和公告误显示为接驳交通；新增JR东日本“公告”分类和HTML标签清理
+  - 清理未使用的import，并为线路提示、山手站、渡轮指引和运行信息添加回归测试
 
 ### 🤖 AI 智能建议
 

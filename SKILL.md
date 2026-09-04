@@ -218,4 +218,4 @@ odpt:Railway:TokyoMetro.{路線名}
 - 「山手」単体を路線ヒントと誤認する問題を修正し、根岸線の山手駅を一意解決
 - 浅草〜お台場などで `ferry_alternative` を生成し、表示済みテキストにも水上バス案内を復活
 - 運行情報の英語・中国語フォールバックを中立化し、工事・お知らせを振替輸送と誤認させないよう修正。JR東日本の `notice` 分類とHTMLタグ除去を追加
-- `fare.mjs` の未使用importを削除し、路線指定・山手駅・フェリー案内・運行情報の回帰テストを追加
+- `fare.mjs` の未使用importを削除し、路線指定・山手駅・フェリー案内・運行情報の回帰テスト（`tests/handlers-basic.test.mjs`・`tests/running-status.test.mjs`）を追加
