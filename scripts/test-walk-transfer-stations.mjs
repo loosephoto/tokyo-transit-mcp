@@ -257,7 +257,7 @@ for (const [alias, expectStn] of [
 }
 
 // 2-3. 同名別駅の曖昧化
-for (const [name, cands] of [['小川町', 2], ['両国', 2], ['霞ヶ関', 2]]) {
+for (const [name, cands] of [['小川町', 3], ['両国', 2], ['霞ヶ関', 2]]) {
   const res = resolveStation(name);
   assert(res.ambiguous && res.candidates.length === cands, `${name}: 曖昧化（候補${cands}件）→ ${res.candidates.join(' / ')}`);
 }

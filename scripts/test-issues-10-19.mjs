@@ -23,10 +23,13 @@ assert(s.error === undefined && s.transfers === 0 && s.main_line === 'JR中央�
 s = route('西国分寺', '国立');
 assert(s.error === undefined && s.transfers === 0 && s.main_line === 'JR中央線各停', `#13 西国分寺→国立: 中央線各停直通 (${s.error || s.transfers + '乗換'})`);
 
-// #16 永田町→国会議事堂前: 永田町は丸ノ内線に存在しない（公式駅順: 赤坂見附→四ツ谷）。
-// 正しい乗換は永田町(半蔵門線)→赤坂見附(徒歩連絡)→丸ノ内線→国会議事堂前。
+// #16 永田町→国会議事堂前: 両駅は東京メトロ公式の乗換駅（地下通路直結・#68でWALK_TRANSFERS追加済み）。
+// そのため徒歩連絡（0乗換）が最短路。丸ノ内線の利用は赤坂見附を経由する別経路。
 s = route('永田町', '国会議事堂前');
-assert(s.error === undefined && s.transfers === 1 && s.main_line === '東京メトロ丸ノ内線', `#16 永田町→国会議事堂前: 赤坂見附の徒歩連絡経由で丸ノ内線（公式駅順）(${s.error || s.transfers + '乗換'})`);
+assert(s.error === undefined && s.transfers === 0, `#16 永田町→国会議事堂前: 公式乗換駅の徒歩連絡（0乗換）(${s.error || s.transfers + '乗換'})`);
+// 丸ノ内線利用経路も確認（永田町→赤坂見附徒歩→丸ノ内線）
+s = route('永田町', '赤坂見附');
+assert(s.error === undefined && s.transfers === 0, `#16 永田町⇔赤坂見附: 徒歩連絡（0乗換）(${s.error || s.transfers + '乗換'})`);
 
 // #17 6駅収録漏れ
 s = route('代々木公園', '渋谷');

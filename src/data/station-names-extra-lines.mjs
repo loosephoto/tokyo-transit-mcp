@@ -47,6 +47,13 @@ export const STATION_NAME_EXTRA_LINES = {
   'Shimo-Yamaguchi': '下山口', 'ShimoYamaguchi': '下山口',
   'Nishi-Agano': '西吾野', 'NishiAgano': '西吾野',
   'Yokoze': '横瀬',
+  // ニューシャトル鉄道博物館駅（旧: 大成・鉄道博物館（大成））
+  '大成': '鉄道博物館', 'Taisho': '鉄道博物館', '鉄道博物館（大成）': '鉄道博物館',
+  // JR八高線 高麗川以遠（明覚・竹沢・折原・小川町）
+  'Myogaku': '明覚', 'Myou-gaku': '明覚',
+  'Takezawa': '竹沢',
+  'Orihara': '折原',
+  'Ogawamachi (JR Hachiko)': '小川町（JR八高線）',
   // 秩父鉄道秩父本線（2026-09 追加・CR01〜CR37）
   'Nishi-Hanyu': '西羽生', 'Nishihanyu': '西羽生',
   'Shingo': '新郷',

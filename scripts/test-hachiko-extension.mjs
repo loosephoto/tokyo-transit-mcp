@@ -15,7 +15,7 @@ const hkStations = Object.keys(STATION_TO_LINES)
   .filter(s => STATION_TO_LINES[s].some(e => e.line === 'JR八高線'))
   .sort((a, b) => STATION_TO_LINES[a].find(e => e.line === 'JR八高線').index
     - STATION_TO_LINES[b].find(e => e.line === 'JR八高線').index);
-const expectHk = ['八王子','北八王子','小宮','拝島','東福生','箱根ケ崎','金子','東飯能','高麗川','毛呂','越生','東毛呂','武州唐沢','川角','西大家','寄居'];
+const expectHk = ['八王子','北八王子','小宮','拝島','東福生','箱根ケ崎','金子','東飯能','高麗川','毛呂','越生','明覚','小川町（JR八高線）','竹沢','折原','寄居'];
 assert(hkStations.length === 16, `JR八高線は16駅（現在 ${hkStations.length}駅）`);
 for (const [i, st] of expectHk.entries()) {
   assert(hkStations[i] === st, `八高線 ${i + 1}駅目は「${st}」（現在「${hkStations[i]}」）`);
