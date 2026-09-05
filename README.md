@@ -17,11 +17,11 @@
 
 ### 🚉 全交通機関を統合
 
-**計124路線・1,431駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
+**計125路線・1,468駅を網羅**（経路探索はAPIキー不要の内蔵グラフで動作）：
 
 | 種別 | 対応事業者（対応路線） |
 |:---|:---|
-| 🚃 鉄道 | **JR東日本**: 山手線、京浜東北線、中央線快速、中央総武線各停、総武線各停、総武線快速、埼京線、京葉線、武蔵野線（大崎支線含む）、常磐線快速、常磐線各停、南武線、南武支線、東海道線、横須賀線、湘南新宿ライン、横浜線、青梅線、五日市線、鶴見線（本線・海芝浦支線・大川支線）、相模線、八高線、川越線、高崎線、宇都宮線、成田線<br>**東京メトロ**: 銀座線、丸ノ内線（支線含む）、日比谷線、東西線、千代田線、半蔵門線、有楽町線、副都心線、南北線<br>**都営地下鉄**: 浅草線、三田線、新宿線、大江戸線<br>**私鉄・第三セクター**: 小田急（小田原線・多摩線・江ノ島線）、京王（本線・高尾線・相模原線・動物園線・井の頭線）、西武（池袋線・新宿線・拝島線・秩父線・狭山線・有楽町線・多摩湖線・西武園線・多摩川線・国分寺線・豊島線）、東武（東上線・伊勢崎線・日光線・越生線・大師線・亀戸線・野田線・宇都宮線）、京急（本線・空港線・大師線・逗子線・久里浜線）、京成（本線・押上線・支線・金町線・千葉線・千原線・成田空港線）、**関東鉄道（常総線・竜ヶ崎線）**、新京成線、東急（東横線・田園都市線・目黒線・新横浜線・大井町線・池上線・多摩川線）、相鉄（本線・いずみ野線・新横浜線）、北総鉄道、埼玉高速鉄道、東葉高速鉄道、芝山鉄道、つくばエクスプレス、りんかい線、みなとみらい線、箱根登山線、富士急行線、江ノ島電鉄<br>**横浜市営地下鉄**: ブルーライン、グリーンライン |
+| 🚃 鉄道 | **JR東日本**: 山手線、京浜東北線、中央線快速、中央総武線各停、総武線各停、総武線快速、埼京線、京葉線、武蔵野線（大崎支線含む）、常磐線快速、常磐線各停、南武線、南武支線、東海道線、横須賀線、湘南新宿ライン、横浜線、青梅線、五日市線、鶴見線（本線・海芝浦支線・大川支線）、相模線、八高線、川越線、高崎線、宇都宮線、成田線<br>**東京メトロ**: 銀座線、丸ノ内線（支線含む）、日比谷線、東西線、千代田線、半蔵門線、有楽町線、副都心線、南北線<br>**都営地下鉄**: 浅草線、三田線、新宿線、大江戸線<br>**私鉄・第三セクター**: 小田急（小田原線・多摩線・江ノ島線）、京王（本線・高尾線・相模原線・動物園線・井の頭線）、西武（池袋線・新宿線・拝島線・秩父線・狭山線・有楽町線・多摩湖線・西武園線・多摩川線・国分寺線・豊島線）、東武（東上線・伊勢崎線・日光線・越生線・大師線・亀戸線・野田線・宇都宮線）、京急（本線・空港線・大師線・逗子線・久里浜線）、京成（本線・押上線・東成田線・金町線・千葉線・千原線・成田空港線）、**秩父鉄道（秩父本線）**、**関東鉄道（常総線・竜ヶ崎線）**、新京成線、東急（東横線・田園都市線・目黒線・新横浜線・大井町線・池上線・多摩川線）、相鉄（本線・いずみ野線・新横浜線）、北総鉄道、埼玉高速鉄道、東葉高速鉄道、芝山鉄道、つくばエクスプレス、りんかい線、みなとみらい線、箱根登山線、富士急行線、江ノ島電鉄<br>**横浜市営地下鉄**: ブルーライン、グリーンライン |
 | 🚌 バス | 都営バス・西武バス・横浜市営バス（ODPT 並列取得）＋ JRバス関東・都内コミュニティバス41自治体・**千葉/埼玉/神奈川ローカルバス8社**（ちばフラワーバス・さいたま市営・東武バス（埼玉）・西武観光バス（秩父）・江ノ電バス・千葉中央バス・丸建つばさ交通・川越観光自動車）（GTFS-JP個別取得）。バス停検索・乗り継ぎ探索・**バス⇔電車⇔バス横断乗り継ぎ**・ノンステップバス表示に対応 |
 | 🚡 AGT | ゆりかもめ・日暮里舎人ライナー・埼玉新都市交通（ニューシャトル）・西武山口線（おとぎ線） |
 | 🚝 モノレール | 東京モノレール・多摩モノレール・湘南モノレール・千葉都市モノレール・**ディズニーリゾートライン（舞浜リゾートライン・4駅周回）** |
@@ -33,13 +33,13 @@
 
 ### 🛤️ 直近の更新内容
 
-- **コード監査に基づく不具合・データ不整合を修正（v2.54.0）**
-  - 緊急時AIアドバイスの改行エスケープを修正し、安全情報が見出しの下に正しく改行表示されるように
-  - 到着駅周辺の文化施設に徒歩目安（徒歩約◯分）を日英中で表示
-  - 筑波実験植物園→つくば駅・東京競馬場→府中本町駅など、存在しない駅を参照していたランドマークを修正しルート検索が可能に
-  - 成田空港第2・第3ターミナル到着時のアクセス駅を「空港第2ビル」に修正
-  - 運行状況検索で「JR東日本」「東京メトロ」「JR East」など日本語・英語の事業者名指定に対応
-  - 検証・監査スクリプトをモノリス分割後の構成（src/data/railway-lines.mjs）に対応
+- **路線データを公式情報（西武鉄道・京成電鉄・秩父鉄道・Wikipedia）と突合して修正し、秩父鉄道秩父本線を追加（v2.55.0）**
+  - 秩父鉄道秩父本線（羽生〜三峰口・CR01〜CR37・37駅）を新規追加。西武秩父駅⇔御花畑駅（徒歩5分）で西武秩父線と接続
+  - JR八高線を高麗川から寄居まで延長（毛呂・越生・東毛呂・武州唐沢・川角・西大家・寄居を追加・計16駅）
+  - 西武秩父線を公式6駅（吾野起点・西吾野・横瀬を補完）に修正、狭山線の「上山口」（1954年廃止駅）を「下山口」に修正、有楽町線を公式駅順（小竹向原起点）に統一
+  - 京成立石を京成本線から京成押上線へ移動（公式KS49・本線42駅/押上線6駅に是正）、北総鉄道の駅順（秋山→東松戸→松飛台）を公式順に修正
+  - 「京成本線支線」を正式名「東成田線」に改名
+  - 乗換駅の徒歩連絡を追加: 京成八幡⇔本八幡（5分）・京成成田⇔成田（3分）・京成西船⇔西船橋（8分）・京成幕張本郷⇔幕張本郷（2分）で大回り経路を解消
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -630,11 +630,11 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🚉 Integrated Transit Agencies
 
-**Covers 124 lines / 1,431 stations** (route search runs on the built-in graph without an API key):
+**Covers 125 lines / 1,468 stations** (route search runs on the built-in graph without an API key):
 
 | Type | Supported Operators (Lines) |
 |:---|:---|
-| 🚃 Railways | **JR East**: Yamanote, Keihin-Tohoku, Chuo (Rapid), Chuo-Sobu (Local), Sobu (Local), Sobu (Rapid), Saikyo, Keiyo, Musashino (incl. Osaki Branch), Joban (Rapid), Joban (Local), Nambu, Nambu Branch, Tokaido, Yokosuka, Shonan-Shinjuku, Yokohama, Ome, Itsukaichi, Tsurumi (Main / Umishibaura Branch / Okawa Branch), Sagami, Hachiko, Kawagoe, Takasaki, Utsunomiya, Narita<br>**Tokyo Metro**: Ginza, Marunouchi (incl. branch), Hibiya, Tozai, Chiyoda, Hanzomon, Yurakucho, Fukutoshin, Namboku<br>**Toei Subway**: Asakusa, Mita, Shinjuku, Oedo<br>**Private / third-sector**: Odakyu (Odawara, Tama, Enoshima), Keio (Main, Takao, Sagamihara, Dobutsuen, Inokashira), Seibu (Ikebukuro, Shinjuku, Haijima, Chichibu, Sayama, Yurakucho, Tamako, Seibuen, Tamagawa, Kokubunji, Toshima), Tobu (Tojo, Isesaki, Nikko, Ogose, Daishi, Kameido, Noda, Utsunomiya), Keikyu (Main, Airport, Daishi, Zushi, Kurihama), Keisei (Main, Oshiage, Branch, Kanamachi, Chiba, Chihara, Narita Sky Access), **Kanto Railway (Joso, Ryugasaki)**, Shin-Keisei, Tokyu (Toyoko, Den-en-toshi, Meguro, Shin-Yokohama, Oimachi, Ikegami, Tamagawa), Sotetsu (Main, Izumino, Shin-Yokohama), Hokuso, Saitama Rapid, Toyo Rapid, Shibayama, Tsukuba Express, Rinkai, Minatomirai, Hakone Tozan, Fujikyu, Enoshima Electric Railway<br>**Yokohama Municipal Subway**: Blue Line, Green Line |
+| 🚃 Railways | **JR East**: Yamanote, Keihin-Tohoku, Chuo (Rapid), Chuo-Sobu (Local), Sobu (Local), Sobu (Rapid), Saikyo, Keiyo, Musashino (incl. Osaki Branch), Joban (Rapid), Joban (Local), Nambu, Nambu Branch, Tokaido, Yokosuka, Shonan-Shinjuku, Yokohama, Ome, Itsukaichi, Tsurumi (Main / Umishibaura Branch / Okawa Branch), Sagami, Hachiko, Kawagoe, Takasaki, Utsunomiya, Narita<br>**Tokyo Metro**: Ginza, Marunouchi (incl. branch), Hibiya, Tozai, Chiyoda, Hanzomon, Yurakucho, Fukutoshin, Namboku<br>**Toei Subway**: Asakusa, Mita, Shinjuku, Oedo<br>**Private / third-sector**: Odakyu (Odawara, Tama, Enoshima), Keio (Main, Takao, Sagamihara, Dobutsuen, Inokashira), Seibu (Ikebukuro, Shinjuku, Haijima, Chichibu, Sayama, Yurakucho, Tamako, Seibuen, Tamagawa, Kokubunji, Toshima), Tobu (Tojo, Isesaki, Nikko, Ogose, Daishi, Kameido, Noda, Utsunomiya), Keikyu (Main, Airport, Daishi, Zushi, Kurihama), Keisei (Main, Oshiage, Higashi-Narita, Kanamachi, Chiba, Chihara, Narita Sky Access), **Chichibu Railway (Chichibu Main Line)**, **Kanto Railway (Joso, Ryugasaki)**, Shin-Keisei, Tokyu (Toyoko, Den-en-toshi, Meguro, Shin-Yokohama, Oimachi, Ikegami, Tamagawa), Sotetsu (Main, Izumino, Shin-Yokohama), Hokuso, Saitama Rapid, Toyo Rapid, Shibayama, Tsukuba Express, Rinkai, Minatomirai, Hakone Tozan, Fujikyu, Enoshima Electric Railway<br>**Yokohama Municipal Subway**: Blue Line, Green Line |
 | 🚌 Buses | Toei / Seibu / Yokohama City Bus (parallel ODPT merge) + JR Bus Kanto & 41 Tokyo community buses & **8 local bus operators in Chiba/Saitama/Kanagawa** (Chiba Flower Bus, Saitama City Bus, Tobu Bus (Saitama), Seibu Kanko Bus (Chichibu), Enoden Bus, Chiba Chuo Bus, Maruken Tsubasa Kotsu, Kawagoe Kanko Bus) (individual GTFS-JP feeds). Stop search, transfer search, **bus⇔train⇔bus cross-modal transfers**, and non-step bus display supported |
 | 🚡 AGT | Yurikamome, Nippori-Toneri Liner, Saitama New Urban Transit (New Shuttle), Seibu Yamaguchi Line (Otogi Line) |
 | 🚝 Monorails | Tokyo Monorail, Tama Monorail, Shonan Monorail, Chiba Urban Monorail, **Disney Resort Line (Maihama Resort Line, 4-station loop)** |
@@ -646,13 +646,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Bug and data-integrity fixes based on a code audit (v2.54.0)**
-  - Fix the newline escape in emergency AI advice so safety information renders on a new line under the heading
-  - Show walking estimates (approx. N min walk) for cultural facilities near the destination station in JA/EN/ZH
-  - Fix landmarks referencing non-existent stations (Tsukuba Botanical Garden → Tsukuba Stn, Tokyo Racecourse → Fuchu-Hommachi Stn) so route search works again
-  - Use “Airport Terminal 2” station for NRT Terminal 2/3 arrivals
-  - Accept Japanese/English operator names (e.g. “JR東日本”, “東京メトロ”, “JR East”) in service-status search
-  - Update verification/audit scripts for the post-monolith-split layout (src/data/railway-lines.mjs)
+- **Cross-checked and fixed railway data against official sources (Seibu Railway, Keisei Electric Railway, Chichibu Railway, Wikipedia) and added the Chichibu Railway Main Line (v2.55.0)**
+  - Added the Chichibu Railway Main Line (Hanyu - Mitsumineguchi, CR01-CR37, 37 stations), connecting to the Seibu Chichibu Line via a 5-min walk between Seibu-Chichibu Stn and Ohanabatake Stn
+  - Extended the JR Hachiko Line from Komagawa to Yorii (added Moro, Ogose, Higashi-Moro, Bushu-Karasawa, Kawakado, Nishi-Oya, Yorii; 16 stations total)
+  - Fixed the Seibu Chichibu Line to its official 6 stations (starting at Agano, adding Nishi-Agano and Yokoze); corrected the Sayama Line station "Kamiyamaguchi" (closed in 1954) to "Shimo-Yamaguchi"; unified the Seibu Yurakucho Line station order (starting at Kotake-Mukaihara)
+  - Moved Keisei-Tateishi from the Keisei Main Line to the Keisei Oshiage Line (official KS49; Main Line 42 stns / Oshiage Line 6 stns); fixed the Hokuso Railway station order (Akiyama → Higashi-Matsudo → Matsuhidai)
+  - Renamed "Keisei Main Line (Branch)" to its official name "Higashi-Narita Line"
+  - Added walking transfers at interchange stations: Keisei-Yawata ⇔ Motoyawata (5 min), Keisei-Narita ⇔ Narita (3 min), Keisei-Nishifuna ⇔ Nishifuna (8 min), Keisei-Makuharihongō ⇔ Makuharihongō (2 min), eliminating long detour routes
 
 ### 🤖 AI Intelligent Advice
 
@@ -1199,11 +1199,11 @@ MIT License
 
 ### 🚉 整合所有公共交通工具
 
-**共覆盖124条线路/1,431站**（路线搜索由无需 API 密钥的内置图执行）：
+**共覆盖125条线路/1,468站**（路线搜索由无需 API 密钥的内置图执行）：
 
 | 类别 | 支持的运营商（线路） |
 |:---|:---|
-| 🚃 铁路 | **JR东日本**：山手线、京滨东北线、中央线快速、中央总武线各站停车、总武线各站停车、总武线快速、埼京线、京叶线、武藏野线（含大崎支线）、常磐线快速、常磐线各站停车、南武线、南武支线、东海道线、横须贺线、湘南新宿线、横滨线、青梅线、五日市线、鹤见线（本线・海芝浦支线・大川支线）、相模线、八高线、川越线、高崎线、宇都宫线、成田线<br>**东京地铁**：银座线、丸之内线（含支线）、日比谷线、东西线、千代田线、半藏门线、有乐町线、副都心线、南北线<br>**都营地铁**：浅草线、三田线、新宿线、大江户线<br>**私铁・第三部门**：小田急（小田原线・多摩线・江之岛线）、京王（本线・高尾线・相模原线・动物园线・井之头线）、西武（池袋线・新宿线・拜岛线・秩父线・狭山线・有乐町线・多摩湖线・西武园线・多摩川线・国分寺线・丰岛线）、东武（东上线・伊势崎线・日光线・越生线・大师线・龟户线・野田线・宇都宫线）、京急（本线・机场线・大师线・逗子线・久里浜线）、京成（本线・押上线・支线・金町线・千叶线・千原线・成田机场线）、**关东铁道（常总线・龙崎线）**、新京成线、东急（东横线・田园都市线・目黑线・新横滨线・大井町线・池上线・多摩川线）、相铁（本线・泉野线・新横滨线）、北总铁道、埼玉高速铁道、东叶高速铁道、芝山铁道、筑波快线、临海线、港未来线、箱根登山线、富士急行线、江之岛电铁<br>**横滨市营地铁**：蓝线、绿线 |
+| 🚃 铁路 | **JR东日本**：山手线、京滨东北线、中央线快速、中央总武线各站停车、总武线各站停车、总武线快速、埼京线、京叶线、武藏野线（含大崎支线）、常磐线快速、常磐线各站停车、南武线、南武支线、东海道线、横须贺线、湘南新宿线、横滨线、青梅线、五日市线、鹤见线（本线・海芝浦支线・大川支线）、相模线、八高线、川越线、高崎线、宇都宫线、成田线<br>**东京地铁**：银座线、丸之内线（含支线）、日比谷线、东西线、千代田线、半藏门线、有乐町线、副都心线、南北线<br>**都营地铁**：浅草线、三田线、新宿线、大江户线<br>**私铁・第三部门**：小田急（小田原线・多摩线・江之岛线）、京王（本线・高尾线・相模原线・动物园线・井之头线）、西武（池袋线・新宿线・拜岛线・秩父线・狭山线・有乐町线・多摩湖线・西武园线・多摩川线・国分寺线・丰岛线）、东武（东上线・伊势崎线・日光线・越生线・大师线・龟户线・野田线・宇都宫线）、京急（本线・机场线・大师线・逗子线・久里浜线）、京成（本线・押上线・东成田线・金町线・千叶线・千原线・成田机场线）、**秩父铁道（秩父本线）**、**关东铁道（常总线・龙崎线）**、新京成线、东急（东横线・田园都市线・目黑线・新横滨线・大井町线・池上线・多摩川线）、相铁（本线・泉野线・新横滨线）、北总铁道、埼玉高速铁道、东叶高速铁道、芝山铁道、筑波快线、临海线、港未来线、箱根登山线、富士急行线、江之岛电铁<br>**横滨市营地铁**：蓝线、绿线 |
 | 🚌 公交 | 都营/西武/横滨市营公交（ODPT 并行获取）+ JR巴士关东及东京 41 个自治体的社区公交（GTFS-JP 单独数据源）+ **千叶/埼玉/神奈川8家地方公交**（千叶花巴士・埼玉市营・东武巴士（埼玉）・西武观光巴士（秩父）・江之电巴士・千叶中央巴士・丸建翼交通・川越观光汽车）。支持公交站查询、换乘搜索、**公交⇔电车⇔公交跨方式换乘**及无障碍公交显示 |
 | 🚡 AGT | 百合海鸥号（Yurikamome）、日暮里-舍人线、埼玉新都市交通（新交通系统）、西武山口线（御伽线） |
 | 🚝 单轨铁路 | 东京单轨电车、多摩单轨电车、湘南单轨电车、千叶都市单轨电车、**迪士尼度假区线（舞浜度假区线・4站环线）** |
@@ -1215,13 +1215,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **基于代码审计修复缺陷与数据不一致（v2.54.0）**
-  - 修复紧急AI建议的换行转义，使安全信息在标题下正确换行显示
-  - 在到达站周边的文化设施中显示步行参考时间（步行约N分钟），支持日英中
-  - 修复引用不存在车站的地标（筑波实验植物园→筑波站、东京赛马场→府中本町站），使路线搜索恢复正常
-  - 成田机场第2、第3航站楼到达时的接驳车站修正为“机场第2大楼”站
-  - 运行状况搜索支持日文/英文的运营商名称（如“JR东日本”“东京地铁”“JR East”）
-  - 更新验证/审计脚本以适配模块拆分后的结构（src/data/railway-lines.mjs）
+- **将线路数据与官方信息（西武铁道、京成电铁、秩父铁道、Wikipedia）比对修正，并新增秩父铁道秩父本线（v2.55.0）**
+  - 新增秩父铁道秩父本线（羽生〜三峰口・CR01〜CR37・37站），经西武秩父站⇔御花畑站（步行5分钟）与西武秩父线接驳
+  - 将 JR八高线从高丽川延伸至寄居（新增毛吕、越生、东毛吕、武州唐泽、川角、西大家、寄居，共16站）
+  - 将西武秩父线修正为官方6站（以吾野为起点，补全西吾野、横濑）；将狭山线的“上山口”（1954年废止站）修正为“下山口”；统一西武有乐町线官方站序（以小竹向原为起点）
+  - 将京成立石从京成本线移至京成押上线（官方KS49，本线修正为42站、押上线为6站）；修正北总铁道的站序（秋山→东松户→松飞台）
+  - 将“京成本线支线”更名为正式名称“东成田线”
+  - 新增换乘站的步行接驳：京成八幡⇔本八幡（5分）、京成成田⇔成田（3分）、京成西船⇔西船桥（8分）、京成幕张本乡⇔幕张本乡（2分），消除大绕行路线
 
 ### 🤖 AI 智能建议
 

@@ -212,12 +212,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.54.0（2026-09-04）— コード監査に基づく不具合・データ不整合の修正（#119）
+### v2.55.0（2026-09-05）— 路線データの公式情報突合修正と秩父鉄道秩父本線の追加
 
-- `MULTILINGUAL_ADVICE.emergency` の改行エスケープ（`\\n` → `\n`）を修正し、緊急時安全情報が正しく改行表示されるように
-- `buildDisplayText` の文化施設徒歩表記を `walk_min ?? walk_minutes` 参照に修正し、ja/en/zh の言語別表記（徒歩約◯分 / approx. N min walk / 步行约N分钟）に対応
-- `LANDMARK_DEFS` のデッド参照を解消（筑波実験植物園→`つくば`、東京競馬場→`府中本町`）し、ルート検索が `STATION_NOT_FOUND` にならないように
-- `search_flight` の成田空港第2・第3ターミナル到着時のアクセス駅を「空港第2ビル」に修正
-- `get_running_status` に日本語・英語の事業者名エイリアス（JR東日本/JR East/東京メトロ/京急/相鉄等）を追加し、正式キーへ正規化
-- `extractRailwayHint` の正規表現リテラルの二重バックスラッシュを修正
-- モノリス分割後の `RAILWAY_LINES` 参照を `src/data/railway-lines.mjs` に更新（`check-station-reality.mjs`・`check-station-wikipedia.mjs`・`dump-railway-lines.mjs`）
+- 秩父鉄道秩父本線（羽生〜三峰口・CR01〜CR37・37駅）を `RAILWAY_LINES` に新規追加（Wikipedia駅一覧と突合）。乗換は `WALK_TRANSFERS` の西武秩父⇔御花畑（徒歩5分）で西武秩父線と接続。`LINE_DISPLAY_NAMES` / `STATION_DISPLAY_NAMES` / 英字エイリアス / 座標34駅を追加
+- JR八高線を高麗川から寄居まで延長（毛呂を新規登録し越生〜西大家〜寄居の既存駅を再利用・計16駅）。寄居で秩父鉄道・東武東上線、越生で東武越生線と接続
+- 西武秩父線を公式6駅に修正（飯能起点→吾野起点・西吾野・横瀬を補完）。西武狭山線の「上山口」は1954年廃止駅のため「下山口」に修正。西武有楽町線を公式駅順（小竹向原起点）に統一
+- 京成立石を京成本線から京成押上線へ移動（公式KS49・Wikipedia駅一覧で確定）。北総鉄道の駅順（秋山→東松戸→松飛台）を公式HSナンバリング順に修正。「京成本線支線」を正式名「東成田線」に改名（LINE_DISPLAY_NAMES・RAILWAY_NAME_MAP・README同期）
+- 乗換駅の徒歩連絡を4組追加（京成八幡⇔本八幡 5分・京成成田⇔成田 3分・京成西船⇔西船橋 8分・京成幕張本郷⇔幕張本郷 2分）し、大回り経路（2乗換20〜35分）を0乗換に解消
+- 🔴 落とし穴: 路線データ行末に `//` コメントを書くと配列の続きがコメントアウトされる（京成本線・北総鉄道で構文エラー発生）。路線配列の行末コメントは禁止し、コメントは行頭または別行に置く
+- 検証: `scripts/test-chichibu-railway.mjs`（37駅+接続+孤立0）・`scripts/test-seibu-lines.mjs`（秩父6駅/狭山3駅/有楽町3駅）・`scripts/test-hachiko-extension.mjs`（八高線16駅）・`scripts/test-keisei-lines.mjs`（本線42/押上6/北総15+乗換4組）を新設し全PASS。既存回帰・`check-railway-integrity`・`probe-all-lang` 29/29・ユニット5本 すべて成功。計125路線・1,468駅
