@@ -11,6 +11,7 @@ import { STATION_NAME_EXTRA_LINES } from './station-names-extra-lines.mjs';
 import { STATION_NAME_EXPANSION_237 } from './station-names-expansion237.mjs';
 import { STATION_NAME_YOKOHAMA_CHIBA } from './station-names-yokohama-chiba.mjs';
 import { STATION_NAME_DISNEY } from './station-names-disney.mjs';
+import { BUS_STATION_DISPLAY_NAMES } from './bus-station-display-names.mjs';
 
 export const STATION_NAME_MAP = {
   ...STATION_NAME_CORE,
@@ -338,6 +339,7 @@ export const RAILWAY_NAME_MAP = {
 };
 
 export const STATION_DISPLAY_NAMES = {
+  ...BUS_STATION_DISPLAY_NAMES,
   '東京': { en: 'Tokyo', zh: '东京' },
   '新宿': { en: 'Shinjuku', zh: '新宿' },
   '渋谷': { en: 'Shibuya', zh: '涩谷' },

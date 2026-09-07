@@ -10,8 +10,21 @@ import { WEATHER_TERM_MAP, TRAIN_INFO_TERM_MAP } from '../data/misc.mjs';
 export function getDisplayStationName(stationName, userLang) {
   if (!stationName) return '';
   if (userLang === 'ja') return stationName;
+  // A → B 形式の系統・区間表記を分割して翻訳
+  if (stationName.includes(' → ') || stationName.includes(' -> ')) {
+    const sep = stationName.includes(' → ') ? ' → ' : ' -> ';
+    return stationName.split(sep).map(s => getDisplayStationName(s.trim(), userLang)).join(sep);
+  }
   const trans = STATION_DISPLAY_NAMES[stationName];
   if (trans && trans[userLang]) return trans[userLang];
+  // 駅前フォールバック（例: 浅草駅前 → Asakusa Station / 浅草站前）
+  if (stationName.endsWith('駅前')) {
+    const base = stationName.slice(0, -2);
+    const baseTrans = STATION_DISPLAY_NAMES[base];
+    if (baseTrans && baseTrans[userLang]) {
+      return userLang === 'en' ? `${baseTrans.en} Station` : `${baseTrans.zh}站前`;
+    }
+  }
   return stationName;
 }
 

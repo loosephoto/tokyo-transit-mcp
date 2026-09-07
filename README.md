@@ -33,14 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **千葉・埼玉の路線データを公式情報（千葉都市モノレール・京成電鉄・埼玉新都市交通・Wikipedia）と突合して修正（v2.56.0）**
-  - 千葉都市モノレールを公式2路線に分離（1号線: 千葉みなと⇔県庁前 6駅 / 2号線: 千葉⇔千城台 13駅）。千葉駅が両線の乗換駅に
-  - 「新京成線」を2025年4月の京成電鉄吸収合併に伴う正式名「京成松戸線」に改称。終点を「津田沼」の誤りから「京成津田沼」（本線・千葉線と接続）に修正し公式24駅の駅順に統一
-  - JR津田沼⇔新津田沼（徒歩3分）の乗換連絡を追加
-  - JR八高線の越生〜寄居間を公式駅順に修正（東武越生線の駅・東毛呂/武州唐沢/川角/西大家を除去し、明覚・小川町・竹沢・折原を追加）
-  - 埼玉新都市交通「鉄道博物館（大成）」を正式名「鉄道博物館」に改称（大成・鉄道博物館（大成）は検索エイリアスとして維持）
-  - 埼玉県小川町駅（JR八高線⇔東武東上線・徒歩3分）の乗換連絡を追加し、曖昧駅候補を3件に更新
-  - テスト修正: #16 永田町→国会議事堂前は東京メトロ公式乗換駅（徒歩連絡0乗換）のため期待値を更新
+- **バス停標柱時刻表（stop_timetable）の多言語化と都営バス等218停留所・行先辞書の追加（v2.57.0）**
+  - `search_bus(busstop)` で返却される標柱別時刻表（`stop_timetable.entries`）の `stop` および `direction` を多言語化（`getDisplayStationName` を通すよう配線）
+  - 都営バス等で頻出する218語の停留所・行先名（とうきょうスカイツリー駅前、深川車庫前、豊洲駅前等）を英中辞書（`src/data/bus-station-display-names.mjs`）として新設し統合
+  - `getDisplayStationName` を強化し、「深川車庫前 → 新橋」等の区間表記（`A → B`）の分割翻訳、および `〜駅前` 接尾辞の動的翻訳フォールバックを実装
+  - 内部合成ID（`Toei:stop-fallback` 等）が `bus_routes.route` に露出していた問題を解消
+  - 全言語回帰テスト（`probe-all-lang`）29ケース全件 PASS（29/29）を確認
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -647,14 +645,12 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Cross-checked and fixed Chiba & Saitama railway data against official sources (Chiba Urban Monorail, Keisei Electric Railway, Saitama New Urban Transit, Wikipedia) (v2.56.0)**
-  - Split the Chiba Urban Monorail into its two official lines (Line 1: Chiba-Minato - Kenchomae, 6 stns / Line 2: Chiba - Chishirodai, 13 stns); Chiba Stn is now the transfer between them
-  - Renamed "Shin-Keisei Line" to its official name "Keisei Matsudo Line" (following the April 2025 absorption into Keisei Electric Railway); fixed the terminal from the erroneous "Tsudanuma" (JR) to "Keisei-Tsudanuma" (connecting Main & Chiba Lines) with the official 24-station order
-  - Added the JR Tsudanuma ⇔ Shin-Tsudanuma (3 min) walking transfer
-  - Fixed the JR Hachiko Line Ogose-Yorii section to the official station order (removed Tobu Ogose Line stations Higashi-Moro/Bushu-Karasawa/Kawakado/Nishi-Oya; added Myogaku, Ogawamachi, Takezawa, Orihara)
-  - Renamed Saitama New Urban Transit "Tetsudo-Hakubutsukan (Taisho)" to its official name "Tetsudo-Hakubutsukan" (Taisho kept as a search alias)
-  - Added the Ogawamachi Stn transfer (JR Hachiko Line ⇔ Tobu Tojo Line, 3 min walk) and updated the ambiguous-station candidates to 3
-  - Test fix: #16 Nagatacho → Kokkai-gijidomae is an official Tokyo Metro transfer pair (0-transfer walk), so the expected value was updated
+- **Multilingual Support for Bus Pole Timetables (stop_timetable) & Added 218 Bus Stop / Destination Dictionaries (v2.57.0)**
+  - Localized `stop` and `direction` in `stop_timetable.entries` returned by `search_bus(busstop)` via `getDisplayStationName`
+  - Created and integrated `src/data/bus-station-display-names.mjs` containing 218 frequently used bus stop and destination names (Tokyo Skytree Station, Fukagawa Shako-mae, Toyosu Station, etc.) in English and Chinese
+  - Enhanced `getDisplayStationName` to split and translate route segment strings (`A → B`) and provide dynamic fallback for `-ekimae` (Station) suffixes
+  - Cleaned up internal synthetic fallback IDs (such as `Toei:stop-fallback`) from `bus_routes.route`
+  - Verified 100% pass rate across all 29 cases in multilingual probe tests (`probe-all-lang`)
 ### 🤖 AI Intelligent Advice
 
 Generates concrete, useful advice for your trip based on weather and operational status.
@@ -1216,14 +1212,12 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **将千叶・埼玉的线路数据与官方信息（千叶都市单轨电车、京成电铁、埼玉新都市交通、Wikipedia）比对修正（v2.56.0）**
-  - 将千叶都市单轨电车分为官方2条线路（1号线：千叶港⇔县厅前 6站 / 2号线：千叶⇔千城台 13站），千叶站成为两线换乘站
-  - 将“新京成线”更名为2025年4月京成电铁吸收合并后的正式名称“京成松户线”，修正终点站（“津田沼”误→“京成津田沼”，与京成本线・千叶线接驳）并统一为官方24站站序
-  - 新增 JR津田沼⇔新津田沼（步行3分钟）换乘接驳
-  - 修正 JR八高线越生〜寄居间为官方站序（移除东武越生线的车站・东毛吕/武州唐泽/川角/西大家，新增明觉・小川町・竹泽・折原）
-  - 将埼玉新都市交通“铁道博物馆（大成）”更名为正式名称“铁道博物馆”（大成・铁道博物馆（大成）保留为搜索别名）
-  - 新增埼玉县小川町站（JR八高线⇔东武东上线・步行3分钟）换乘接驳，并将模糊站候选更新为3个
-  - 测试修正：#16 永田町→国会议事堂前为东京地铁官方换乘站（步行接驳0次换乘），已更新期望值
+- **公交站牌时刻表（stop_timetable）多语言化并新增东京都营公交等218个站点与目的地词典（v2.57.0）**
+  - 将 `search_bus(busstop)` 返回的站牌时刻表（`stop_timetable.entries`）中的 `stop` 与 `direction` 接入 `getDisplayStationName` 实现多语言化
+  - 新建并整合 `src/data/bus-station-display-names.mjs`，包含东京晴空塔站前、深川车库前、丰洲站前等218个高频公交站与目的地的日英中词典
+  - 增强 `getDisplayStationName`，支持区间表达（`A → B`）分段翻译以及“站前（-ekimae）”后缀的动态回退翻译
+  - 移除 `bus_routes.route` 中暴露的内部合成ID（如 `Toei:stop-fallback` 等）
+  - 经实测验证，全语言回归测试（`probe-all-lang`）29项用例全部通过（29/29）
 ### 🤖 AI 智能建议
 
 根据天气与运行状况，自动生成具体实用的出行建议。

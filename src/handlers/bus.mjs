@@ -1266,7 +1266,7 @@ export async function searchBus(args) {
         total: buses.length,
         operators: operatorSumm,
         bus_routes: buses.slice(0, 20).map(b => ({
-            note: getDisplayStationName(b['odpt:note'] || b._displayNote, userLang), route: b['odpt:busroute'], number: b['odpt:busNumber'],
+            note: getDisplayStationName(b['odpt:note'] || b._displayNote, userLang), route: (b['odpt:busroute'] && !b['odpt:busroute'].includes('stop-fallback') && !b._busstopFallback) ? b['odpt:busroute'] : undefined, number: b['odpt:busNumber'],
           operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label,
           website: b._communityBusUrl || b._operatorLabel.website || undefined,
           community_bus: b._communityBus ? true : undefined,
@@ -1431,7 +1431,10 @@ export async function searchBus(args) {
               : userLang === 'zh' ? '各公交站牌时刻表（odpt:BusstopPoleTimetable）'
               : 'バス停(標柱)別の時刻表（odpt:BusstopPoleTimetable）',
             entries: filtered.slice(0, 15).map((e) => ({
-              stop: e.stop, direction: e.direction, route: e.route, operator: poleOpLabel(e.operator),
+              stop: getDisplayStationName(e.stop, userLang),
+              direction: getDisplayStationName(e.direction, userLang),
+              route: e.route && !e.route.includes('stop-fallback') ? e.route : undefined,
+              operator: poleOpLabel(e.operator),
               departures: e.departures.slice(0, 12),
               non_step_bus: e.non_step_known ? e.non_step : undefined
             }))
@@ -1451,7 +1454,7 @@ export async function searchBus(args) {
       gov_facility_search_support: buildGovFacilitySearchSupport(null, userLang, getDisplayStationName(resolvedBusstop || busstopName, userLang)),
       operators: operatorSumm,
       bus_routes: matched.slice(0, 20).map(b => ({
-        note: getDisplayStationName(b['odpt:note'] || b._displayNote, userLang), route: b['odpt:busroute'], number: b['odpt:busNumber'],
+        note: getDisplayStationName(b['odpt:note'] || b._displayNote, userLang), route: (b['odpt:busroute'] && !b['odpt:busroute'].includes('stop-fallback') && !b._busstopFallback) ? b['odpt:busroute'] : undefined, number: b['odpt:busNumber'],
         frequency: b['odpt:frequency'],
         operator: userLang === 'en' ? b._operatorLabel.labelEn : userLang === 'zh' ? b._operatorLabel.labelZh : b._operatorLabel.label,
         website: b._communityBusUrl || b._operatorLabel.website || undefined,
