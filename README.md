@@ -1146,7 +1146,7 @@ tokyo-transit-mcp/
 ├── package-lock.json
 ├── README.md
 ├── CLAUDE.md            # Claude Code project guide
-├── SKILL.md             # Project skill definition (v2.48.0)
+├── SKILL.md             # Project skill definition (v2.57.0)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
