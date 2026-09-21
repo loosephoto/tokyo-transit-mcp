@@ -21,7 +21,10 @@ const { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStation
   listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, searchFlight, getRunningStatus } =
   await import('../src/index.mjs');
 
-const KANA = /[\u3040-\u30ff]/;
+// ※ U+30FB（・ 中黒 / KATAKANA MIDDLE DOT）は「かな」ではなく区切り記号。
+//   zh 応答でも「相铁・JR直通线」のように区切りとして現れるため、
+//   かな判定から除外する（除外しないと internal_graph_fallback 経路で誤検知する）。
+const KANA = /[\u3040-\u30fa\u30fc-\u30ff]/;
 const KANJI = /[\u4e00-\u9fff]/;
 
 function findLangMismatch(obj, lang, path = '', out = []) {
