@@ -212,11 +212,10 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
-### v2.57.0（2026-09-07）— バス停標柱時刻表（stop_timetable）の多言語化と都営バス等218停留所・行先辞書の追加
+### v2.57.1（2026-10-03）— 新橋周辺バス標柱時刻表の英中表示漏れ修正と安全監査テスト改善
 
-- `search_bus(busstop)` で返却される標柱別時刻表（`stop_timetable.entries`）の `stop` および `direction` を多言語化。`src/handlers/bus.mjs` で `getDisplayStationName(..., userLang)` を通すよう配線し、英語・中国語応答時に日本語が残存する不具合を解消
-- 都営バス等のODPT標柱時刻表データで出現する218語の停留所・行先名（とうきょうスカイツリー駅前、深川車庫前、豊洲駅前、東京国際フォーラム前等）を英中辞書（`src/data/bus-station-display-names.mjs`）として新設し、`STATION_DISPLAY_NAMES` に統合
-- `getDisplayStationName` を強化し、「深川車庫前 → 新橋」などの区間・系統表記（`A → B`）の分割翻訳、および `〜駅前` 接尾辞の動的翻訳フォールバック（例: 浅草駅前 → Asakusa Station / 浅草站前）を実装
-- 内部合成ID（`Toei:stop-fallback` 等）が `bus_routes.route` に露出していた問題を解消
-- 🔴 落とし穴: バス停や標柱時刻表のデータは、路線図（駅）とは異なり「○○前」「○○車庫」等の施設・交差点名が多く含まれる。これらが `STATION_DISPLAY_NAMES` に未登録だと英語・中国語応答で日本語がフォールバックして多言語テストが FAIL する。バス専用の辞書ファイル（`bus-station-display-names.mjs`）に分離して保守性を高める
-- 検証: `npm test`（ユニット5本 + probe-all-lang 29/29 PASS）、`npm run test:walk`（ALL PASS）すべて成功
+- `search_bus(busstop)` の `stop_timetable.entries` に含まれる「新橋五丁目」「新橋六丁目」「新橋駅北口」の英中表示名を追加し、日本語のまま残る不具合を修正
+- 上記3停留所について英中の決定的回帰テストを追加
+- `scripts/test-safety-audit.mjs` が MCP の `structuredContent` を優先して使うよう修正し、`content` にJSONテキストがない応答を空データと誤判定する問題を解消
+- 依存関係監査で検出された Axios / `ip-address` の既知脆弱性もsemver範囲内の更新で解消し、`npm audit` 0件を確認
+- 検証: `npm test`（29/29 PASS）、安全監査、徒歩連絡・路線整合性チェック PASS

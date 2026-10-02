@@ -11,7 +11,10 @@ function assert(condition, message) {
 function payload(response) {
   const texts = (response?.content || []).map(x => x.text || '');
   const json = texts.find(t => t.trim().startsWith('{')) || '{}';
-  return { data: JSON.parse(json), advice: texts.find(t => t.includes('AI')) || '' };
+  return {
+    data: response?.structuredContent || JSON.parse(json),
+    advice: texts.find(t => t.includes('AI')) || ''
+  };
 }
 
 // 降雪では避難所リンクや自転車代替を出さず、降雪専用の安全助言を返す。

@@ -33,12 +33,12 @@
 
 ### 🛤️ 直近の更新内容
 
-- **バス停標柱時刻表（stop_timetable）の多言語化と都営バス等218停留所・行先辞書の追加（v2.57.0）**
-  - `search_bus(busstop)` で返却される標柱別時刻表（`stop_timetable.entries`）の `stop` および `direction` を多言語化（`getDisplayStationName` を通すよう配線）
-  - 都営バス等で頻出する218語の停留所・行先名（とうきょうスカイツリー駅前、深川車庫前、豊洲駅前等）を英中辞書（`src/data/bus-station-display-names.mjs`）として新設し統合
-  - `getDisplayStationName` を強化し、「深川車庫前 → 新橋」等の区間表記（`A → B`）の分割翻訳、および `〜駅前` 接尾辞の動的翻訳フォールバックを実装
-  - 内部合成ID（`Toei:stop-fallback` 等）が `bus_routes.route` に露出していた問題を解消
-  - 全言語回帰テスト（`probe-all-lang`）29ケース全件 PASS（29/29）を確認
+- **新橋周辺のバス標柱時刻表の英中表示漏れ修正と安全監査テストの応答解析改善（v2.57.1）**
+  - `search_bus(busstop)` の `stop_timetable.entries` で日本語のまま残っていた「新橋五丁目」「新橋六丁目」「新橋駅北口」に英中表示名を追加
+  - 3停留所の英中表示を決定的回帰テストに追加
+  - 安全監査テストが MCP の `structuredContent` を参照せず空の JSON と誤判定していた問題を修正
+  - 依存関係の監査で判明した Axios と `ip-address` の脆弱性を修正し、`npm audit` は0件
+  - `npm test`（29/29）、安全監査、徒歩連絡・路線整合性チェックを確認
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -597,7 +597,7 @@ tokyo-transit-mcp/
 
 - MCP ツールの `annotations`（`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`）の不足は [Issue #103](https://github.com/loosephoto/tokyo-transit-mcp/issues/103) で追跡しています。
 - 依存関係のOSV監査、MIT `LICENSE`、MCPツールの自動テスト整備は [Issue #109](https://github.com/loosephoto/tokyo-transit-mcp/issues/109) で追跡しています。
-- 現行依存関係は SDK `1.30.0`、Axios `1.19.0`。ローカル `npm audit` では high / critical ともに0件ですが、OSVによる再監査を別途実施します。
+- 現行依存関係は SDK `1.30.0`、Axios `1.20.0`。`npm audit` は脆弱性0件ですが、OSVによる再監査は別途必要です。
 
 ## ⚠️ ライセンス
 
@@ -645,12 +645,13 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 🛤️ Latest Updates
 
-- **Multilingual Support for Bus Pole Timetables (stop_timetable) & Added 218 Bus Stop / Destination Dictionaries (v2.57.0)**
-  - Localized `stop` and `direction` in `stop_timetable.entries` returned by `search_bus(busstop)` via `getDisplayStationName`
-  - Created and integrated `src/data/bus-station-display-names.mjs` containing 218 frequently used bus stop and destination names (Tokyo Skytree Station, Fukagawa Shako-mae, Toyosu Station, etc.) in English and Chinese
-  - Enhanced `getDisplayStationName` to split and translate route segment strings (`A → B`) and provide dynamic fallback for `-ekimae` (Station) suffixes
-  - Cleaned up internal synthetic fallback IDs (such as `Toei:stop-fallback`) from `bus_routes.route`
-  - Verified 100% pass rate across all 29 cases in multilingual probe tests (`probe-all-lang`)
+- **Fix Shimbashi Bus-Pole Timetable Localization Gaps and MCP Safety-Test Parsing (v2.57.1)**
+  - Added English and Chinese names for `Shimbashi 5-chome`, `Shimbashi 6-chome`, and `Shimbashi Station North Exit`, which were previously returned in Japanese in `stop_timetable.entries`
+  - Added deterministic regression coverage for all three stops in English and Chinese
+  - Fixed the safety audit test to read MCP `structuredContent` instead of incorrectly treating the payload as empty JSON
+  - Updated vulnerable Axios and `ip-address` dependency versions; `npm audit` reports 0 vulnerabilities
+  - Verified `npm test` (29/29), safety audit, walk-transfer, and railway-integrity checks
+
 ### 🤖 AI Intelligent Advice
 
 Generates concrete, useful advice for your trip based on weather and operational status.
@@ -1146,7 +1147,7 @@ tokyo-transit-mcp/
 ├── package-lock.json
 ├── README.md
 ├── CLAUDE.md            # Claude Code project guide
-├── SKILL.md             # Project skill definition (v2.57.0)
+├── SKILL.md             # Project skill definition (v2.57.1)
 ├── mcp.json             # MCP client configuration example
 ├── .env.example         # Environment variables sample
 └── .env                 # API Keys
@@ -1164,7 +1165,7 @@ Please report bugs and feature requests through the [GitHub Issues tracker](http
 
 - Missing MCP tool `annotations` (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`) is tracked in [Issue #103](https://github.com/loosephoto/tokyo-transit-mcp/issues/103).
 - OSV dependency auditing, the MIT `LICENSE`, and automated MCP tool tests are tracked in [Issue #109](https://github.com/loosephoto/tokyo-transit-mcp/issues/109).
-- Current dependencies are SDK `1.30.0` and Axios `1.19.0`. Local `npm audit` reports zero high and critical vulnerabilities; an OSV rescan remains required.
+- Current dependencies are SDK `1.30.0` and Axios `1.20.0`. `npm audit` reports zero vulnerabilities; an OSV rescan remains required.
 
 ## ⚠️ License
 
@@ -1212,12 +1213,13 @@ MIT License
 
 ### 🛤️ 最近更新
 
-- **公交站牌时刻表（stop_timetable）多语言化并新增东京都营公交等218个站点与目的地词典（v2.57.0）**
-  - 将 `search_bus(busstop)` 返回的站牌时刻表（`stop_timetable.entries`）中的 `stop` 与 `direction` 接入 `getDisplayStationName` 实现多语言化
-  - 新建并整合 `src/data/bus-station-display-names.mjs`，包含东京晴空塔站前、深川车库前、丰洲站前等218个高频公交站与目的地的日英中词典
-  - 增强 `getDisplayStationName`，支持区间表达（`A → B`）分段翻译以及“站前（-ekimae）”后缀的动态回退翻译
-  - 移除 `bus_routes.route` 中暴露的内部合成ID（如 `Toei:stop-fallback` 等）
-  - 经实测验证，全语言回归测试（`probe-all-lang`）29项用例全部通过（29/29）
+- **修复新桥周边公交站牌时刻表的英中显示遗漏，并改进安全审计测试的响应解析（v2.57.1）**
+  - 为 `search_bus(busstop)` 的 `stop_timetable.entries` 补充「新桥五丁目」「新桥六丁目」「新桥站北口」的英中显示名，避免只返回日文
+  - 为上述3个站点新增英中确定性回归测试
+  - 修复安全审计测试未读取 MCP `structuredContent`、将有效响应误判为空 JSON 的问题
+  - 更新存在漏洞的 Axios 与 `ip-address` 依赖版本；`npm audit` 当前报告0项漏洞
+  - 已验证 `npm test`（29/29）、安全审计、步行换乘和铁路数据一致性检查
+
 ### 🤖 AI 智能建议
 
 根据天气与运行状况，自动生成具体实用的出行建议。
@@ -1730,7 +1732,7 @@ tokyo-transit-mcp/
 
 - MCP 工具 `annotations`（`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`）缺失问题见 [Issue #103](https://github.com/loosephoto/tokyo-transit-mcp/issues/103)。
 - OSV 依赖审计、MIT `LICENSE` 以及 MCP 工具自动化测试见 [Issue #109](https://github.com/loosephoto/tokyo-transit-mcp/issues/109)。
-- 当前依赖版本为 SDK `1.30.0`、Axios `1.19.0`。本地 `npm audit` 的 high / critical 均为0，但仍需单独执行 OSV 复审。
+- 当前依赖版本为 SDK `1.30.0`、Axios `1.20.0`。`npm audit` 报告0项漏洞，但仍需单独进行 OSV 复审。
 
 ## ⚠️ 许可证
 

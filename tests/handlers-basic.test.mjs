@@ -4,6 +4,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { server, searchRoute, resolveStation, detectLanguage } from '../src/index.mjs';
+import { getDisplayStationName } from '../src/lib/lang.mjs';
 
 let failures = 0;
 const fail = (msg) => { failures++; console.error(`  ✗ ${msg}`); };
@@ -21,6 +22,18 @@ for (const [input, expected] of langCases) {
   const got = detectLanguage(input);
   if (got === expected) ok(`detectLanguage('${input}') = '${got}'`);
   else fail(`detectLanguage('${input}') = '${got}', expected '${expected}'`);
+}
+
+// バス停・標柱名の英中表示（辞書ヒット）
+console.log('-- バス停表示名 --');
+for (const [name, lang, expected] of [
+  ['新橋五丁目', 'en', 'Shimbashi 5-chome'], ['新橋五丁目', 'zh', '新桥五丁目'],
+  ['新橋六丁目', 'en', 'Shimbashi 6-chome'], ['新橋六丁目', 'zh', '新桥六丁目'],
+  ['新橋駅北口', 'en', 'Shimbashi Station North Exit'], ['新橋駅北口', 'zh', '新桥站北口'],
+]) {
+  const got = getDisplayStationName(name, lang);
+  if (got === expected) ok(`getDisplayStationName('${name}', '${lang}') = '${got}'`);
+  else fail(`getDisplayStationName('${name}', '${lang}') = '${got}', expected '${expected}'`);
 }
 
 // 駅解決（resolveStation）
