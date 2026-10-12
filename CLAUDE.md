@@ -88,6 +88,18 @@ node scripts/check-railway-integrity.mjs
 
 ---
 
+## リリース手順
+
+1. `package.json` の `version` を上げ、README の総数表記（計N路線・M駅）と `SKILL.md` の記述を実装と一致させる
+2. 検証（`.claude/rules/testing.md`）を通す
+3. コミット（`fix: vX.Y.Z — 日本語の要約`）→ `git push origin main` → `vX.Y.Z` タグを打つ
+4. **同じ本文で GitHub Release を作成**する — **変更点の一次置き場は Releases**（README には書かない。本文＝要約・変更点の箇条書き・検証行・`**Full Changelog**` リンク）
+5. `SKILL.md` の `## 更新履歴` は **LLM 向けの要約として残す**（README 側は Releases へのリンクのみ）
+
+- `gh` が無い環境では GitHub API（`POST /repos/<owner>/<repo>/releases`）で作成する。トークンは `git credential fill`（`protocol=https` / `host=github.com`）から取る。
+
+---
+
 ## ライセンス・参考
 
 - MIT License

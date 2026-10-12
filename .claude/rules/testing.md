@@ -26,6 +26,7 @@ node scripts/test-issue-88-89-90.mjs
 - [ ] **ランドマーク追加** → ja/en/zh 別名を付与。`search_route` 経由で最寄り駅が引けるか確認
 - [ ] **事業者・路線を追加** → `misc.mjs` の事業者マップ、README の総数表記（計N路線・M駅）を3言語で更新
 - [ ] **MCPクライアント設定を変更** → `mcp.json` / CLAUDE.md のツール一覧を実装と一致させる
+- [ ] **リリース** → `package.json` の version を上げ、`vX.Y.Z` タグと **GitHub Release を作成**（変更点は README ではなくリリース本文に書く。`SKILL.md` の `## 更新履歴` は LLM 向け要約として残す）
 
 ## 並行作業時の検証方針
 - **実API依存テスト（`test:bus`）は遅く flaky**。並行検証では決定的モック（`probe-bus-vehicle-mock`）を優先し、実APIプローブは最終確認で個別実行。

@@ -31,14 +31,9 @@
 | ✈️ フライト | 羽田(HND)・成田(NRT) の到着/出発フライト（AviationStack）。キー未設定時は空港アクセス経路のみ表示（graceful degradation） |
 | 🚲 シェアサイクル | ドコモ・バイクシェア + ハローサイクリング（GBFS API・2ネットワーク約16,500ポート） |
 
-### 🛤️ 直近の更新内容
+### 📝 更新履歴
 
-- **新橋周辺のバス標柱時刻表の英中表示漏れ修正と安全監査テストの応答解析改善（v2.57.1）**
-  - `search_bus(busstop)` の `stop_timetable.entries` で日本語のまま残っていた「新橋五丁目」「新橋六丁目」「新橋駅北口」に英中表示名を追加
-  - 3停留所の英中表示を決定的回帰テストに追加
-  - 安全監査テストが MCP の `structuredContent` を参照せず空の JSON と誤判定していた問題を修正
-  - 依存関係の監査で判明した Axios と `ip-address` の脆弱性を修正し、`npm audit` は0件
-  - `npm test`（29/29）、安全監査、徒歩連絡・路線整合性チェックを確認
+各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.57.1](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.57.1)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -643,14 +638,9 @@ Beyond simple route search, this server integrates weather data and public trans
 | ✈️ Flights | Haneda (HND) / Narita (NRT) arrivals & departures (AviationStack). Without a key, airport access routes are shown only (graceful degradation) |
 | 🚲 Bike Sharing | Docomo Bike Share + HELLOCYCLING (GBFS API, 2 networks, ~16,500 ports) |
 
-### 🛤️ Latest Updates
+### 📝 Update History
 
-- **Fix Shimbashi Bus-Pole Timetable Localization Gaps and MCP Safety-Test Parsing (v2.57.1)**
-  - Added English and Chinese names for `Shimbashi 5-chome`, `Shimbashi 6-chome`, and `Shimbashi Station North Exit`, which were previously returned in Japanese in `stop_timetable.entries`
-  - Added deterministic regression coverage for all three stops in English and Chinese
-  - Fixed the safety audit test to read MCP `structuredContent` instead of incorrectly treating the payload as empty JSON
-  - Updated vulnerable Axios and `ip-address` dependency versions; `npm audit` reports 0 vulnerabilities
-  - Verified `npm test` (29/29), safety audit, walk-transfer, and railway-integrity checks
+Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.57.1](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.57.1)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
 
 ### 🤖 AI Intelligent Advice
 
@@ -1211,14 +1201,9 @@ MIT License
 | ✈️ 航班 | 羽田 (HND) / 成田 (NRT) 的到达/出发航班（AviationStack）。未配置密钥时仅显示机场接驳路线（优雅降级） |
 | 🚲 共享单车 | Docomo 共享单车 + HELLOCYCLING（GBFS API，双网络约16,500个站点） |
 
-### 🛤️ 最近更新
+### 📝 更新历史
 
-- **修复新桥周边公交站牌时刻表的英中显示遗漏，并改进安全审计测试的响应解析（v2.57.1）**
-  - 为 `search_bus(busstop)` 的 `stop_timetable.entries` 补充「新桥五丁目」「新桥六丁目」「新桥站北口」的英中显示名，避免只返回日文
-  - 为上述3个站点新增英中确定性回归测试
-  - 修复安全审计测试未读取 MCP `structuredContent`、将有效响应误判为空 JSON 的问题
-  - 更新存在漏洞的 Axios 与 `ip-address` 依赖版本；`npm audit` 当前报告0项漏洞
-  - 已验证 `npm test`（29/29）、安全审计、步行换乘和铁路数据一致性检查
+各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.57.1](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.57.1)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
 
 ### 🤖 AI 智能建议
 
