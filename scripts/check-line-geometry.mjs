@@ -717,7 +717,16 @@ function saveWikiCache(cache) {
   }
 }
 
-/** 駅名から Wikipedia 記事タイトル候補を作る */
+/**
+ * 駅名から Wikipedia 記事タイトル候補を作る。
+ *
+ * 括弧付き駅名（両国（大江戸線） 等）は「同一駅の別表記」か「別駅」を示すため、
+ * 駅名の基本形（両国駅）を第一候補にする。
+ * 同名駅が複数ある場合は「駅名 (都道府県)」形式の disambiguation に分割されるため、
+ *   ・基本形（両国駅）
+ *   ・(線名) 形式（両国駅 (都営大江戸線)）
+ * の順に試し、どれも無ければ検索 API で類似記事を探す。
+ */
 function wikiTitleCandidates(name) {
   const out = new Set();
   out.add(`${name}駅`);
@@ -725,9 +734,29 @@ function wikiTitleCandidates(name) {
   if (base !== name) {
     out.add(`${base}駅`);
     const suf = suffixOf(name);
-    if (suf) out.add(`${suf}（${base}駅）`);
+    if (suf) out.add(`${base}駅 (${suf})`);
   }
   return [...out];
+}
+
+/**
+ * Wikipedia 検索 API で「駅名 + 路線名」に近い記事タイトルを推測する。
+ * （同名駅の disambiguation は都道府県名を使うため、路線名だけでは当たらないことが多い）
+ */
+async function wikiSearchTitles(term) {
+  const url = 'https://ja.wikipedia.org/w/api.php?action=query&format=json&list=search&srnamespace=0&srlimit=8&srsearch='
+    + encodeURIComponent(term);
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': WIKI_UA, 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (res.status !== 200) return [];
+    const data = await res.json();
+    return (data?.query?.search ?? []).map((r) => r.title);
+  } catch (e) {
+    return [];
+  }
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -852,6 +881,38 @@ async function checkWikipedia(stationNames) {
     if (decided.has(p.cacheKey)) continue;
     const v = verdicts.get(p.title);
     if (v) decided.set(p.cacheKey, { title: p.title, status: v });
+  }
+
+  // どの候補も記事が無かった駅（＝要確認）は検索 API で再確認する。
+  // 括弧修飾（両国（大江戸線） 等）は Wikipedia の disambiguation タイトルと
+  // 一致しないため、線名込みで検索して実在記事を探す。
+  const unresolved = pending.filter((p) => !decided.has(p.cacheKey));
+  const searchTerms = new Map();
+  for (const p of unresolved) {
+    if (searchTerms.has(p.cacheKey)) continue;
+    const suf = suffixOf(p.name);
+    searchTerms.set(p.cacheKey, suf ? `${baseName(p.name)}駅 ${suf}` : `${baseName(p.name)}駅`);
+  }
+  const searchTitles = [];
+  for (const term of new Set(searchTerms.values())) {
+    const titles = await wikiSearchTitles(term);
+    for (const t of titles) searchTitles.push(t);
+    await sleep(WIKI_SLEEP_MS);
+  }
+  if (searchTitles.length) {
+    const sv = await wikiExistsBatch([...new Set(searchTitles)]);
+    // 検索語と一致する記事标题を該当駅に割り当てる
+    for (const [cacheKey, term] of searchTerms) {
+      if (decided.has(cacheKey)) continue;
+      const baseTerm = term.split(' ')[0];
+      for (const [title, status] of sv) {
+        if (status !== 'exists') continue;
+        if (title.startsWith(baseTerm)) {
+          decided.set(cacheKey, { title, status });
+          break;
+        }
+      }
+    }
   }
 
   for (const name of stationNames) {

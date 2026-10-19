@@ -18,7 +18,8 @@
     "dev": "node src/index.mjs",
     "test:tools": "node tests/tools-list.test.mjs && node tests/handlers-basic.test.mjs",
     "test:running-status": "node tests/running-status.test.mjs",
-    "test:language": "node scripts/probe-language-detection.mjs"
+    "test:language": "node scripts/probe-language-detection.mjs",
+    "audit:samename": "node scripts/audit-same-name-stations.mjs"
   },
   "keywords": [
     "mcp",
