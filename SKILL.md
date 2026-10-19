@@ -212,6 +212,26 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.4（2026-10-20）— 共通ロジック層とハンドラ層の実測不具合を修正
+
+共通ロジック層（12件）とハンドラ層（20件）のコード監査で実測確認した重大度の高い不具合を修正しました。
+
+**共通ロジック層**
+
+- [重大] `getDisplayLineName` の部分一致による無関係な路線への誤答（「東京」→"Tokyo Metro Ginza Line"、「JR」→"JR Yamanote Line"、「池袋」→"Seibu Ikebukuro Line"、「上野」→"JR Ueno-Tokyo Line"）→ 末尾一致に限定し、最も限定的な路線名を優先するよう修正
+- [重大] 台風予報（`weather="台風"`）で `isSevere=false` となり「晴れ」アドバイスへ分岐していた → 台風・雷・強風（予報文内）・大雨/霧などを荒天として検出
+- [重大] 英語・中国語駅名が全て東京都(130000)へフォールバックしていた（Shibuya/Yokohama/Chiba 等）→ `toJapaneseStationName` で逆引きし日本語駅名へ正規化してから解決
+- [重大] 4xx（400/404/422）が「ネットワーク障害(502)」に誤分類されていた → `INVALID_INPUT` / `NO_ROUTE` / `PARSE_ERROR` へ正しく分類
+- 気象庁 API 障害時に「晴れ」を返していた → 「情報を取得できない」ことを明示する `unavailable` メッセージを追加
+
+**ハンドラ層**
+
+- [重大] `normalizeFerryPortName('')` が空文字を実在港「横浜・大さん橋」に変換していた → 空文字の早期リターンを追加
+- [重大] 実GTFSの `route_short_name` が空文字で「航路名：」が空欄になっていた → `route_long_name` → 「出発港 → 到着港」の順でフォールバック
+- [重大] `list_community_buses` の en/zh で全41件が日本語のまま返されていた → バス名・自治体名を多言語化（自治体名の辞書 `src/data/municipality-names.mjs` を新規追加、辞書の表記揺れは `COMMUNITY_BUS_NAME_ALIASES` で吸収）
+
+**検証**: 回帰テスト `tests/common-logic-regression.test.mjs` を追加し `npm test` に組み込み（`npm test` 29/29 PASS、共通ロジック層回帰 44件全 PASS）
+
 ### v2.58.3（2026-10-20）— コード監査に基づく多言語判定・GTFS 404・路線駅列の修正
 
 3名のサブエージェントによる実測ベース監査（共通ロジック層12件・データ層20件・ハンドラ20件）で確認した問題のうち、重大度の高いものを修正しました。

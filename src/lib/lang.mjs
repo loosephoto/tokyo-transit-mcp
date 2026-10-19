@@ -28,6 +28,45 @@ export function getDisplayStationName(stationName, userLang) {
   return stationName;
 }
 
+// 🔴 v2.58.3: 英中表記 → 日本語駅名の逆引き。
+//   STATION_DISPLAY_NAMES は「日本語 → 英中」の前方辞書のみで、
+//   英語/中国語の駅名入力（"Yokohama" 等）を日本語駅名へ戻す手段が存在しなかった。
+//   JMA 予報区・自治体解決は日本語キーの辞書で動くため、
+//   英語入力が全て東京都(130000)へフォールバックしていた（実測）。
+//   → 逆引き辞書（英/中 → 日本語）を_CACHE に構築して解決する。
+const _reverseStationNameCache = new Map();
+function reverseStationName(stationName, lang) {
+  if (!stationName) return '';
+  const key = `${lang}::${stationName}`;
+  if (_reverseStationNameCache.has(key)) return _reverseStationNameCache.get(key);
+  let found = '';
+  for (const [ja, tr] of Object.entries(STATION_DISPLAY_NAMES)) {
+    if (tr[lang] === stationName) { found = ja; break; }
+  }
+  _reverseStationNameCache.set(key, found);
+  return found;
+}
+
+// 駅名を日本語へ正規化する（英語/中国語入力 → 日本語駅名。変換不能なら元のまま）
+export function toJapaneseStationName(stationName) {
+  if (!stationName) return '';
+  // 既に日本語（かな・漢字を含む）ならそのまま
+  if (/[぀-ヿ一-鿿]/.test(stationName)) return stationName;
+  const en = reverseStationName(stationName, 'en');
+  if (en) return en;
+  const zh = reverseStationName(stationName, 'zh');
+  if (zh) return zh;
+  // "Shibuya Sta." のような接尾辞付き表記も試す
+  const stripped = stationName.replace(/\s*(Sta\.?|Station|站|站前)$/i, '').trim();
+  if (stripped && stripped !== stationName) {
+    const en2 = reverseStationName(stripped, 'en');
+    if (en2) return en2;
+    const zh2 = reverseStationName(stripped, 'zh');
+    if (zh2) return zh2;
+  }
+  return stationName;
+}
+
 export function getLineDisplayName(lineName, userLang) {
   if (!lineName) return '';
   if (userLang === 'ja') return lineName;
@@ -40,10 +79,38 @@ export function getLineDisplayName(lineName, userLang) {
   return lineName;
 }
 
+// 🔴 v2.58.3: TOKYO_COMMUNITY_BUSES の実キーと辞書のキーの表記揺れを吸収する。
+//   実データは全角英字（"Ａバス" "Ｋバス" "ＭＭシャトル" "ＣｏＣｏバス" "Ｂーぐる" "新宿ＷＥバス（運行終了）"）や
+//   空白・補足表記（"すみまるくん　他" "せたがやくるりん　他" "まちっこ　他"）で、
+//   辞書は半角・基本名のみのため直接参照できなかった。
+//   → 正規化キーの対応表で辞書側キーへ引き当てる。
+const COMMUNITY_BUS_NAME_ALIASES = {
+  'Ａバス': 'Aバス',
+  'りんりん号': 'りんりんGO',
+  'Ｋバス': 'Kバス',
+  'ＣｏＣｏバス': 'CoCoバス',
+  '新宿ＷＥバス（運行終了）': '新宿WEバス',
+  'すみまるくん　他': 'すみまるくん',
+  'せたがやくるりん　他': 'せたがやくるりん',
+  'Ｂーぐる': 'Bーぐる',
+  'まちっこ　他': 'まちっこ',
+  'ＭＭシャトル': 'MMシャトル',
+};
+
 export function getCommunityBusDisplayName(busName, userLang) {
   if (!busName || userLang === 'ja') return busName;
-  const t = (COMMUNITY_BUS_NAME_MAP[userLang] || {})[busName];
-  return t || busName;
+  const map = COMMUNITY_BUS_NAME_MAP[userLang] || {};
+  const direct = map[busName];
+  if (direct) return direct;
+  const alias = COMMUNITY_BUS_NAME_ALIASES[busName];
+  if (alias && map[alias]) return map[alias];
+  // 全角英数字 → 半角 へ正規化してから再照合
+  const half = busName.replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  if (half !== busName && map[half]) return map[half];
+  // 補足表記（"　他" 等）を除去して再照合
+  const trimmed = busName.replace(/[　\s]*他$/, '').trim();
+  if (trimmed && trimmed !== busName && map[trimmed]) return map[trimmed];
+  return busName;
 }
 
 export function getCommunityBusStopDisplayName(stopName, userLang) {
@@ -86,11 +153,28 @@ export function getDisplayLineName(lineName, userLang) {
     }
   }
   // 3. 部分一致で解決（例: "丸ノ内線" → "東京メトロ丸ノ内線"）
+  //
+  // 🔴 v2.58.3: 部分一致の誤答を修正。
+  //   従来は `keyNorm.includes(norm) || norm.includes(keyNorm)` を無条件に試していたため、
+  //   「東京」→"Tokyo Metro Ginza Line"（銀座線が「東京」を含む）、
+  //   「JR」→"JR Yamanote Line"、"池袋」→"Seibu Ikebukuro Line"、
+  //   「上野」→"JR Ueno-Tokyo Line" のように無関係な路線へ誤答していた（実測）。
+  //   → 方向を一方向（短い検索語が長い路線名の接尾辞になる）に限定し、
+  //     さらに「路線名の末尾要素が検索語と一致する」ものだけを候補とする。
+  //     例: 「丸ノ内線」→「東京メトロ丸ノ内線」（末尾一致）はOK、
+  //         「東京」→「東京メトロ銀座線」（末尾不一致）はNG。
+  const candidates = [];
   for (const [key, t] of Object.entries(LINE_DISPLAY_NAMES)) {
     const keyNorm = key.replace(/[・\s]/g, '');
-    if (keyNorm.includes(norm) || norm.includes(keyNorm)) {
-      if (t[userLang]) return t[userLang];
+    // 検索語が路線名の一部である、かつ路線名の末尾で終わる
+    if (keyNorm.length > norm.length && keyNorm.endsWith(norm) && t[userLang]) {
+      candidates.push({ keyNorm, t: t[userLang] });
     }
+  }
+  if (candidates.length) {
+    // 最も短い（= 最も限定的な）路線名を優先
+    candidates.sort((a, b) => a.keyNorm.length - b.keyNorm.length);
+    return candidates[0].t;
   }
   return lineName;
 }

@@ -7,8 +7,9 @@ import { OPERATOR_MAP, NON_RAIL_OPERATORS } from '../data/misc.mjs';
 import { RAILWAY_NAME_MAP, ODPT_RAILWAY_NAME_MAP } from '../data/station-names.mjs';
 import { RAILWAY_LINES } from '../data/railway-lines.mjs';
 import { TOKYO_COMMUNITY_BUSES } from '../data/bus-routes.mjs';
+import { getMunicipalityDisplayName } from '../data/municipality-names.mjs';
 import { getParams, jsonResponse, buildErrorResponse, handleApiError, buildGovFacilitySearchSupport, isInternalError } from '../lib/common.mjs';
-import { resolveLang, detectLanguage, getDisplayStationName, getLineDisplayName, getDisplayLineName } from '../lib/lang.mjs';
+import { resolveLang, detectLanguage, getDisplayStationName, getLineDisplayName, getDisplayLineName, getCommunityBusDisplayName } from '../lib/lang.mjs';
 import { normalizeStationName, resolveStation, getStationRomanToJa, getDestinationCulturalFacilities, STATION_TO_LINES } from './search-route.mjs';
 import { parseTestMode, buildTestAdvice, getTransitAdvice, detectFailureType } from '../advice/transit-advice.mjs';
 import { isEarthquakeSimulation, buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
@@ -138,7 +139,15 @@ export async function listCommunityBuses(args) {
           userLang === 'zh' ? "东京都23区及多摩地区的41条社区公交（来源：东京巴士协会 tokyobus.or.jp）。时刻表与路线请参见各自治体官网。" :
           "東京都23区・多摩地域の41コミュニティバス（出典: 東京バス協会 tokyobus.or.jp）。時刻表・路線は各自治体公式サイトでご確認ください。",
     total: sorted.length,
-    community_buses: sorted.map(b => ({ municipality: b.municipality, name: b.name, url: b.url })),
+    // 🔴 v2.58.3: バス名と自治体名を多言語化する。
+    //   従来は name / municipality が常に日本語のまま返され、
+    //   en / zh の利用者に全41件が日本語で応答されていた（実測）。
+    //   COMMUNITY_BUS_NAME_MAP（バス名）と MUNICIPALITY_DISPLAY_NAMES（自治体名）を使う。
+    community_buses: sorted.map(b => ({
+      municipality: getMunicipalityDisplayName(b.municipality, userLang),
+      name: getCommunityBusDisplayName(b.name, userLang),
+      url: b.url
+    })),
     source: "https://www.tokyobus.or.jp/sp/"
   });
 }

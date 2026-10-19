@@ -130,6 +130,13 @@ export async function getTransitAdvice(testAdv, userLang) {
   try {
     const weatherAdvice = await getWeatherAdvice(userLang);
     if (weatherAdvice?.advice) return weatherAdvice.advice;
-  } catch (_) { /* 下記の既定アドバイスへフォールバック */ }
+  } catch (_) {
+    // 🔴 v2.58.3: API 障害時に「晴れ」 (''fair'') を返していたバグを修正。
+    //   従来は catch で握り潰して MULTILINGUAL_ADVICE.fair（晴れ）へフォールバックしていたため、
+    //   API 障害＝晴れ という誤報が発生していた（実測）。
+    //   → 取得不能であることを明示する専用メッセージへ切り替える。
+    const unavailable = MULTILINGUAL_ADVICE.unavailable || MULTILINGUAL_ADVICE.fair;
+    return (unavailable[userLang] || unavailable.ja);
+  }
   return MULTILINGUAL_ADVICE.fair[userLang] || MULTILINGUAL_ADVICE.fair.ja;
 }

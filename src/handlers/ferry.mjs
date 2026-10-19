@@ -135,7 +135,12 @@ export async function fetchFerryData() {
 }
 
 export function normalizeFerryPortName(name) {
-  const trimmed = name.trim();
+  const trimmed = (name || '').trim();
+  // 🔴 v2.58.3: 空文字入力の早期リターンを追加。
+  //   従来は空文字が部分一致フェーズへ入り、`k.includes('')` が全キーで真となるため
+  //   最長キー「横浜・大さん橋」が選ばれ、空の from_port が
+  //   「港が見つかりません」ではなく実在の港として扱われていた（実測）。
+  if (!trimmed) return '';
   if (FERRY_PORT_MAP[trimmed]) return FERRY_PORT_MAP[trimmed];
   // 中黒・スペース・括弧・suffix（桟橋/ピア/码头/港）を除去した正規化形でも試す
   const norm = trimmed.replace(/[・\s()（）]/g, '').replace(/(桟橋|ピア|码头|港|ターミナル)$/g, '');
@@ -539,8 +544,15 @@ export async function searchFerry(args) {
       ...entry,
       route: {
         ...entry.route,
-        route_short_name: userLang === 'ja' ? entry.route.route_short_name : `${displayFrom} → ${displayTo}`,
-        route_long_name: userLang === 'ja' ? entry.route.route_long_name : `${displayFrom} – ${displayTo}`,
+        // 🔴 v2.58.3: 実GTFSの route_short_name は空文字のことがあり（東海汽船）。
+        //   そのまま出力すると日本語利用者に「航路名：」が空欄の行が返っていた（実測）。
+        //   → route_long_name → 「 출발港 → 到着港」の順でフォールバックする。
+        route_short_name: userLang === 'ja'
+          ? (entry.route.route_short_name || entry.route.route_long_name || `${displayFrom} → ${displayTo}`)
+          : `${displayFrom} → ${displayTo}`,
+        route_long_name: userLang === 'ja'
+          ? (entry.route.route_long_name || entry.route.route_short_name || `${displayFrom} – ${displayTo}`)
+          : `${displayFrom} – ${displayTo}`,
         _source: sourceLabel(entry.route._source || '')
       },
       trips: (entry.trips || []).map(t => ({

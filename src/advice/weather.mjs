@@ -7,7 +7,7 @@ import { MULTILINGUAL_ADVICE, JMA_AREA_MAP, JMA_AREA_LABELS, PLACE_MUNICIPALITY,
 import { STATION_COORDS } from '../data/railway-lines.mjs';
 import { STATION_COORDS_EXTRA } from '../data/station-coords-extra.mjs';
 import { PREFECTURE_BOUNDS } from '../data/prefecture-bounds.mjs';
-import { resolveLang, detectLanguage, translateWeather } from '../lib/lang.mjs';
+import { resolveLang, detectLanguage, translateWeather, toJapaneseStationName } from '../lib/lang.mjs';
 import { jsonResponse, buildErrorResponse } from '../lib/common.mjs';
 import axios from 'axios';
 
@@ -135,6 +135,11 @@ export function pickMaxTemp(timeSeries, subAreaCode = null) {
 export function parseSevereWeather(weatherText = '', windText = '', waveText = '', overviewText = '') {
   // #93: 強風検出表現を拡張（「風が強く」「強い風」「強風」等）。JMA 予報文で風が強まる表現を捕捉する。
   const isSevereWind = /非常に強く|猛烈|風が強く|強い風|強風|非常に強い/.test(windText || '');
+  // 🔴 v2.58.3: 強風は風情報（windText）だけでなく予報文（weatherText）にも現れる。
+  //   JMA の都區予報では「雷を伴い激しく降る」「和一些の雨 accompanies 強い風」のように
+  //   風情報が空欄でも予報文本体に強風の記述がある。windText だけを見ていたため、
+  //   予報文に「強風」「非常に強い風」が含まれる場合でも isSevereWind=false になっていた。
+  const isSevereWindInText = /強風|非常に強い風|猛烈な風|暴風/.test(weatherText || '');
   // 🔴 JMA の waves は全角数字（「２．５メートル」）のため、半角化してから波高をパースする
   const waveNorm = (waveText || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/．/g, '.');
   const m = waveNorm.match(/(\d+(?:\.\d+)?)\s*(?:メートル|m)/g);
@@ -143,7 +148,17 @@ export function parseSevereWeather(weatherText = '', windText = '', waveText = '
   // #93: 概況文（警報・注意報の文章）とも突合して特別警報・津波・記録的短時間大雨を検出
   const combined = `${weatherText || ''} ${overviewText || ''}`;
   const isSpecial = /特別警報|大雨特別|大雪特別|津波|記録的短時間大雨|暴風特別|高潮特別/.test(combined);
-  return { isSevereWind, maxWave, isHighWave, isSpecial, isSevere: isSpecial || isSevereWind || isHighWave };
+  // 🔴 v2.58.3: 台風・雷・霧などの荒天検出を追加。
+  //   従来は強風・高波・特別警報のみを検出したため、
+  //   「台風」予報（weather="台風"）が isSevere=false となり、
+  //   adviceKey が 'fair'（晴れ）へ分岐していた（実測: 台風予報なのに晴れ表示）。
+  //   → 荒天として扱うべき予報文を検出し、typhoon アドバイスへ昇格させる。
+  const isTyphoon = /台風|_typhoon|颱風/.test(weatherText || '') || /台風|颱風/.test(overviewText || '');
+  const isThunder = /雷[を伴]?|雷電|thunder/i.test(weatherText || '');
+  const isHazard = /大雨|大雪|豪雨|豪雪|霧|濃霧|砂塵|砂あらし|氷結|着氷|ひょう|霰/.test(weatherText || '');
+  // 🔴 v2.58.3: 風速・波高之外の荒天シグナルも isSevere に含める
+  const isSevere = isSpecial || isSevereWind || isHighWave || isSevereWindInText || isTyphoon || isThunder || isHazard;
+  return { isSevereWind, maxWave, isHighWave, isSpecial, isTyphoon, isThunder, isHazard, isSevere };
 }
 
 // #88: 駅名・地域名 → JMA 予報区コード（府県コード。JMA_AREA_MAP に主要駅・県を登録済み）
@@ -152,15 +167,27 @@ export function stationToJmaArea(name) {
   if (raw && JMA_AREA_MAP[raw]) return JMA_AREA_MAP[raw];
   const norm = raw.replace(/駅$/, '');
   if (norm !== raw && JMA_AREA_MAP[norm]) return JMA_AREA_MAP[norm];
+  // 🔴 v2.58.3: 英語・中国語の駅名を日本語へ正規化してから解決する。
+  //   JMA_AREA_MAP / PLACE_MUNICIPALITY / 座標辞書はすべて日本語キーのため、
+  //   英語入力（"Yokohama" 等）はどこにもヒットせず東京都(130000)へ
+  //   フォールバックしていた（実測: Shibuya/Yokohama/Shinjuku/Ueno/Chiba が全て東京）。
+  //   → toJapaneseStationName() で日本語駅名へ変換して再解決する。
+  const jaName = toJapaneseStationName(raw);
+  if (jaName && jaName !== raw) {
+    if (JMA_AREA_MAP[jaName]) return JMA_AREA_MAP[jaName];
+    const jaNorm = jaName.replace(/駅$/, '');
+    if (JMA_AREA_MAP[jaNorm]) return JMA_AREA_MAP[jaNorm];
+  }
   // 🔴 #93: PLACE_MUNICIPALITY に駅名があれば、その自治体名（例: 上野→台東区）から県コードを解決。
   // これにより「上野」などの都内駅が東京（130000）に正しく解決される。
-  const muniEntry = PLACE_MUNICIPALITY[raw] || PLACE_MUNICIPALITY[norm];
+  const muniEntry = PLACE_MUNICIPALITY[raw] || PLACE_MUNICIPALITY[norm] || PLACE_MUNICIPALITY[jaName] || PLACE_MUNICIPALITY[jaName?.replace(/駅$/, '')];
   if (muniEntry) {
     const muniKey = muniEntry.ja.replace(/区$/, '');
     if (JMA_AREA_MAP[muniKey]) return JMA_AREA_MAP[muniKey];
   }
   // 🔴 #96: 手動辞書に無い駅名は座標→point-in-polygonで府県を自動解決（東京縮退を防止）。
-  const coordCode = jmaCodeFromStationCoords(raw) || jmaCodeFromStationCoords(norm);
+  const coordCode = jmaCodeFromStationCoords(raw) || jmaCodeFromStationCoords(norm)
+    || jmaCodeFromStationCoords(jaName) || jmaCodeFromStationCoords(jaName?.replace(/駅$/, ''));
   if (coordCode) return coordCode;
   return '130000'; // デフォルト: 東京
 }

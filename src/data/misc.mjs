@@ -415,6 +415,14 @@ export const MULTILINGUAL_ADVICE = {
     en: "🤖 [AI Intelligent Transit Advice]\n☀ Fair and clear weather! Enjoy your comfortable journey.",
     zh: "🤖 【AI智能出行建议】\n☀ 天气晴朗良好！祝您旅途愉快顺畅。"
   },
+  // 🔴 v2.58.3: 天気情報 API 障害時用。
+  //   気象庁 API へ到達できないときは「晴れなのか・取得失敗なのか」を区別できないため、
+  //   晴れ（fair）を返さず「情報を取得できない」ことを明示する。
+  unavailable: {
+    ja: "🤖 【AIからのインテリジェントアドバイス】\n⚠ 気象情報を現在取得できないため、天候 조건を確認できません。最新の運行情報をご確認ください。",
+    en: "🤖 [AI Intelligent Transit Advice]\n⚠ Weather information is currently unavailable, so conditions cannot be confirmed. Please check the latest service information.",
+    zh: "🤖 【AI智能出行建议】\n⚠ 当前无法获取气象信息，无法确认天气状况。请确认最新运行信息。"
+  },
   rainy: {
     ja: "🤖 【AIからのインテリジェントアドバイス (雨天時)】\n☔ 駅構内・階段・ホームが滑りやすくなります。足元に注意し、乗換時間には余裕を持ってください。バスへの乗換は、この経路に接続情報がある場合のみ駅係員・事業者の案内で確認してください。",
     en: "🤖 [AI Intelligent Transit Advice (Rainy)]\n☔ Station floors, stairs, and platforms may be slippery. Watch your step and allow extra transfer time. Only use bus connections when they are shown for this journey and confirmed by staff or the operator.",

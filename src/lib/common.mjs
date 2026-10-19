@@ -177,11 +177,34 @@ export function handleApiError(error, details = {}) {
   // （retryable:false）として分類する。再試行を促す誤診断（#91）を防ぐ。
   const isInternal = isInternalError(error);
   const status = error?.response?.status;
-  const errType = isInternal ? 'UNKNOWN_ERROR'
-    : error.code === 'ECONNABORTED' ? 'API_TIMEOUT'
-    : status === 401 || status === 403 ? 'API_AUTH_ERROR'
-    : status >= 500 ? 'API_SERVER_ERROR'
-    : 'NETWORK_ERROR';
+  // 🔴 v2.58.3: 4xx の誤分類を修正。
+  //   従来は 401/403 と 5xx 以外はすべて NETWORK_ERROR（HTTP 502 / retryable:false）へ落ちていた。
+  //   400系（不正リクエスト）・404（リソース不在）・422（処理不能）を
+  //   「ネットワーク障害（502）」と誤表示していた（実測）。
+  //   → 400系は入力起因、404は不在、422はパース不能として適切な型へ分類する。
+  let errType;
+  if (isInternal) {
+    errType = 'UNKNOWN_ERROR';
+  } else if (error.code === 'ECONNABORTED') {
+    errType = 'API_TIMEOUT';
+  } else if (status === 401 || status === 403) {
+    errType = 'API_AUTH_ERROR';
+  } else if (status >= 500) {
+    errType = 'API_SERVER_ERROR';
+  } else if (status === 404) {
+    // リソースが存在しない（該当データなし）。ネットワーク障害ではない。
+    errType = 'NO_ROUTE';
+  } else if (status === 400 || status === 422) {
+    // リクエスト不正 / 処理不能。入力値の確認を促す。
+    errType = status === 400 ? 'INVALID_INPUT' : 'PARSE_ERROR';
+  } else if (status === 429) {
+    errType = 'API_TIMEOUT';
+  } else if (status >= 400) {
+    // その他の 4xx はクライアント起因だが種別を判別できないため、入力起因として扱う。
+    errType = 'INVALID_INPUT';
+  } else {
+    errType = 'NETWORK_ERROR';
+  }
   return jsonResponse(buildErrorResponse(errType, error.message || 'APIエラー', { ...details, internal: isInternal, http_status: status }));
 }
 

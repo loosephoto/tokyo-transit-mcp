@@ -17,7 +17,7 @@ export const COMMUNITY_BUS_NAME_MAP = {
     '調布市ミニバス': 'Chofu City Mini Bus', 'グリーンバス': 'Green Bus', 'まちっこ': 'Machikko',
     'Aバス': 'A-Bus', '日野市ミニバス': 'Hino City Mini Bus', 'ちょこバス': 'Choko Bus',
     'MMシャトル': 'MM Shuttle', 'はむらん': 'Hamuran', 'やまびこ': 'Yamabiko', '池07系統': 'Ike 07 Route',
-    'CoCoバス': 'CoCo Bus'
+    'CoCoバス': 'CoCo Bus', 'ミニバス': 'Mini Bus'
   },
   zh: {
     'ちぃばす': '千代田循环巴士', 'ハチ公バス': '八公巴士', 'ムーバス': 'M巴士', 'はなバス': '花巴士',
@@ -31,8 +31,8 @@ export const COMMUNITY_BUS_NAME_MAP = {
     '調布市ミニバス': '调布市迷你巴士', 'グリーンバス': '绿色巴士', 'まちっこ': '街小',
     'Aバス': 'A巴士', '日野市ミニバス': '日野市迷你巴士', 'ちょこバス': '小步巴士',
     'MMシャトル': 'MM班车', 'はむらん': '羽村巴士', 'やまびこ': '山彦', '池07系統': '池07路',
-    'CoCoバス': 'CoCo巴士'
-  }
+    'CoCoバス': 'CoCo巴士', 'ミニバス': '迷你巴士'
+  },
 };
 
 export const BUS_STOP_SUFFIX_MAP = {
