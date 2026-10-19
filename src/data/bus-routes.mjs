@@ -704,7 +704,7 @@ export const BUS_GTFS_SOURCES = [
     label: '京王バス', labelEn: 'Keio Bus', labelZh: '京王巴士',
     website: 'https://www.keio-bus.com/',
     url: 'https://api.odpt.org/api/v4/files/odpt/KeioBus/AllLines.zip',
-    date: () => '20260815',
+    date: () => 'current',
     useStopsAndRoutes: true
   },
   {
@@ -930,7 +930,7 @@ export const BUS_GTFS_SOURCES = [
     label: '川崎市バス', labelEn: 'Kawasaki City Bus', labelZh: '川崎市公交',
     website: 'https://www.city.kawasaki.jp/kurashi/category/19-1-1-1-0-0-0-0-0-0.html',
     url: 'https://api.odpt.org/api/v4/files/odpt/TransportationBureau_CityOfKawasaki/AllLines.zip',
-    date: () => '20260801',
+    date: () => 'current',
     // stops.txt の stop_name を停名レコード、routes.txt の route_short_name を系統レコードとして合成
     useStopsAndRoutes: true
   },
@@ -939,7 +939,7 @@ export const BUS_GTFS_SOURCES = [
     label: '川崎鶴見臨港バス', labelEn: 'Kawasaki Tsurumi Rinko Bus', labelZh: '川崎鹤见临港公交',
     website: 'https://www.rinkobus.co.jp/',
     url: 'https://api.odpt.org/api/v4/files/odpt/KawasakiTsurumiRinkoBus/allrinko.zip',
-    date: () => '20260716',
+    date: () => 'current',
     useStopsAndRoutes: true
   },
   {
@@ -947,7 +947,7 @@ export const BUS_GTFS_SOURCES = [
     label: '関東バス', labelEn: 'Kanto Bus', labelZh: '关东公交',
     website: 'https://www.kantobus.co.jp/',
     url: 'https://api.odpt.org/api/v4/files/odpt/KantoBus/AllLines.zip',
-    date: () => '20260701',
+    date: () => 'current',
     useStopsAndRoutes: true
   },
   {
@@ -955,7 +955,7 @@ export const BUS_GTFS_SOURCES = [
     label: '西東京バス', labelEn: 'Nishi Tokyo Bus', labelZh: '西东京公交',
     website: 'https://www.nisitokyobus.co.jp/',
     url: 'https://api.odpt.org/api/v4/files/odpt/NishiTokyoBus/NTBus.zip',
-    date: () => '20260829',
+    date: () => 'current',
     useStopsAndRoutes: true
   },
   {
@@ -963,7 +963,7 @@ export const BUS_GTFS_SOURCES = [
     label: '京成バス千葉ウエスト', labelEn: 'Keisei Bus Chiba West', labelZh: '京成巴士千叶西',
     website: 'https://www.keiseibus.co.jp/',
     url: 'https://api.odpt.org/api/v4/files/odpt/KeiseiTransitBus/AllLines.zip',
-    date: () => '20260401',
+    date: () => 'current',
     useStopsAndRoutes: true
   },
   // 都営バス GTFS-JP（v2.45.0 追加）— CKAN b_bus_gtfs_jp-toei（CC BY 4.0）。

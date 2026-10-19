@@ -73,6 +73,9 @@ const MONO_EPS = 0.20;
 /** 欠落候補探索の最大半径（km） */
 const MISSING_RADIUS_KM = 6.0;
 
+/** Wikipedia 実在性検査の駅間待機時間（ms）。レート制限対策 */
+const WIKI_SLEEP_MS = Number(process.env.WIKI_SLEEP_MS || 1500);
+
 /** Wikipedia 実在性検査の User-Agent（Wikimedia の etiquette に従い識別可能なものを付ける） */
 const WIKI_UA = 'tokyo-transit-mcp-geometry-audit/1.0 (local data integrity check; local user)';
 
@@ -152,6 +155,26 @@ function suffixOf(name) {
 
 /** 括弧が「線名修飾」か「同一駅の別表記」かの判定 */
 const LINE_QUALIFIER_RE = /(線|電鉄|鉄道|地下鉄|モノレール|ライナー|バス|フェリー|エクスプレス|シャトル|レール)/;
+
+/**
+ * 駅名の表記ゆれを吸収するための正規化キー。
+ * ・「ヶ」と「ケ」（阿佐ヶ谷 / 阿佐ケ谷 等）
+ * ・「・」「・」の統一
+ * ・旧字体・異体字の lifeline 変換（麴/麹、淺/浅 等）
+ * 同一个駅が Wikidata とローカルで表記が違っても同一駅として照合できるようにする。
+ */
+function normalizeName(name) {
+  return String(name)
+    .replace(/[（(〈【][^）)〉】]*[）)〉】]/g, '') // 括弧修飾を除去
+    .replace(/ヶ/g, 'ケ')
+    .replace(/・/g, '')
+    .replace(/[淺淵邊嶋濵灣澤瀨瀉澤]/g, (c) => ({
+      '淺': '浅', '淵': '渊', '邊': '辺', '嶋': '島', '濵': '浜',
+      '灣': '湾', '澤': '沢', '瀨': '瀬', '瀉': '泻',
+    }[c] || c))
+    .replace(/[駅站]$/, '')
+    .trim();
+}
 
 /**
  * 括弧付き駅名について、括弧が「同一駅の別表記」か「別駅を示す線名修飾」かを返す。
@@ -236,7 +259,19 @@ function buildWikidataIndex(filePath) {
     }
     index.set(k, out);
   }
-  return { index, available: true, raw };
+  // 正規化キー（ヶ↔ケ 等）でも引けるように別インデックスを作る
+  const normIndex = new Map();
+  for (const [k, list] of index) {
+    const nk = normalizeName(k);
+    if (!nk) continue;
+    if (!normIndex.has(nk)) normIndex.set(nk, []);
+    for (const c of list) {
+      if (!normIndex.get(nk).some((x) => x.src === c.src && x.lat === c.lat && x.lon === c.lon)) {
+        normIndex.get(nk).push(c);
+      }
+    }
+  }
+  return { index, normIndex, available: true, raw };
 }
 
 /**
@@ -269,6 +304,8 @@ function candidatesFor(name, localCoords, wdIndex) {
     if (base !== name) {
       for (const c of wdIndex.get(name) || []) push(c, 'wikidata-exact');
     }
+    // 正規化キーで引ける候補（阿佐ヶ谷 ↔ 阿佐ケ谷 等の表記ゆれ）
+    for (const c of (wdIndex.normIndex?.get(normalizeName(base)) || [])) push(c, 'wikidata-norm');
   }
   return out;
 }
@@ -653,6 +690,33 @@ function compareLocalVsWikidata(analyses) {
 // 検査 [6] Wikipedia 実在性
 // ---------------------------------------------------------------------------
 
+/**
+ * Wikipedia 実在性キャッシュの保存先。
+ * 既定は Hermes のスクラッチ領域（TMPDIR が Hermes 領域を指さない環境のとき用）。
+ */
+const WIKI_CACHE_PATH = process.env.WIKI_CACHE_JSON
+  || 'C:/Users/oresama/AppData/Local/hermes/cache/scratch/wiki-existence-cache.json';
+
+/** Wikipedia 実在性キャッシュを読み込む */
+function loadWikiCache() {
+  try {
+    if (!fs.existsSync(WIKI_CACHE_PATH)) return {};
+    return JSON.parse(fs.readFileSync(WIKI_CACHE_PATH, 'utf8'));
+  } catch (e) {
+    return {};
+  }
+}
+
+/** Wikipedia 実在性キャッシュを保存する */
+function saveWikiCache(cache) {
+  try {
+    fs.mkdirSync(path.dirname(WIKI_CACHE_PATH), { recursive: true });
+    fs.writeFileSync(WIKI_CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
+  } catch (e) {
+    // キャッシュ保存失敗は検査結果に影響しない
+  }
+}
+
 /** 駅名から Wikipedia 記事タイトル候補を作る */
 function wikiTitleCandidates(name) {
   const out = new Set();
@@ -692,11 +756,23 @@ async function wikiExists(title) {
   return { title, status: 'unknown' };
 }
 
-/** 対象駅名について Wikipedia 実在性を調べる */
+/**
+ * 対象駅名について Wikipedia 実在性を調べる。
+ * 取得済み結果はディスクキャッシュに保存し、再実行時の負荷とレート制限を避ける。
+ * 1駅ごとにキャッシュを保存するため、長時間実行でも途中結果が失われない。
+ */
 async function checkWikipedia(stationNames) {
+  const cache = loadWikiCache();
   const results = [];
   let undetermined = 0;
+  let cacheHits = 0;
   for (const name of stationNames) {
+    const cacheKey = normalizeName(name);
+    if (cache[cacheKey]) {
+      cacheHits++;
+      results.push({ name, ...cache[cacheKey] });
+      continue;
+    }
     const titles = wikiTitleCandidates(name);
     let verdict = { title: titles[0], status: 'unknown' };
     for (const t of titles) {
@@ -704,10 +780,63 @@ async function checkWikipedia(stationNames) {
       if (verdict.status === 'exists' || verdict.status === 'missing') break;
     }
     if (verdict.status === 'unknown' || verdict.status === 'error') undetermined++;
+    // 判定できたものだけキャッシュする（429 の判定不能は次回に再試行させる）
+    if (verdict.status === 'exists' || verdict.status === 'missing') {
+      cache[cacheKey] = { title: verdict.title, status: verdict.status };
+      saveWikiCache(cache); // 1駅ごとに保存（途中終了でも結果を保持）
+    }
     results.push({ name, ...verdict });
-    await sleep(1200); // レート制限対策
+    await sleep(WIKI_SLEEP_MS);
   }
-  return { results, undetermined };
+  saveWikiCache(cache);
+  return { results, undetermined, cacheHits };
+}
+
+// ---------------------------------------------------------------------------
+// 検査 [7] Wikidata スライス Based 実在性（オフライン）
+// ---------------------------------------------------------------------------
+
+/**
+ * ローカル座標が無く、Wikidata スライスにも該当項目が無い駅を列挙する。
+ * Wikidata に無い = 実在しないとは限らない（記事未作成・表記ゆれ等）だが、
+ * 「Wikipedia には実在しない駅名」の候補をオフラインで絞り込むのに使える。
+ *
+ * さらに、Wikipedia 実在性キャッシュ（--wikipedia 実行時の結果）があれば参照し、
+ * 「記事なし」と確定したものを上位、表記ゆれで実在するものを下位に見せる。
+ */
+function findUnknownStations(analyses) {
+  const wikiCache = loadWikiCache();
+  const rows = [];
+  for (const a of analyses) {
+    for (const s of a.stations) {
+      if (LOCAL_COORDS.has(s)) continue;
+      const base = baseName(s);
+      const found = (WD_INDEX && WD_INDEX.has(base))
+        || (WD_NORM_INDEX && WD_NORM_INDEX.has(normalizeName(base)))
+        || (WD_INDEX && WD_INDEX.has(normalizeName(base)));
+      if (!found) {
+        const wiki = wikiCache[normalizeName(s)] || null;
+        rows.push({
+          station: s,
+          line: a.lineName,
+          wikiStatus: wiki ? wiki.status : 'unchecked',
+        });
+      }
+    }
+  }
+  // 同一駅名は1行にまとめる
+  const byName = new Map();
+  for (const r of rows) {
+    if (!byName.has(r.station)) {
+      byName.set(r.station, { station: r.station, lines: [], wikiStatus: r.wikiStatus });
+    }
+    byName.get(r.station).lines.push(r.line);
+  }
+  const list = [...byName.values()];
+  // Wikipedia で記事なしが確認できたものを先頭に、表記ゆれ等で見つからないものを後ろに
+  const rank = (u) => (u.wikiStatus === 'missing' ? 0 : u.wikiStatus === 'exists' ? 2 : 1);
+  list.sort((a, b) => rank(a) - rank(b) || a.station.localeCompare(b.station));
+  return list;
 }
 
 // ---------------------------------------------------------------------------
@@ -725,6 +854,7 @@ const bySeverity = (a, b) => (b.deviationKm ?? 0) - (a.deviationKm ?? 0);
 // グローバル参照用（関数内から使うため）
 let LOCAL_COORDS = new Map();
 let WD_INDEX = null;
+let WD_NORM_INDEX = null;
 let WD_AVAILABLE = false;
 
 async function main() {
@@ -733,6 +863,7 @@ async function main() {
   if (OPT.useWikidata) {
     const wd = buildWikidataIndex(OPT.wikidataPath);
     WD_INDEX = wd.index;
+    WD_NORM_INDEX = wd.normIndex;
     WD_AVAILABLE = wd.available;
     if (!wd.available && wd.error) {
       console.error(`[警告] Wikidata スライスを読めませんでした（${OPT.wikidataPath}）: ${wd.error}`);
@@ -1068,7 +1199,7 @@ async function main() {
   if (wiki) {
     const missing = wiki.results.filter((r) => r.status === 'missing');
     console.log(line());
-    console.log(`【6】Wikipedia(ja) 実在性 … 記事なし ${missing.length} 件 / 判定不能 ${wiki.undetermined} 件（検査対象 ${wiki.results.length} 駅）`);
+    console.log(`【6】Wikipedia(ja) 実在性 … 記事なし ${missing.length} 件 / 判定不能 ${wiki.undetermined} 件（検査対象 ${wiki.results.length} 駅・キャッシュ ${wiki.cacheHits || 0} 件）`);
     console.log(line());
     if (!missing.length) {
       console.log('  記事なしなし');
@@ -1081,6 +1212,28 @@ async function main() {
         console.log(`  ⚠ ${m.name} [${ls.join('/')}]`);
       }
       if (missing.length > OPT.top) console.log(`  … 他 ${missing.length - OPT.top} 件`);
+    }
+    console.log('');
+  }
+
+  // --- [7] Wikipedia/Wikidata に存在しない駅名（オフライン判定） ---
+  if (WD_AVAILABLE) {
+    const unknown = findUnknownStations(analyses);
+    const confirmed = unknown.filter((u) => u.wikiStatus === 'missing');
+    console.log(line());
+    console.log(`【7】Wikipedia/Wikidata に該当記事が無い駅名（オフライン判定） … ${unknown.length} 件（うち Wikipedia 記事なし確定 ${confirmed.length} 件）`);
+    console.log('    ※ ローカル座標が無く、Wikidata スライスにも項目が無い駅。実在性の要確認。');
+    console.log(line());
+    if (!unknown.length) {
+      console.log('  該当なし');
+    } else {
+      for (const u of unknown.slice(0, OPT.top)) {
+        const tag = u.wikiStatus === 'missing' ? '⚠ Wikipedia記事なし'
+          : u.wikiStatus === 'exists' ? '※ 表記ゆれ（Wikipediaには記事あり）'
+            : '要確認';
+        console.log(`  ${tag} | ${u.station} [${u.lines.join('/')}]`);
+      }
+      if (unknown.length > OPT.top) console.log(`  … 他 ${unknown.length - OPT.top} 件`);
     }
     console.log('');
   }

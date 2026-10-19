@@ -24,11 +24,20 @@ export function getJstDay(now = new Date()) {
   return new Date(now.getTime() + 9 * 3600 * 1000).getUTCDay();
 }
 
+// GTFS 取得試行の日付リスト。
+// 🔴 v2.58.1: ODPT の GTFS 固定 URL は `date=current` で「現在の有効リソース」を返す。
+// 固定日（例: '20260815'）の有効期間が切れると 404 になり、GTFS が恒久的に
+// 取得できなくなる（実測: 2026-10 時点で京王バス・関東バス・西東京バス・
+// 川崎市バス・京成バス千葉ウェストが全て 404 になっていた）。
+// そのため source.date が未指定の場合は 'current' を最優先で試し、
+// 失敗したときだけ日付形式にフォールバックする。
 export function gtfsFetchDates(fixedDate) {
   const today = getJstDateCompact();
-  const dates = [String(fixedDate || today)];
+  // 特殊値 'current' / 'next' は ODPT が解釈する固定キーワード（日付形式ではない）
+  if (fixedDate === 'current' || fixedDate === 'next') return [fixedDate, today];
+  const dates = [String(fixedDate || 'current'), today];
   if (!dates.includes(today)) dates.push(today);
-  return dates;
+  return [...new Set(dates)];
 }
 
 export function normalizeOvernightTime(timeStr) {

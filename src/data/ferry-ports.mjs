@@ -76,8 +76,13 @@ export const FERRY_PORT_NAMES = {
 };
 
 export const FERRY_GTFS_SOURCES = [
-  { name: '東海汽船', url: `${API_BASE_URL}/files/odpt/TokaiKisen/AllLines.zip`, date: () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, '') }, // 🔴 v2.50.1: JST日付（JST 0:00-9:00のUTC日付1日ずれ修正。lib/time.mjs getJstDateCompact と同一ロジック）
-  { name: '東京クルーズ（水上バス）', url: 'https://api-public.odpt.org/api/v4/files/odpt/TokyoCruiseShip/AllLines.zip', date: () => '20250402' },
+  // 🔴 v2.58.1: ODPT の GTFS 固定 URL は `date=current` で「現在の有効リソース」を返す。
+  // 従来は JST日付（毎日変わる日付）や固定日（'20250402'）を渡していたため、
+  // 有効期間外になると 404 になり、东海汽船・東京クルーズの GTFS が恒久的に
+  // 取得できなくなっていた（実測: 2026-10 時点で両方 404 → ハードコード代替のみ）。
+  // `date=current` に変更し、ダイヤ改正に自動追随させる。
+  { name: '東海汽船', url: `${API_BASE_URL}/files/odpt/TokaiKisen/AllLines.zip`, date: () => 'current' },
+  { name: '東京クルーズ（水上バス）', url: 'https://api-public.odpt.org/api/v4/files/odpt/TokyoCruiseShip/AllLines.zip', date: () => 'current' },
   // 東海汽船 GTFS エンドポイント（files/odpt/...）が ODPT 側で 404/500 となる場合のフォールバック。
   // ハードコード港リストを stop として展開し、伊豆諸島航路等を検索可能にする。
   { name: '東海汽船（ハードコード）', hardCoded: true, stops: [

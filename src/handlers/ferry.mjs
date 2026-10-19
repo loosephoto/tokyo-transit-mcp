@@ -489,6 +489,52 @@ export async function searchFerry(args) {
       if (src.includes('東海汽船')) return userLang === 'en' ? 'Tokai Kisen (hardcoded)' : userLang === 'zh' ? '东海汽船（内置数据）' : src;
       return src;
     };
+    // 🔴 v2.58.1: trip_headsign（行先表示）を多言語化する。
+    // 実 GTFS（東海汽船）が取れるようになったため、trip_headsign に
+    // 「父島」「八丈島～父島」「式根島～新島～利島～大島～」等の日本語が
+    // そのまま応答に含まれるようになった（en/zh 応答で日本語残存＝多言語回帰）。
+    // 行先は「港名～港名」の並びなので、FERRY_PORT_NAMES の英中名で
+    // 港名を置換し、残った日本語（約束記号・記号）は除去する。
+    const localizeHeadsign = (text) => {
+      if (!text || userLang === 'ja') return text;
+      const raw = String(text);
+      // 港名の入れ子構造（'東京・竹芝' の '竹芝' など）で二重置換が起きないよう、
+      // 出現する港名を最長一致で1回だけ置換する。
+      const entries = Object.entries(FERRY_PORT_NAMES)
+        .filter(([, t]) => t && (t.en || t.zh) && t.en !== undefined && t.zh !== undefined)
+        .sort((a, b) => b[0].length - a[0].length);
+      let out = '';
+      let rest = raw;
+      while (rest.length) {
+        // 現在位置から始まる最も長い港名を探す
+        let matched = null;
+        for (const [ja, t] of entries) {
+          if (!rest.startsWith(ja)) continue;
+          const label = userLang === 'en' ? t.en : t.zh;
+          if (!label) continue;
+          matched = { ja, label };
+          break;  // 長さ降順なので最初のヒットが最長
+        }
+        if (matched) {
+          out += matched.label;
+          rest = rest.slice(matched.ja.length);
+        } else {
+          out += rest[0];
+          rest = rest.slice(1);
+        }
+      }
+      // 港名として置換できたかを判定（zh は漢字体だけが残ると情報量ゼロになるため）
+      const hasPort = entries.some(([ja, t]) => {
+        const label = userLang === 'en' ? t.en : t.zh;
+        return label && label !== ja && out.includes(label);
+      });
+      if (!hasPort) {
+        return userLang === 'en' ? 'Ferry service' : '轮渡航线';
+      }
+      // 残った日本語（かな・未登録の地名）は除去
+      out = out.replace(/[぀-ヿ]+/g, '').replace(/[～~]\s*/g, ' ~ ').replace(/\s{2,}/g, ' ').trim();
+      return out || (userLang === 'en' ? 'Ferry service' : '轮渡航线');
+    };
     const localizeRoutes = (routes) => routes.map(entry => ({
       ...entry,
       route: {
@@ -497,7 +543,11 @@ export async function searchFerry(args) {
         route_long_name: userLang === 'ja' ? entry.route.route_long_name : `${displayFrom} – ${displayTo}`,
         _source: sourceLabel(entry.route._source || '')
       },
-      trips: (entry.trips || []).map(t => ({ ...t, _source: sourceLabel(t._source || '') }))
+      trips: (entry.trips || []).map(t => ({
+        ...t,
+        trip_headsign: localizeHeadsign(t.trip_headsign),
+        _source: sourceLabel(t._source || '')
+      }))
     }));
 
     // #23: 航路全体の時刻表有無を集計（すべてのtripが時刻なしなら「時刻表なし」を明示）
