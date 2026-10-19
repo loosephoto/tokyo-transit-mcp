@@ -76,6 +76,11 @@ class CircuitBreaker {
     // 鉄道の時刻表・運賃検索（JSON API）まで巻き込んで全面停止していた（実測）。
     // 恒久不在は失敗カウントに含めない（回路上の別リソース取得は影響されない）。
     if (status === 404 || status === 410) return;
+    // 🔴 v2.58.7: 429（レート制限）も失敗カウントに含めない。
+    //   429 は一時的なレート制限であり、リトライ（retryOnRateLimit）で回復する。
+    //   含めると、並列取得の瞬間に 429 が数件発生してブレーカーが OPEN になり、
+    //   検索系ツールが一斉に失敗した（実測: probe 19/29 PASS）。
+    if (status === 429) return;
     this.failureCount++;
     if (this.state === 'HALF-OPEN' || this.failureCount >= this.failureThreshold) {
       // #93 修正: 段階的クールダウンは「サーキットを開放したエピソード回数」に応じて
@@ -108,6 +113,74 @@ class CircuitBreaker {
 
 const odptBreaker = new CircuitBreaker('ODPT_API_BREAKER', 3, 180000);
 const jmaBreaker = new CircuitBreaker('JMA_API_BREAKER', 2, 120000);
+
+// ==========================================
+// 🐢 ODPT API 並列制御とレート制限（429）対策
+// ==========================================
+// 🔴 v2.58.7: ODPT API は同一キーの同時リクエストが多いと HTTP 429 を返す。
+//   GTFS ソースを並列化した際（v2.58.7）、同時リクエスト数の増加で 429 が頻発し、
+//   odptBreaker が OPEN になって検索系ツールが一斉に失敗した（実測: probe 19/29 PASS）。
+//   → 429 は「一時的なレート制限」であり回復可能なので、ブレーカーの失敗カウントには含めない。
+//   → 代わりに指数バックオフでリトライする。
+
+// ODPT API への同時接続数の上限（429 を避けるためのグローバルなセマフォ）
+const ODPT_MAX_CONCURRENCY = 3;
+let _odptActive = 0;
+const _odptQueue = [];
+// 🔴 v2.58.7: ODPT のレート制限は「同時接続数」だけでなく短時間の累計リクエスト数でも生じる。
+//   probe-all-lang は 29 ケースを逐次実行し、その間に ODPT へ数百リクエストが飛ぶため、
+//   累積で 429 が発生し、search_flight まで巻き込まれた（実測: 29件中4〜10件が FAIL）。
+//   → 同時接続数に加えて「最小リクエスト間隔」を設けて確実に上限内に収める。
+const ODPT_MIN_INTERVAL_MS = 120;
+
+// 直近のリクエスト時刻（全体で共有）
+let _odptLastRequestAt = 0;
+
+/** ODPT API 呼び出しを同時 ODPT_MAX_CONCURRENCY 件・最小間隔 ODPT_MIN_INTERVAL_MS に制限する */
+export async function withOdptSlot(fn) {
+  if (_odptActive >= ODPT_MAX_CONCURRENCY) {
+    await new Promise(resolve => _odptQueue.push(resolve));
+  }
+  _odptActive++;
+  try {
+    // 最小間隔を保証する（直前のリクエストから ODPT_MIN_INTERVAL_MS 以上あける）
+    const now = Date.now();
+    const waitMs = _odptLastRequestAt + ODPT_MIN_INTERVAL_MS - now;
+    if (waitMs > 0) await new Promise(r => setTimeout(r, waitMs));
+    _odptLastRequestAt = Date.now();
+    return await fn();
+  } finally {
+    _odptActive--;
+    const next = _odptQueue.shift();
+    if (next) next();
+  }
+}
+
+/**
+ * 429（レート制限）に対応するリトライ。
+ * - 429 はサーキットブレーカーに失敗を通知しない（回復可能な一時障害のため）
+ * - Retry-After ヘッダがあればそれを、なければ指数バックオフ（1s→2s→4s）を使う
+ */
+export async function retryOnRateLimit(fn, { maxRetries = 5, label = 'ODPT' } = {}) {
+  let delay = 1000;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await withOdptSlot(fn);
+    } catch (e) {
+      const status = e?.response?.status;
+      if (status !== 429 || attempt === maxRetries) throw e;
+      const retryAfter = Number(e?.response?.headers?.['retry-after']);
+      // 🔴 v2.58.7: 待機時間を 1s→2s→4s→8s→16s と伸ばす（最大5回）。
+      //   短い間隔だと ODPT のウィンドウ内に再送出され続けて失敗する（実測: 3回では 429 継続）。
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : delay;
+      console.warn(`[${label}] HTTP 429 レート制限のため ${waitMs}ms 待機してリトライ (${attempt + 1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, waitMs));
+      delay *= 2;
+    }
+  }
+}
 
 // ==========================================
 // 📦 統一キャッシュ管理
@@ -145,10 +218,23 @@ const cache = {
   stationRomanToJa: { key: 'station_roman_to_ja', ttl: 86400000 },
   trainTimetable: { key: 'train_timetable', ttl: 3600000 },
   busData: { key: 'bus_data', ttl: 600000 },
-  busTimetable: { key: 'bus_timetable', ttl: 600000 },
+  // 🔴 v2.58.7: バス時刻表（ノンステップ情報）のキャッシュを 10分→1時間へ延長。
+  //   odpt:BusTimetable は 1社あたり 7.5MB と ODPT への要求バイト数が大きく、
+  //   短時間に再取得するとレート制限（429）で breaker が OPEN になる（実測）。
+  //   ノンステップ車両情報の変化は緩やかなため 1時間 TTL で問題ない。
+  busTimetable: { key: 'bus_timetable', ttl: 3600000 },
   busGraph: { key: 'bus_graph', ttl: 600000 },
   busStopGeo: { key: 'bus_stop_geo', ttl: 600000 },
   stationGeo: { key: 'station_geo', ttl: 600000 },
+  // 🔴 v2.58.7: GTFS 静的 ZIP バッファのキャッシュ。
+  //   GTFS zip は1事業者あたり数MB〜10MB超（川崎市バスは7.4MB）で、
+  //   `date=current` ごとに再取得・再解凍・再パースしていた。
+  //   search_bus 1回の呼出で 7事業者ぶんの zip を落とすため、
+  //   初回の probe-all-lang では search_bus だけで 156秒（最悪80秒）を要していた（実測）。
+  //   → zip バッファをメモリ＋ディスク（.cache/gtfs）へ二重キャッシュし、
+  //     プロセス再起動をまたいでも再ダウンロードを避ける。
+  //   TTL は1時間（事業者はダイヤ改正のたびに更新するため日単位では長すぎる）。
+  gtfsZip: { key: 'gtfs_zip', ttl: 3600000 },
   flightData: { key: 'flight_data', ttl: 60000 } // リアルタイム性重視（60s）
 };
 

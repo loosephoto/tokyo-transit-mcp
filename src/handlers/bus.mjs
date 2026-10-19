@@ -3,7 +3,7 @@
  * ODPT バス + GTFS-JP ハードコード + コミュニティバスの統合グラフ探索。
  * 依存: config / data / lib / advice / handlers/search-route（駅名解決・コミュニティバス接続）
  */
-import { cache, odptBreaker, API_BASE_URL, API_KEY } from '../config.mjs';
+import { cache, odptBreaker, API_BASE_URL, API_KEY, retryOnRateLimit } from '../config.mjs';
 import { BUS_OPERATORS, TOKYO_COMMUNITY_BUSES, COMMUNITY_BUS_ROUTES, COMMUNITY_BUS_STATION_ACCESS,
          BUS_GTFS_SOURCES, BUSSTOP_ROMAN_TO_JA, BUS_OPERATOR_LABEL,
          COMMUNITY_BUS_NAME_MAP, BUS_STOP_SUFFIX_MAP } from '../data/bus-routes.mjs';
@@ -167,25 +167,21 @@ export async function fetchAllBuses(userLang) {
   // GTFS-JP 個別取得パス: hardCoded ソース（JRバス関東・コミュニティバス等）をマージ
   // および ODPT 静的 GTFS ソース（川崎市バス・関東バス等・{ url, date } 方式）を展開してマージ
   let hcCount = 0;
-  for (const src of BUS_GTFS_SOURCES) {
-    if (src.hardCoded) {
-      const hcRecs = buildHardCodedBusRecords(src);
-      for (const r of hcRecs) merged.push(r);
-      hcCount++;
-      continue;
-    }
-    // ODPT 静的 GTFS（files/odpt/...・基本ライセンス）: フェリーと同じ { url, date } 方式。
-    // stops.txt の stop_name を停名レコード、routes.txt の route_short_name を系統レコードとして合成。
-    // 🔴 stop_times.txt は最大95万行（川崎市バス）と巨大なため、全体は保持せず各系統の代表1trip の
-    //    起終点（先頭/末尾の stop_sequence）だけを取得する（searchBus は停名/系統検索が主目的）。
+  // 🔴 v2.58.7: GTFS ソースの取得・パースを並列化する。
+  //   従来は for ループ内で await しており、9事業者ぶんを逐次処理していた。
+  //   川崎市バスは zip 7.4MB・stop_times 95万行で 1社だけで数十秒かかり、
+  //   search_bus 1回の呼出が 80秒超に達していた（実測: probe-all-lang の search_bus[en] が 81.7秒）。
+  //   → Promise.all で全ソースを並列に取得＋ワーカーパースする。
+  //   マージ順が安定するよう、operatorId でソートしてから merged に積む。
+  const _Worker = (await import('node:worker_threads')).Worker;
+  const _parseOneGtfs = async (src) => {
     try {
       const zipBuf = await fetchGtfsZipBuffer(src, 20000);
       // #93: GTFS ZIP 解凍＋CSV パース（stop_times.txt は最大95万行）は専用ワーカースレッドで実行し、
       // メインスレッド（イベントループ）のブロックを回避する。従来は同期パースの間、
       // 他の MCP リクエストに応答できない状態だった。
-      const { Worker } = await import('node:worker_threads');
       const workerRecords = await new Promise((resolve, reject) => {
-        const worker = new Worker(new URL('../lib/gtfs-bus-worker.mjs', import.meta.url), {
+        const worker = new _Worker(new URL('../lib/gtfs-bus-worker.mjs', import.meta.url), {
           workerData: {
             zipBuf,
             src: { operatorId: src.operatorId, label: src.label, labelEn: src.labelEn, labelZh: src.labelZh, website: src.website, name: src.name }
@@ -198,14 +194,30 @@ export async function fetchAllBuses(userLang) {
         });
         worker.once('error', (e) => { worker.terminate(); reject(e); });
       });
-      for (const r of workerRecords) merged.push(r);
       console.log(`[Bus] ${src.name}: GTFS loaded (${workerRecords.length} 停名・系統)`);
       odptBreaker.onSuccess();
-      hcCount++;
+      return { src, records: workerRecords, ok: true };
     } catch (e) {
       const httpStatus = e?.response?.status ?? (e?.code || '');
       console.log(`[Bus] ${src.name}: GTFS skip (${e.message})${httpStatus ? ` [HTTP ${httpStatus}]` : ''}`);
       odptBreaker.onFailure(e);
+      return { src, records: [], ok: false };
+    }
+  };
+  const gtfsSources = BUS_GTFS_SOURCES.filter(src => !src.hardCoded);
+  for (const src of BUS_GTFS_SOURCES) {
+    if (!src.hardCoded) continue;
+    const hcRecs = buildHardCodedBusRecords(src);
+    for (const r of hcRecs) merged.push(r);
+    hcCount++;
+  }
+  if (gtfsSources.length) {
+    const settled = await Promise.all(gtfsSources.map(_parseOneGtfs));
+    // operatorId でソートしてマージ順を安定させる（並列化で順序が変わっても結果は同一にする）
+    settled.sort((a, b) => String(a.src.operatorId || '').localeCompare(String(b.src.operatorId || '')));
+    for (const s of settled) {
+      for (const r of s.records) merged.push(r);
+      if (s.ok) hcCount++;
     }
   }
   // コミュニティバス（めぐりん・江戸バス等・COMMUNITY_BUS_ROUTES）の停留所も検索プールに追加。
@@ -250,7 +262,13 @@ export async function fetchBusGraph(signal) {
   const patterns = []; // { operator, patternId, stops: [{name, poleId}] }
   const results = await Promise.allSettled(
     BUS_OPERATORS.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:BusroutePattern`, { params: getParams(op.id), timeout: 8000, signal })
+      // 🔴 v2.58.7: 429（レート制限）時は指数バックオフでリトライする。
+      //   ODPT API は同時リクエストが多いと 429 を返すため、
+      //   そのまま失敗扱いにすると odptBreaker が OPEN になり検索系が全滅する（実測）。
+      retryOnRateLimit(
+        () => axios.get(`${API_BASE_URL}/odpt:BusroutePattern`, { params: getParams(op.id), timeout: 8000, signal }),
+        { label: 'BusroutePattern' }
+      )
     )
   );
   results.forEach((res, i) => {
@@ -287,7 +305,11 @@ export async function fetchBusTimetable(signal) {
   const nonStepByStop = {};     // stopName -> bool（patternId 不一致のフォールバック）
   const results = await Promise.allSettled(
     BUS_OPERATORS.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:BusTimetable`, { params: getParams(op.id), timeout: 8000, signal })
+      // 🔴 v2.58.7: 429 は指数バックオフでリトライ（上記 BusroutePattern と同じ理由）
+      retryOnRateLimit(
+        () => axios.get(`${API_BASE_URL}/odpt:BusTimetable`, { params: getParams(op.id), timeout: 8000, signal }),
+        { label: 'BusTimetable' }
+      )
     )
   );
   results.forEach((res) => {

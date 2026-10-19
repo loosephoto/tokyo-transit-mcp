@@ -212,6 +212,32 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.7（2026-10-20）— バス経路探索の性能改善（57.4秒→93ms）と ODPT レート制限対策
+
+`probe-all-lang` の実行時間が 2分42秒 → 14秒（12倍）になり、タイムアウトによる不安定な失敗（29件中4〜10件 FAIL）が解消しました。
+
+**最大の原因: `normalizeStationName` の線形走査（`src/handlers/search-route.mjs`）**
+
+`STATION_DISPLAY_NAMES`（約2,000駅）の全エントリを毎回走査していたため、バス経路探索では停留所名の正規化が約76,000回発生し（=1.5億回の文字列比較）、`buildTransferGraph` だけで **57.4秒**を要していました。逆引き Map を構築し O(1) で引くようにした。
+
+```
+buildTransferGraph: 57,411ms → 93ms   （ノード数7,618・結果は同一）
+search_bus 1回      : 58秒 → 0.4秒
+probe-all-lang 全体 : 2分42秒 → 14秒
+```
+
+**その他の改善**
+
+| 内容 | 詳細 |
+|---|---|
+| GTFS zip のディスクキャッシュ | `.cache/gtfs` に zip を保存し、プロセス再起動をまたいで再ダウンロードを回避（9事業者・27MB） |
+| GTFS ソースの並列化 | 9事業者の zip 取得・ワーカーパースを逐次から並列へ（`Promise.all`、マージ順は operatorId ソートで安定化） |
+| ODPT レート制限対策 | 同時接続数3・最小リクエスト間隔120ms のセマフォと、429時の指数バックオフリトライ（最大5回・1s→2s→4s→8s→16s）を追加 |
+| ブレーカーの429除外 | 429（レート制限）は回復可能な一時障害のため失敗カウントに含めない（404/410 と同様の扱い） |
+| キャッシュTTL延長 | バス時刻表（ノンステップ情報、1社7.5MB）を10分→1時間へ |
+
+**検証**: `npm test` 3回連続 29/29 PASS、probe-all-lang 10回連続 29/29 PASS、`check-railway-integrity` 全126路線 OK、`check-ghost-transfer` 未分離0件、`test-walk-transfer-stations` ALL PASS、`audit-same-name-stations` 3件中全てOK、`test-bus-routes-expansion` ALL PASS
+
 ### v2.58.6（2026-10-20）— 大宮駅の誤座標を訂正し、路線幾何検査の乖離系を全件解消
 
 `check-line-geometry.mjs --wikipedia --all-stations`（Wikipedia/Wikidata 参照のフル走査）で|大宮|の座標が実位置から約3kmずれていたことを検出しました。

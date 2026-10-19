@@ -670,17 +670,36 @@ export const STATION_NAME_MAP_LOWER = new Map(
   Object.entries(STATION_NAME_MAP).map(([k, v]) => [k.toLowerCase(), v])
 );
 
+// 🔴 v2.58.7: 英語・中国語表示名 → 日本語駅名の逆引き辞書。
+//   従来は normalizeStationName の中で STATION_DISPLAY_NAMES（約2,000駅）の全エントリを
+//   線形走査していたため、1回の呼び出しに最大2,000回の文字列比較が発生していた。
+//   バス経路探索では停留所名が約76,000回正規化され（＝1.5億回の比較）、
+//   buildTransferGraph だけで57.4秒を要していた（実測）。
+//   → 逆引き Map を構築済みのものを使って O(1) で引く。
+const _displayNameReverse = (() => {
+  const m = new Map();
+  for (const [ja, display] of Object.entries(STATION_DISPLAY_NAMES)) {
+    if (display.en) {
+      const k = display.en.toLowerCase();
+      if (!m.has(k)) m.set(k, ja);
+    }
+    if (display.zh && !m.has(display.zh)) m.set(display.zh, ja);
+  }
+  return m;
+})();
+
 export function normalizeStationName(name) {
   const trimmed = String(name || '').trim();
   if (STATION_NAME_MAP[trimmed]) return STATION_NAME_MAP[trimmed];
-  const mapped = STATION_NAME_MAP_LOWER.get(trimmed.toLowerCase());
+  const lower = trimmed.toLowerCase();
+  const mapped = STATION_NAME_MAP_LOWER.get(lower);
   if (mapped) return mapped;
   // 英語・中国語の表示名も駅名解決に利用する（STATION_DISPLAY_NAMESは表示専用だが、
   // 英語入力から日本語の路線グラフへ戻すため逆引きが必要）。
-  for (const [ja, display] of Object.entries(STATION_DISPLAY_NAMES)) {
-    if (display.en && display.en.toLowerCase() === trimmed.toLowerCase()) return ja;
-    if (display.zh && display.zh === trimmed) return ja;
-  }
+  // 🔴 v2.58.7: 逆引き Map を使う（従来は全エントリを線形走査していた）。
+  //   キーは小文字で登録。英語は小文字・中国語は原文のまま引く。
+  const rev = _displayNameReverse.get(lower) || _displayNameReverse.get(trimmed);
+  if (rev) return rev;
   // 一般的な駅名サフィックスは辞書登録の有無にかかわらず除去する。
   // 先に完全一致と辞書を評価しているため、正式名称の一部を壊さない。
   const withoutSuffix = trimmed.replace(/(?:駅|站|station)$/iu, '').trim();
