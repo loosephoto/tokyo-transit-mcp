@@ -1975,7 +1975,7 @@ export const LINE_DISPLAY_NAMES = {
   'JR埼京線': { en: 'JR Saikyo Line', zh: 'JR埼京线' },
   'JR京葉線': { en: 'JR Keiyo Line', zh: 'JR京叶线' },
   'JR武蔵野線': { en: 'JR Musashino Line', zh: 'JR武藏野线' },
-  'JR武蔵野線（大崎支線）': { en: 'JR Musashino Line (Osaki Branch)', zh: 'JR武藏野线（大崎支线）' },
+  'JR武蔵野線大宮支線': { en: 'JR Musashino Line (Omiya Branch)', zh: 'JR武藏野线（大宫支线）' },
   'JR常磐線快速': { en: 'JR Joban Line (Rapid)', zh: 'JR常磐线快速' },
   'JR常磐線各停': { en: 'JR Joban Line (Local)', zh: 'JR常磐线各站停车' },
   'JR南武線': { en: 'JR Nambu Line', zh: 'JR南武线' },
