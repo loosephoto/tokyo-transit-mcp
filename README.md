@@ -33,7 +33,7 @@
 
 ### 📝 更新履歴
 
-各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.5](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.5)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
+各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.6](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.6)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -640,7 +640,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 📝 Update History
 
-Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.5](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.5)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
+Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.6](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.6)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
 
 ### 🤖 AI Intelligent Advice
 
@@ -1203,7 +1203,7 @@ MIT License
 
 ### 📝 更新历史
 
-各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.5](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.5)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
+各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.6](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.6)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
 
 ### 🤖 AI 智能建议
 

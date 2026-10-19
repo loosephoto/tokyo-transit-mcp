@@ -7,7 +7,7 @@
 //      → ブルーラインとの共通5駅の前後関係も矛盾（乖離4.87km）。
 //   2. 京王高尾線: 「目白台」は正しくは「めじろ台」（Wikipedia 記事が存在しない表記）。
 //   3. 東武宇都宮線: 実在しない「栃木」駅が混入し、野州大塚→壬生 の弦が折り返していた。
-import { RAILWAY_LINES } from '../src/data/railway-lines.mjs';
+import { RAILWAY_LINES, STATION_COORDS } from '../src/data/railway-lines.mjs';
 import { STATION_COORDS_EXTRA } from '../src/data/station-coords-extra.mjs';
 
 let failures = 0;
@@ -115,6 +115,21 @@ console.log('-- ブルーラインとの共通駅の前後関係の一致 --');
     }
     if (consistent) ok('共通駅の前後関係が一致している');
     else fail('共通駅の前後関係が矛盾している');
+  }
+}
+
+// ---- 5. 大宮駅の座標が Wikipedia infobox 値であること ----
+console.log('-- 大宮駅の座標（Wikidata との乖離で検出された誤座標）--');
+{
+  const wikiLat = 35.906278, wikiLon = 139.623833;  // Wikipedia infobox（埼玉県さいたま市大宮区錦町）
+  const c = STATION_COORDS['大宮'];
+  if (!c) fail('STATION_COORDS に「大宮」が無い');
+  else {
+    const dLat = (c.lat - wikiLat) * 111;
+    const dLon = (c.lon - wikiLon) * 111 * Math.cos(wikiLat * Math.PI / 180);
+    const dKm = Math.sqrt(dLat * dLat + dLon * dLon);
+    if (dKm < 0.5) ok(`大宮の座標が Wikipedia 値と一致（乖離 ${dKm.toFixed(2)}km）`);
+    else fail(`大宮の座標が Wikipedia 値と ${dKm.toFixed(2)}km 乖離（${c.lat}, ${c.lon}）`);
   }
 }
 
