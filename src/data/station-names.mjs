@@ -723,6 +723,10 @@ export const STATION_DISPLAY_NAMES = {
   '両国（大江戸線）': { en: 'Ryogoku (Toei Oedo Line)', zh: '两国（都营大江户线）' },
   '浅草（つくばエクスプレス）': { en: 'Asakusa (Tsukuba Express)', zh: '浅草（筑波快线）' },
   '霞ヶ関（東武東上線）': { en: 'Kasumigaseki (Tobu Tojo Line)', zh: '霞关（东武东上线）' },
+  // 2026-10 v2.58.0 追加: 同名別駅の識別子付き駅名（幽霊乗換の解消）
+  '赤坂（富士急行線）': { en: 'Akasaka (Fujikyuko Line)', zh: '赤坂（富士急行线）' },
+  '十日市場（富士急行線）': { en: 'Tokaichiba (Fujikyuko Line)', zh: '十日市场（富士急行线）' },
+  '栄町（千葉モノレール）': { en: 'Sakaecho (Chiba Monorail)', zh: '荣町（千叶单轨）' },
   // 近接異名駅（連絡駅）の主要駅
   '牛田': { en: 'Ushida', zh: '牛田' },
   '京成関屋': { en: 'Keisei Sekiya', zh: '京成关屋' },
