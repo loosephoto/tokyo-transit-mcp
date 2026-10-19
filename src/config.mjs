@@ -70,16 +70,26 @@ class CircuitBreaker {
     // 全ODPT機能をCircuit Breaker OPENにしない。
     const status = error?.response?.status;
     if (status === 401 || status === 403) return;
+    // 🔴 v2.58.3: 404/410 は「そのリソースが存在しない」= 恒久的な不在であり、
+    // 回復不能。GTFS ファイル（旧 date の期限切れなど）が 404 になるたびに
+    // カウントすると、failureThreshold(3) に達してブレーカーが OPEN になり、
+    // 鉄道の時刻表・運賃検索（JSON API）まで巻き込んで全面停止していた（実測）。
+    // 恒久不在は失敗カウントに含めない（回路上の別リソース取得は影響されない）。
+    if (status === 404 || status === 410) return;
     this.failureCount++;
     if (this.state === 'HALF-OPEN' || this.failureCount >= this.failureThreshold) {
       // #93 修正: 段階的クールダウンは「サーキットを開放したエピソード回数」に応じて
       // 60秒→120秒→180秒と単調に延長する。従来は failureCount ベースだったため、
       // threshold>1 ではオープン直前に 60/120秒の値が上書きされ一度も参照されなかった。
       // エピソード方式にすることで全段階の値が実際に利用される。
-      this.tripCount++;
-      if (this.tripCount === 1) this.cooldownPeriod = 60000;
-      else if (this.tripCount === 2) this.cooldownPeriod = 120000;
-      else this.cooldownPeriod = 180000;
+      // 🔴 v2.58.3: OPEN 中の追加失敗では段階を進めずクールダウンを据え置く
+      // （従来は OPEN 中の失敗でも tripCount が増えて 180秒固定に張り付いた）。
+      if (this.state !== 'OPEN') {
+        this.tripCount++;
+        if (this.tripCount === 1) this.cooldownPeriod = 60000;
+        else if (this.tripCount === 2) this.cooldownPeriod = 120000;
+        else this.cooldownPeriod = 180000;
+      }
       this.setState('OPEN');
     }
   }

@@ -875,12 +875,19 @@ async function checkWikipedia(stationNames) {
     verdicts = await wikiExistsBatch(uniqueTitles);
   }
 
-  // 駅ごとに「最初に見つかった判定」を採用する
+  // 駅ごとに判定を採用する。
+  // 候補の中に「記事あり」があればそれを優先する。
+  // （基本形の「両国駅」の方が括弧修飾付きの「両国駅 (大江戸線)」より先に
+  //   判定されるため、最初の「記事なし」を採用すると誤判定になる）
   const decided = new Map();
+  const preferExists = (cacheKey, v) => {
+    const cur = decided.get(cacheKey);
+    if (!cur) { decided.set(cacheKey, v); return; }
+    if (cur.status !== 'exists' && v.status === 'exists') decided.set(cacheKey, v);
+  };
   for (const p of pending) {
-    if (decided.has(p.cacheKey)) continue;
     const v = verdicts.get(p.title);
-    if (v) decided.set(p.cacheKey, { title: p.title, status: v });
+    if (v) preferExists(p.cacheKey, { title: p.title, status: v });
   }
 
   // どの候補も記事が無かった駅（＝要確認）は検索 API で再確認する。
@@ -901,12 +908,13 @@ async function checkWikipedia(stationNames) {
   }
   if (searchTitles.length) {
     const sv = await wikiExistsBatch([...new Set(searchTitles)]);
-    // 検索語と一致する記事标题を該当駅に割り当てる
+    // 検索語と一致する記事タイトルを該当駅に割り当てる
     for (const [cacheKey, term] of searchTerms) {
       if (decided.has(cacheKey)) continue;
       const baseTerm = term.split(' ')[0];
       for (const [title, status] of sv) {
         if (status !== 'exists') continue;
+        // 「両国駅」「両国 (東京都)」のように基本の駅名で始まる記事を採用
         if (title.startsWith(baseTerm)) {
           decided.set(cacheKey, { title, status });
           break;

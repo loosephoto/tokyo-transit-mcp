@@ -919,6 +919,9 @@ export const STATION_DISPLAY_NAMES = {
   '穴守稲荷': { en: 'Anamori-Inari', zh: '穴守稻荷' }, '保土ケ谷': { en: 'Hodogaya', zh: '保土谷' },
   '東戸塚': { en: 'Higashi-Totsuka', zh: '东户塚' }, '北鎌倉': { en: 'Kita-Kamakura', zh: '北镰仓' },
   '鎌倉': { en: 'Kamakura', zh: '镰仓' }, '逗子': { en: 'Zushi', zh: '逗子' },
+  // 2026-10 v2.58.3: JR横須賀線の駅列補完で追加した駅の英中表示名
+  '東逗子': { en: 'Higashi-Zushi', zh: '东逗子' }, '田浦': { en: 'Taura', zh: '田浦' },
+  '横須賀': { en: 'Yokosuka', zh: '横须贺' }, '衣笠': { en: 'Kinugasa', zh: '衣笠' },
   '新川崎': { en: 'Shin-Kawasaki', zh: '新川崎' }, '大口': { en: 'Okuchi', zh: '大口' },
   '新横浜': { en: 'Shin-Yokohama', zh: '新横滨' }, '小机': { en: 'Kozukue', zh: '小机' },
   '鴨居': { en: 'Kamoi', zh: '鸭居' }, '中山': { en: 'Nakayama', zh: '中山' },
