@@ -757,15 +757,75 @@ async function wikiExists(title) {
 }
 
 /**
+ * Wikipedia 記事タイトル候補一批に対する存在判定（action=query API・1バッチ最大50件）。
+ * 429 なら REST API（1記事ずつ）にフォールバックする。
+ * 戻り値: Map<title, 'exists' | 'missing'>
+ */
+async function wikiExistsBatch(titles) {
+  const result = new Map();
+  const CHUNK = 50;
+  for (let i = 0; i < titles.length; i += CHUNK) {
+    const chunk = titles.slice(i, i + CHUNK);
+    const url = 'https://ja.wikipedia.org/w/api.php?action=query&format=json&redirects=1&titles='
+      + encodeURIComponent(chunk.join('|'));
+    let ok = false;
+    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+      try {
+        const res = await fetch(url, {
+          headers: { 'User-Agent': WIKI_UA, 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(20000),
+        });
+        if (res.status === 429) {
+          const ra = Number(res.headers.get('retry-after') || 0);
+          await sleep(Math.min(Math.max(ra, 3) * 1000, 20000));
+          continue;
+        }
+        if (res.status !== 200) break;
+        const data = await res.json();
+        const pages = data?.query?.pages ?? {};
+        // redirects 変換後のタイトルへ読み替える
+        const norm = data?.query?.normalized ?? [];
+        const redir = data?.query?.redirects ?? [];
+        const alias = new Map();
+        for (const n of norm) alias.set(n.to, n.from);
+        for (const r of redir) alias.set(r.to, r.from);
+        for (const id in pages) {
+          const p = pages[id];
+          const orig = alias.get(p.title) || p.title;
+          result.set(orig, 'missing' in p ? 'missing' : 'exists');
+        }
+        ok = true;
+      } catch (e) {
+        await sleep(2000 * (attempt + 1));
+      }
+    }
+    if (!ok) {
+      // フォールバック：REST API で1件ずつ確認
+      for (const t of chunk) {
+        const v = await wikiExists(t);
+        if (v.status === 'exists' || v.status === 'missing') result.set(t, v.status);
+      }
+    }
+    if (i + CHUNK < titles.length) await sleep(WIKI_SLEEP_MS);
+  }
+  return result;
+}
+
+/**
  * 対象駅名について Wikipedia 実在性を調べる。
- * 取得済み結果はディスクキャッシュに保存し、再実行時の負荷とレート制限を避ける。
- * 1駅ごとにキャッシュを保存するため、長時間実行でも途中結果が失われない。
+ * ・action=query API で一括取得（高速）
+ * ・取得済み結果はディスクキャッシュに保存し、再実行時の負荷とレート制限を避ける
+ * ・1駅ごとにキャッシュを保存するため、長時間実行でも途中結果が失われない
  */
 async function checkWikipedia(stationNames) {
   const cache = loadWikiCache();
   const results = [];
   let undetermined = 0;
   let cacheHits = 0;
+
+  // キャッシュ済みはスキップし、未判定の駅だけ Wiki へ問い合わせる
+  const pending = [];
+  const seen = new Set();
   for (const name of stationNames) {
     const cacheKey = normalizeName(name);
     if (cache[cacheKey]) {
@@ -773,20 +833,38 @@ async function checkWikipedia(stationNames) {
       results.push({ name, ...cache[cacheKey] });
       continue;
     }
-    const titles = wikiTitleCandidates(name);
-    let verdict = { title: titles[0], status: 'unknown' };
-    for (const t of titles) {
-      verdict = await wikiExists(t);
-      if (verdict.status === 'exists' || verdict.status === 'missing') break;
+    if (seen.has(cacheKey)) continue;
+    seen.add(cacheKey);
+    // 判定に必要なタイトル候補をまとめて收集
+    for (const t of wikiTitleCandidates(name)) pending.push({ name, cacheKey, title: t });
+  }
+
+  // タイトル候補をまとめて一括判定
+  const uniqueTitles = [...new Set(pending.map((p) => p.title))];
+  let verdicts = new Map();
+  if (uniqueTitles.length) {
+    verdicts = await wikiExistsBatch(uniqueTitles);
+  }
+
+  // 駅ごとに「最初に見つかった判定」を採用する
+  const decided = new Map();
+  for (const p of pending) {
+    if (decided.has(p.cacheKey)) continue;
+    const v = verdicts.get(p.title);
+    if (v) decided.set(p.cacheKey, { title: p.title, status: v });
+  }
+
+  for (const name of stationNames) {
+    const cacheKey = normalizeName(name);
+    if (cache[cacheKey]) continue; // 既に結果済み（キャッシュヒット）
+    const v = decided.get(cacheKey);
+    if (!v) {
+      undetermined++;
+      results.push({ name, title: wikiTitleCandidates(name)[0], status: 'unknown' });
+      continue;
     }
-    if (verdict.status === 'unknown' || verdict.status === 'error') undetermined++;
-    // 判定できたものだけキャッシュする（429 の判定不能は次回に再試行させる）
-    if (verdict.status === 'exists' || verdict.status === 'missing') {
-      cache[cacheKey] = { title: verdict.title, status: verdict.status };
-      saveWikiCache(cache); // 1駅ごとに保存（途中終了でも結果を保持）
-    }
-    results.push({ name, ...verdict });
-    await sleep(WIKI_SLEEP_MS);
+    cache[cacheKey] = { title: v.title, status: v.status };
+    results.push({ name, ...v });
   }
   saveWikiCache(cache);
   return { results, undetermined, cacheHits };
