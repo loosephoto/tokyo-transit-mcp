@@ -70,7 +70,7 @@ export const STATION_NAME_ZH_OLD = {
   'Mitsuzawa-shimocho': '三ツ沢下町', 'Mitsuzawa-kamicho': '三ツ沢上町', 'Katakuramachi': '片倉町', 'Kishine-koen': '岸根公園',
   'Kita-Shin-Yokohama': '北新横浜', 'Nippa': '新羽', 'Nakamachidai': '仲町台', 'Center-Minami': 'センター南', 'Center-Kita': 'センター北',
   'Nakagawa': '中川', 'Sakuragicho': '桜木町', 'Kannai': '関内', 'Ishikawacho': '石川町', 'Yamate': '山手', 'Negishi': '根岸',
-  'Keio-Katakura': '京王片倉', 'Yamada': '山田', 'Mejirodai': '目白台', 'Hazama': '狭間', 'Takaosanguchi': '高尾山口',
+  'Keio-Katakura': '京王片倉', 'Yamada': '山田', 'Mejirodai': 'めじろ台', 'Hazama': '狭間', 'Takaosanguchi': '高尾山口',
   'Kawawacho': '川和町', 'Tsuzuki-Fureainooka': '都筑ふれあいの丘', 'Kawawa-Chuo': '川和中央',
   'Higashi-Yamata': '東山田', 'Kita-Yamata': '北山田', 'Higashi-Shinden': '東新田', 'Takata': '高田', 'Hiyoshi-Honcho': '日吉本町', 'HiyoshiHoncho': '日吉本町',
   '新宿西口': '新宿',                         // バス停・出口名
