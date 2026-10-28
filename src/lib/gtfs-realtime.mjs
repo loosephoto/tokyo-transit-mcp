@@ -76,11 +76,21 @@ function decodeUtf8(bytes) {
 
 // TranslatedString の本文（ja優先で text を抽出）
 function translatedText(fields) {
-  const trans = fieldBytes(fields, 1); // translation (repeated) — 先頭のみで代表
-  if (!trans) return '';
-  const t = decodeMessage(trans);
-  const text = firstField(t, 1); // text (string, wire2)
-  return decodeUtf8(typeof text === 'object' && text ? text : null);
+  const list = fields[1];
+  if (!list || !list.length) return '';
+  let firstText = '';
+  let jaText = '';
+  for (const f of list) {
+    if (f.wireType !== 2) continue;
+    const t = decodeMessage(f.value);
+    const textBytes = firstField(t, 1); // text (string, wire2)
+    const text = decodeUtf8(typeof textBytes === 'object' && textBytes ? textBytes : null);
+    const langBytes = firstField(t, 2); // language (string, wire2)
+    const lang = langBytes ? decodeUtf8(langBytes) : '';
+    if (!firstText) firstText = text;
+    if (lang === 'ja') { jaText = text; break; }
+  }
+  return jaText || firstText;
 }
 
 // Alert メッセージを人間可読な運行情報へ変換

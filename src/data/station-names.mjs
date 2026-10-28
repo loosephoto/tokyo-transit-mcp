@@ -427,7 +427,7 @@ export const STATION_DISPLAY_NAMES = {
   '新中野': { en: 'Shin-Nakano', zh: '新中野' },
   '東高円寺': { en: 'Higashi-Koenji', zh: '东高圆寺' },
   '新高円寺': { en: 'Shin-Koenji', zh: '新高圆寺' },
-  '南阿佐ケ谷': { en: 'Minami-Asagaya', zh: '南阿佐谷' },
+  '南阿佐ヶ谷': { en: 'Minami-Asagaya', zh: '南阿佐谷' },
   '方南町': { en: 'Honancho', zh: '方南町' },
   '西新宿': { en: 'Nishi-Shinjuku', zh: '西新宿' },
   '荻窪': { en: 'Ogikubo', zh: '荻窪' },

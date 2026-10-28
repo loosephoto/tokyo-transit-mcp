@@ -130,7 +130,9 @@ export async function fetchFerryData() {
   // （1時間TTLのキャッシュ更新時に自動再試行されるため、復旧すれば次回ロードで実データに切り替わる）
   if (tokaiRealOk) console.log('[Ferry] 東海汽船: real GTFS OK (hardcoded fallback merged, stop_name dedupe)');
   else console.warn('[Ferry] 東海汽船: real GTFS unavailable — hardcoded 19-port fallback in use. Auto-retry on next 1h cache refresh.');
-  cache.set(cache.ferryGtfs.key, data, cache.ferryGtfs.ttl);
+  // 全ライブソース失敗時は短いTTLで再試行を早める（1時間固定による復旧遅延を防ぐ）
+  const ferryTtl = tokaiRealOk ? cache.ferryGtfs.ttl : Math.min(cache.ferryGtfs.ttl, 300000);
+  cache.set(cache.ferryGtfs.key, data, ferryTtl);
   return data;
 }
 

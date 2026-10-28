@@ -62,7 +62,7 @@ export async function getStationInfo(args) {
   if (!odptBreaker.canExecute()) return buildInternalStationFallback(stationName, userLang) || jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT APIが利用できません。', { userLang, station: stationName, breakerName: odptBreaker.name, breakerState: odptBreaker.state }));
   try {
     const response = await axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(operator, { 'dc:title': stationName }), timeout: 15000 });
-    const stations = response.data;
+    const stations = Array.isArray(response.data) ? response.data : [];
     odptBreaker.onSuccess();
     const displayStation = getDisplayStationName(stationName, userLang);
     if (!stations || stations.length === 0) {
@@ -108,7 +108,7 @@ export async function getStationInfo(args) {
       status: "SUCCESS",
       detected_language: userLang,
       station: displayStation,
-      results: stations.map(s => ({ id: s['@id'].replace('odpt:Station:', ''), name: s['dc:title'], code: s['odpt:stationCode'] })),
+      results: stations.map(s => ({ id: (s?.['@id'] || '').replace('odpt:Station:', ''), name: s?.['dc:title'], code: s?.['odpt:stationCode'] })),
       // 駅周辺の文化施設（search_route と同じ自動選出ルーチン: LANDMARK_DEFS + 明示定義）
       cultural_facilities: getDestinationCulturalFacilities(stationName, userLang).length
         ? getDestinationCulturalFacilities(stationName, userLang)

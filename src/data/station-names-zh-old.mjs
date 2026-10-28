@@ -62,7 +62,7 @@ export const STATION_NAME_ZH_OLD = {
   '数寄屋橋': '銀座',                         // 東京メトロ銀座線 旧・数寄屋橋駅（現:銀座）
   '歌舞伎町': '新宿',                         // 地域・バス停名（最寄り:新宿）
   // 丸ノ内線補完駅（英字入力エイリアス）。西新宿は実在駅（丸ノ内線）のため 都庁前 への旧マップは解除
-  'Nishi-Shinjuku': '西新宿', 'Shin-Nakano': '新中野', 'Higashi-Koenji': '東高円寺', 'Shin-Koenji': '新高円寺', 'Minami-Asagaya': '南阿佐ケ谷',
+  'Nishi-Shinjuku': '西新宿', 'Shin-Nakano': '新中野', 'Higashi-Koenji': '東高円寺', 'Shin-Koenji': '新高円寺', 'Minami-Asagaya': '南阿佐ヶ谷',
   // 京王高尾線・横浜市営地下鉄・京成本線支線・京浜東北線延伸 補完駅（英字入力エイリアス）
   'Shonandai': '湘南台', 'Shimoida': '下飯田', 'Tachiba': '立場', 'Nakada': '中田', 'Odori': '踊場', 'Maioka': '舞岡',
   'Shimonagaya': '下永谷', 'Kaminagaya': '上永谷', 'Konan-Chuo': '港南中央', 'Maita': '蒔田', 'Yoshinocho': '吉野町',

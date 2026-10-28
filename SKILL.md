@@ -212,6 +212,26 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.8（2026-10-29）— 監査で発見した不都合の修正（GTFSキャッシュTTL・多言語判定・駅座標・幽霊乗換防止など）
+
+- GTFS zip メモリキャッシュに TTL 判定を追加（期限切れでディスク/ネットワークへフォールバック）
+- GTFS-RT `translatedText` で language='ja' を優先選択
+- `reverseStationName` を import 時に O(1) Map 構築へ変更
+- `detectLanguage` の中国語語彙から日英と共通の語（地震/人身事故/信号故障/降雪/` bus`）を除去
+- gtfs-bus-worker の停名用と系統用の `seen` Set を分離
+- 座標欠落35駅を STATION_COORDS_EXTRA に追加（Wikipedia 座標）
+- 阿佐ヶ谷の表記揺れ（南阿佐ケ谷→南阿佐ヶ谷）を統一、STATION_COORDS の重複キー4件を削除
+- landmarks `railway_museum` の駅名を `鉄道博物館` に訂正
+- station-info の ODPT 応答に Array.isArray ガードと optional chaining を追加
+- bus: transfer NOT_FOUND の `buses` 参照を除去、`fetchBusstopPoleTimetables` を retry/breaker 対応に
+- running-status: JR East パース0件を throw（公式ページ縮退）
+- ferry: 全ライブソース失敗時に短TTL（5分）で再試行
+- timetable: truncated スナップショットをキャッシュしない
+- index: `resolveErrLang` を busstop_name/operator/airport 等まで拡張
+- csv: RFC4180 準拠の引用符開始判定
+
+**検証**: `npm test` 29/29 PASS、`check-railway-integrity` 全126路線 OK、`check-ghost-transfer` 未分離0件、`test-walk-transfer-stations` ALL PASS、`audit-same-name-stations` 3/3 OK
+
 ### v2.58.7（2026-10-20）— バス経路探索の性能改善（57.4秒→93ms）と ODPT レート制限対策
 
 `probe-all-lang` の実行時間が 2分42秒 → 14秒（12倍）になり、タイムアウトによる不安定な失敗（29件中4〜10件 FAIL）が解消しました。

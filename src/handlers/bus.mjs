@@ -419,12 +419,19 @@ export async function fetchBusstopPoleTimetables(signal) {
   if (poleTimetableCache.data && Date.now() - poleTimetableCache.ts < POLE_TT_TTL) return poleTimetableCache.data;
   const ops = BUS_OPERATORS.filter((o) => o && o.id);
   const results = await Promise.allSettled(ops.map((o) =>
-    axios.get(`${API_BASE_URL}/odpt:BusstopPoleTimetable`, { params: getParams(o.id), timeout: 10000, signal })
+    retryOnRateLimit(
+      () => axios.get(`${API_BASE_URL}/odpt:BusstopPoleTimetable`, { params: getParams(o.id), timeout: 10000, signal }),
+      { label: 'BusstopPoleTimetable' }
+    )
   ));
   const entries = [];
   results.forEach((res, idx) => {
-    if (res.status !== 'fulfilled') return;
+    if (res.status !== 'fulfilled') {
+      odptBreaker.onFailure(res.reason || new Error('BusstopPoleTimetable fetch failed'));
+      return;
+    }
     const opId = ops[idx].id;
+    odptBreaker.onSuccess();
     for (const e of res.value.data || []) {
       const title = String(e['dc:title'] || e['odpt:note'] || '');
       const parts = title.split(':');
@@ -1083,7 +1090,7 @@ export async function searchBus(args) {
         // searchBusTransfer が返す統合グラフの全ノード名(allNodeNames)をソースに使う。
         const busPool = (result.allNodeNames && result.allNodeNames.length)
           ? result.allNodeNames
-          : (typeof buses !== 'undefined' ? (buses || []) : []);
+          : (result.allNodeNames ?? []);
         if (fromInput && toInput) {
           for (const q of [fromInput, toInput]) {
             const qn = String(q || '').replace(/(停留所|バス停|駅)$/, '');

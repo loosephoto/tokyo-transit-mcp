@@ -10,7 +10,7 @@ export function parseCsvRecords(content) {
         if (text[i + 1] === '"') { field += '"'; i++; }
         else quoted = false;
       } else field += ch;
-    } else if (ch === '"' && field.length === 0) {
+    } else if (ch === '"' && field.length === 0 && (i === 0 || text[i - 1] === ',' || text[i - 1] === '\n' || text[i - 1] === '\r')) {
       quoted = true;
     } else if (ch === ',') {
       row.push(field.trim()); field = '';

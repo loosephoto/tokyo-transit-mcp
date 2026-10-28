@@ -116,7 +116,7 @@ export async function getTimetable(args) {
     const cached = cache.get(`${cache.trainTimetable.key}:merged`);
     let allTimetables;
     let truncated = false;
-    if (cached) { allTimetables = cached.merged; truncated = cached.truncated || false; }
+    if (cached && !cached.truncated) { allTimetables = cached.merged; truncated = false; }
     else {
       const railways = await getTimetableRailways();
       // 各路線 × 2 calendar を並列取得（1000件上限回避のため calendar を明示指定）
@@ -137,7 +137,7 @@ export async function getTimetable(args) {
       truncated = fulfilled.some(r => Array.isArray(r.value.data) && r.value.data.length >= 1000);
       allTimetables = fulfilled.flatMap(r => r.value.data);
       odptBreaker.onSuccess();
-      cache.set(`${cache.trainTimetable.key}:merged`, { merged: allTimetables, truncated }, cache.trainTimetable.ttl);
+      if (!truncated) cache.set(`${cache.trainTimetable.key}:merged`, { merged: allTimetables, truncated }, cache.trainTimetable.ttl);
     }
 
     // ローマ字駅ID → 日本語駅名 の逆引き（駅フィルタ用）

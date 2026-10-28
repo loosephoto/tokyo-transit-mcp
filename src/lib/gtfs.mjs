@@ -76,15 +76,21 @@ export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
   for (const d of dates) {
     // 🔴 v2.58.7: メモリキャッシュ → ディスクキャッシュ → ネットワーク の順に確認する。
     const memKey = `${src.url}|${d || 'nodate'}`;
-    const memHit = _memZipCache.get(memKey);
-    if (memHit) {
-      _memZipCache.delete(memKey);   // アクセス順を更新（LRU 相当）
-      _memZipCache.set(memKey, memHit);
-      return memHit;
+    const memEntry = _memZipCache.get(memKey);
+    if (memEntry) {
+      // 🔴 TTL 判定: ディスクキャッシュと同じ DISK_CACHE_MAX_AGE_MS を適用する。
+      //   期限切れならメモリから削除してディスク/ネットワークへフォールバック。
+      if (Date.now() - memEntry.ts >= DISK_CACHE_MAX_AGE_MS) {
+        _memZipCache.delete(memKey);
+      } else {
+        _memZipCache.delete(memKey);   // アクセス順を更新（LRU 相当）
+        _memZipCache.set(memKey, memEntry);
+        return memEntry.buf;
+      }
     }
     const diskHit = readDiskCache(src, d);
     if (diskHit) {
-      _memZipCache.set(memKey, diskHit);
+      _memZipCache.set(memKey, { buf: diskHit, ts: Date.now() });
       while (_memZipCache.size > _MEM_MAX_ENTRIES) {
         _memZipCache.delete(_memZipCache.keys().next().value);
       }
@@ -101,7 +107,7 @@ export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
         { label: 'GTFS-zip' }
       );
       const buf = Buffer.from(res.data);
-      _memZipCache.set(memKey, buf);
+      _memZipCache.set(memKey, { buf, ts: Date.now() });
       while (_memZipCache.size > _MEM_MAX_ENTRIES) {
         _memZipCache.delete(_memZipCache.keys().next().value);
       }

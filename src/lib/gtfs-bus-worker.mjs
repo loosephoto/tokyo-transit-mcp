@@ -31,7 +31,7 @@ async function parseGtfs(zipBuf, src) {
   };
 
   const records = [];
-  const seen = new Set();
+    const seenStops = new Set();
   // 1) stops.txt → stop_id → stop_name（1回だけパース）
   const stopRows = parseCsv('stops.txt');
   const stopNameById = new Map();
@@ -72,8 +72,8 @@ async function parseGtfs(zipBuf, src) {
   // 4) 停名レコード（stops.txt）
   for (const s of stopRows) {
     const name = s.stop_name || s.stop_id || '';
-    if (!name || seen.has(name)) continue;
-    seen.add(name);
+    if (!name || seenStops.has(name)) continue;
+    seenStops.add(name);
     records.push({
       'odpt:note': name,
       'odpt:busroute': `${src.operatorId}:stop:${s.stop_id}`,
@@ -88,6 +88,7 @@ async function parseGtfs(zipBuf, src) {
     });
   }
   // 5) 系統レコード（routes.txt）: 起終点を「起点 → 終点」形式で合成
+  const seenRoutes = new Set();
   for (const r of parseCsv('routes.txt')) {
     const shortName = r.route_short_name || r.route_long_name || r.route_id || '';
     const tripId = firstTripByRoute.get(r.route_id);
@@ -95,8 +96,9 @@ async function parseGtfs(zipBuf, src) {
     const origin = ep ? (stopNameById.get(ep.first) || ep.first) : '';
     const dest = ep ? (stopNameById.get(ep.last) || ep.last) : '';
     const note = (origin && dest) ? `${origin} → ${dest}` : shortName;
-    if (seen.has(note)) continue;
-    seen.add(note);
+    const routeKey = `${r.route_id || ''}|${note}`;
+    if (seenRoutes.has(routeKey)) continue;
+    seenRoutes.add(routeKey);
     records.push({
       'odpt:note': note,
       'odpt:busroute': `${src.operatorId}:route:${r.route_id}`,

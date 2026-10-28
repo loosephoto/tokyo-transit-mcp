@@ -34,15 +34,25 @@ export function getDisplayStationName(stationName, userLang) {
 //   JMA 予報区・自治体解決は日本語キーの辞書で動くため、
 //   英語入力が全て東京都(130000)へフォールバックしていた（実測）。
 //   → 逆引き辞書（英/中 → 日本語）を_CACHE に構築して解決する。
+// 🔴 逆引き Map を import 時に一度構築し、参照を O(1) にする（performance.md 推奨）。
+//   重複する表示名キーは先頭の日本語駅名を保持する（既存挙動と同一）。
+const _reverseStationNameMap = { en: new Map(), zh: new Map() };
+for (const [ja, tr] of Object.entries(STATION_DISPLAY_NAMES)) {
+  if (!tr) continue;
+  for (const lang of ['en', 'zh']) {
+    const v = tr[lang];
+    if (v && !_reverseStationNameMap[lang].has(v)) {
+      _reverseStationNameMap[lang].set(v, ja);
+    }
+  }
+}
 const _reverseStationNameCache = new Map();
 function reverseStationName(stationName, lang) {
   if (!stationName) return '';
   const key = `${lang}::${stationName}`;
   if (_reverseStationNameCache.has(key)) return _reverseStationNameCache.get(key);
-  let found = '';
-  for (const [ja, tr] of Object.entries(STATION_DISPLAY_NAMES)) {
-    if (tr[lang] === stationName) { found = ja; break; }
-  }
+  const m = _reverseStationNameMap[lang];
+  const found = m ? (m.get(stationName) || '') : '';
   _reverseStationNameCache.set(key, found);
   return found;
 }
@@ -279,12 +289,12 @@ export function detectLanguage(text) {
   //   字形では判別できない。専用の語彙リストで判定する。
   //   ※ ただし「京都」「大阪」「東京」等は日中共通のためここに入れない（誤判定防止）。
   const zhWords = ['台风','积水','淹水','火灾','停电','酷暑','中暑','积雪','暴雨','海啸','海嘯',
-    '地震','人身事故','信号故障','降雪','台场','站台','换乘','票价','时刻表','地铁','电车',
+    '台场','站台','换乘','票价','时刻表','地铁','电车',
     '巴士','机场','车站','线路','路线','前往','出发','到达','查询','怎么','如何','最近','附近',
     '几点','多少','航班','列车','天气','码头','碼頭','渡轮','轮渡','要多久','多少钱',
     // 交通・地名拡充（中国語ユーザーがよく使う表記。ただし東京/大阪等の大都市名は
     // 日中で表記が共通するため判定シグナルには使わない）
-    '合羽桥','坐巴士','坐车','坐地铁',' bus','坐','去','到','从','巴士站',
+    '合羽桥','坐巴士','坐车','坐地铁','坐','去','到','从','巴士站',
     '公交车','公车','捷运','高铁','火车','怎么去','怎么走','多长时间','多久','几点发车','首班车','末班车',
     '公交','前台','後台','資料','信息','網絡','网络','軟件','软件','硬件','數據','数据','點擊','点击',
     // 繁体字の一般語（日中の漢字が同一のもの。字形では判別できないため語彙で判定）

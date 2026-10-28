@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.58.7 (Production Ready)
+ * Tokyo Transit MCP Server v2.58.8 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -38,7 +38,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 // 各ツールは registerTool で登録し、ListTools / CallTool の手動ハンドラと switch を廃止した。
 // SDK が zod スキーマから tools/list の JSON Schema を自動生成する（additionalProperties:false 等も自動付与）。
 const server = new McpServer(
-  { name: 'tokyo-transit-mcp', version: '2.58.7' },
+  { name: 'tokyo-transit-mcp', version: '2.58.8' },
   { capabilities: { tools: {}, logging: {} } }
 );
 
@@ -64,13 +64,20 @@ const log = (level, message) => {
 
 // 最上位エラー（未知ツール・未捕捉例外）の言語を解決する（#95）
 function resolveErrLang(args) {
-  return resolveLang(args)
-    || (detectLanguage(args?.from) !== 'ja' ? detectLanguage(args?.from)
-        : detectLanguage(args?.to) !== 'ja' ? detectLanguage(args?.to)
-        : detectLanguage(args?.area_name) !== 'ja' ? detectLanguage(args?.area_name)
-        : detectLanguage(args?.from_port) !== 'ja' ? detectLanguage(args?.from_port)
-        : detectLanguage(args?.station_name) !== 'ja' ? detectLanguage(args?.station_name)
-        : 'ja');
+  const rl = resolveLang(args);
+  if (rl) return rl;
+  const candidates = [
+    args?.from, args?.to, args?.area_name, args?.from_port, args?.to_port,
+    args?.station_name, args?.busstop_name, args?.operator, args?.airport,
+    args?.port, args?.landmark, args?.municipality
+  ];
+  for (const c of candidates) {
+    if (c) {
+      const d = detectLanguage(c);
+      if (d !== 'ja') return d;
+    }
+  }
+  return 'ja';
 }
 
 // 各ツールのハンドラを呼び、logging 通知と isError の付与を行う共通ラッパー（#101/#104）

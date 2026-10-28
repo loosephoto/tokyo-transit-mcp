@@ -75,6 +75,7 @@ async function fetchJREast() {
     }
     merged.push(l);
   }
+  if (merged.length === 0) throw new Error('JR East: no lines parsed');
   return { lines: merged, updated: updated.length ? `${updated[1]}-${updated[2]}-${updated[3]} ${updated[4]}:${updated[5]}` : undefined };
 }
 

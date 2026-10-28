@@ -493,7 +493,7 @@ export const LANDMARK_DEFS = {
   },
   // ===== Issue #40: 鉄道博物館系（7施設） =====
   railway_museum: {
-    station: '鉄道博物館（大成）', walk_min: 1, category: '博物館',
+    station: '鉄道博物館', walk_min: 1, category: '博物館',
     note: { ja: '埼玉新都市交通 鉄道博物館（大成）駅から徒歩約1分（大宮駅からニューシャトルで約3分）', en: 'About 1 min walk from Tetsudo-Hakubutsukan (Taisho) Stn on the New Shuttle (approx. 3 min from Omiya Stn)', zh: '从埼玉新都市交通铁道博物馆（大成）站步行约1分钟（大宫站乘新交通系统约3分钟）' },
     names: { ja: ['鉄道博物館', '大宮鉄道博物館'], en: ['The Railway Museum', 'Railway Museum'], zh: ['铁道博物馆'] }
   },
