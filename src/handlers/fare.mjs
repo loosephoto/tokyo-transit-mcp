@@ -99,6 +99,12 @@ export async function searchFare(args) {
                 '両駅を指定してください。';
     return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
   }
+  // 🔴 同一駅は運賃が存在しないため INVALID_INPUT にする
+  if (from === to) {
+    const msg = userLang === 'en' ? `Origin and destination are the same station (${from}).` :
+                userLang === 'zh' ? `出发站和到达站是同一个站（${from}）。` : `出発駅と到着駅が同じです（${from}）。`;
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
+  }
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang, from, to }));
   try {
     // 両駅を odpt:Station 候補へ解決し、出発駅ごとに運賃を分割取得

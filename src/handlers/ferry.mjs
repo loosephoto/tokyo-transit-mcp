@@ -441,6 +441,13 @@ export async function searchFerry(args) {
                      '港が見つかりません。list_ferry_portsで確認。';
       return jsonResponse(buildErrorResponse('INVALID_INPUT', errMsg, { userLang }));
     }
+    // 🔴 出発港と到着港が同じ場合は航路が存在しないため INVALID_INPUT にする
+    //   （従来は同一港発の全航路を SUCCESS で返していた）
+    if (fromPort === toPort) {
+      const msg = userLang === 'en' ? `Departure and arrival ports are the same (${fromPort}).` :
+                  userLang === 'zh' ? `出发港和到达港相同（${fromPort}）。` : `出発港と到着港が同じです（${fromPort}）。`;
+      return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
+    }
     const routeStops = [fromStop.stop_id, toStop.stop_id];
     const matchingTrips = data.stopTimes.filter(st => routeStops.includes(st.stop_id));
     const tripIds = new Set(matchingTrips.map(st => st.trip_id));

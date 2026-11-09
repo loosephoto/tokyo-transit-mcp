@@ -177,7 +177,7 @@ export function getDisplayLineName(lineName, userLang) {
   for (const [key, t] of Object.entries(LINE_DISPLAY_NAMES)) {
     const keyNorm = key.replace(/[・\s]/g, '');
     // 検索語が路線名の一部である、かつ路線名の末尾で終わる
-    if (keyNorm.length > norm.length && keyNorm.endsWith(norm) && t[userLang]) {
+    if (norm.length >= 2 && keyNorm.length > norm.length && keyNorm.endsWith(norm) && t[userLang]) {
       candidates.push({ keyNorm, t: t[userLang] });
     }
   }
@@ -260,8 +260,10 @@ export function detectLanguage(text) {
   if (!text) return 'ja';
   const str = text.trim();
   if (!str) return 'ja';
-  // かな（ひらがな・カタカナ）を含む → 日本語
-  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(str)) return 'ja';
+  // かな（ひらがな・カタカナ・半角カナ）を含む → 日本語
+  if (/[\u3040-\u309F\u30A0-\u30FF\uFF66-\uFF9F]/.test(str)) return 'ja';
+  // 英字も漢字も含まない（日本語の句読点・記号のみ）→ 日本語として扱う
+  if (!/[a-zA-Z]/.test(str) && !/[\u3400-\u9FFF\uF900-\uFAFF]/.test(str)) return 'ja';
   // 漢字（CJK）を1文字も含まない → 英語
   // （-> / → / / / ( ) などの記号を含む英字入力もすべて英語として判定される）
   if (!/[\u3400-\u9FFF\uF900-\uFAFF]/.test(str)) return 'en';

@@ -11,7 +11,10 @@ export function validateFlightDate(value) {
 // JST 0:00〜9:00 の時間帯は「昨日」の日付になり、GTFS取得日・サービス日付表示が1日ずれていた。
 // このサーバーのユーザーは日本国内の交通機関を使うため、基準時区は常に JST。
 export function getJstDateStr(now = new Date()) {
-  return new Date(now.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  // 🔴 不正な Date（new Date(NaN) 等）は例外を投げず null を返す
+  const d = now instanceof Date ? now : new Date(now);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
 // JST日付の YYYYMMDD 形式（GTFS date パラメータ・フェリーGTFS取得日）
@@ -35,22 +38,22 @@ export function gtfsFetchDates(fixedDate) {
   const today = getJstDateCompact();
   // 特殊値 'current' / 'next' は ODPT が解釈する固定キーワード（日付形式ではない）
   if (fixedDate === 'current' || fixedDate === 'next') return [fixedDate, today];
-  const dates = [String(fixedDate || 'current'), today];
+  // 🔴 'current' / 'next' 以外の非文字列（undefined 等）は 'current' にフォールバック
+  const fixed = (typeof fixedDate === 'string' && fixedDate) ? fixedDate : 'current';
+  const dates = [fixed, today];
   if (!dates.includes(today)) dates.push(today);
   return [...new Set(dates)];
 }
 
 export function normalizeOvernightTime(timeStr) {
   if (!timeStr) return null;
-  const m = String(timeStr).match(/^(\d{1,2}):(\d{2})$/);
+  // GTFS の生文字列（11:00:00 / 34:59:00）にも対応するため秒を落とす
+  const m = String(timeStr).match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (!m) return String(timeStr);
   let h = parseInt(m[1], 10);
   const min = m[2];
-  if (h >= 24) {
-    h -= 24;
-    return `${String(h).padStart(2, '0')}:${min}`;
-  }
-  return String(timeStr);
+  if (h >= 24) h -= 24; // 24時超は翌日扱い（0時台に戻す）
+  return `${String(h).padStart(2, '0')}:${min}`;
 }
 
 export function timeToSortMinutes(timeStr) {

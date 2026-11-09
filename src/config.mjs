@@ -45,6 +45,7 @@ class CircuitBreaker {
     this.failureCount = 0;
     this.tripCount = 0; // サーキットを開放した累積エピソード数（#93: 段階的クールダウン用）
     this.lastStateChanged = Date.now();
+    this.halfOpenProbeInFlight = false;
   }
 
   canExecute() {
@@ -55,10 +56,17 @@ class CircuitBreaker {
       }
       return false;
     }
+    // 🔴 HALF-OPEN では探査1件のみ通す。並列リクエストが一斉に通り、
+    //   失敗が貯まって即座に再 OPEN になるのを防ぐ。
+    if (this.state === 'HALF-OPEN') {
+      if (this.halfOpenProbeInFlight) return false;
+      this.halfOpenProbeInFlight = true;
+    }
     return true;
   }
 
   onSuccess() {
+    this.halfOpenProbeInFlight = false;
     this.failureCount = 0;
     this.tripCount = 0; // 完全回復で段階クールダウンをリセット
     this.cooldownPeriod = this.baseCooldown;
@@ -66,6 +74,7 @@ class CircuitBreaker {
   }
 
   onFailure(error) {
+    this.halfOpenProbeInFlight = false;
     // 401/403 は一時障害ではなくAPIキー・権限設定の問題。設定不備で
     // 全ODPT機能をCircuit Breaker OPENにしない。
     const status = error?.response?.status;

@@ -102,7 +102,7 @@ export async function getTimetable(args) {
   const serviceDate = (args.date && /^\d{4}-\d{2}-\d{2}$/.test(args.date)) ? args.date : null;
   const targetCalendar = resolveTimetableCalendar(calendarArg, serviceDate || undefined);
   const userLang = resolveLang(args) || detectLanguage(rawStation) || 'ja';
-  if (!rawStation) {
+  if (!rawStation || !String(rawStation).trim()) {
     const msg = userLang === 'en' ? 'Please specify a station name.' : userLang === 'zh' ? '请指定车站名称。' : '駅名を指定してください。';
     return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
   }
@@ -280,11 +280,17 @@ export async function getTimetable(args) {
       });
       if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: getDisplayLineName(railwayFilter, userLang), calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), truncated: truncated || undefined, total: filtered.length, timetable: filtered.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable (路線×calendar別取得)", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
       // フィルタ結果が 0 件なら「該当路線のデータなし」を明確に返す（誤って全件を返さない）
+      // 🔴 JR・大部分の私鉄は ODPT 時刻表の対象外であることを明示する
+      const coverageNote = userLang === 'en'
+        ? ' (ODPT train timetables cover Tokyo Metro, Toei, Yokohama City, TWR, MIR and Tama Monorail only; JR and most private railways are not covered.)'
+        : userLang === 'zh'
+          ? '（ODPT 时刻表仅覆盖东京地铁、都营、横滨市营、TWR、MIR 及多摩单轨电车；JR 及大部分私铁不在覆盖范围内。）'
+          : '（ODPTの時刻表は東京メトロ・都営・横浜市営・TWR・MIR・多摩モノレールのみ。JR及び大部分の私鉄は対象外です。）';
       const noRailwayMsg = userLang === 'en'
-        ? `No timetable found for railway "${getDisplayLineName(railwayFilter, userLang)}" at ${displayStation} (${targetCalendar}).`
+        ? `No timetable found for railway "${getDisplayLineName(railwayFilter, userLang)}" at ${displayStation} (${targetCalendar}).${coverageNote}`
         : userLang === 'zh'
           ? `在${displayStation}未找到路线「${getDisplayLineName(railwayFilter, userLang)}」的时程表（${targetCalendar}）。`
-          : `${displayStation}の「${railwayFilter}」の時刻表は見つかりませんでした（${targetCalendar}）。`;
+          : `${displayStation}の「${railwayFilter}」の時刻表は見つかりませんでした（${targetCalendar}）。${coverageNote}`;
       return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, railway: getDisplayLineName(railwayFilter, userLang), calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), total: 0, message: noRailwayMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
     }
     if (sortedMatched.length === 0) {

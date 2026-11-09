@@ -320,7 +320,9 @@ export function localizeStatusLine(line, userLang) {
 }
 
 export async function getRunningStatus(args) {
-  const userLang = resolveLang(args) || detectLanguage(args?.operator) || 'ja';
+  // 🔴 operator キー（all / jreast / tokyometro）は言語判定に使わない（キーは英字のため
+  //   detectLanguage が en を返し、日本語ユーザーが英語応答になっていた）。
+  const userLang = resolveLang(args) || 'ja';
   const rawOp = String(args?.operator || 'all').trim().toLowerCase();
   const opKey = OPERATOR_ALIASES[rawOp] || rawOp;
   const wanted = opKey === 'all' || opKey === '' ? ORDER : [opKey];

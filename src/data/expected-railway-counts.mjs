@@ -29,7 +29,7 @@ export const EXPECTED_RAILWAY_STATION_COUNTS = {
   'JR川越線': 11,
   'JR相模線': 18,
   'JR総武線快速': 10,
-  'JR総武線各停': 22,
+  'JR総武線各停': 27,
   'JR中央線快速': 17,
   'JR中央線各停': 12,
   'JR中央総武線各停': 39,

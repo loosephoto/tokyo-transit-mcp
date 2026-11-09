@@ -732,7 +732,8 @@ export function buildSegmentsFromPath(nodePath, edgePath, adj, busGraph, nonStep
       let end = i + 1;
       while (end < nodePath.length - 1) {
         const nextType = edgePath?.[end]?.type;
-        if (nextType && (nextType === 'community_bus' || end + 1 === nodePath.length - 1)) end++;
+        // 🔴 末尾条件を外す（末尾ノードに達しただけで後続の bus 区間を飲み込んでいた）
+        if (nextType === 'community_bus') end++;
         else break;
       }
       const stops = nodePath.slice(i, end + 1);
@@ -1036,6 +1037,14 @@ export async function searchBus(args) {
   const fromInput = (args.from || '').trim();
   const toInput = (args.to || '').trim();
   const vehicleInput = (args.vehicle || '').trim();
+  // 🔴 from のみ（または to のみ）指定では乗り継ぎ探索できないため INVALID_INPUT にする
+  //   （従来はバス停検索モードに落ちて全件リストを SUCCESS で返していた）
+  if ((fromInput || toInput) && !(fromInput && toInput)) {
+    const ul = resolveLang(args) || detectLanguage(fromInput || toInput) || 'ja';
+    const msg = ul === 'en' ? 'Please specify both from and to bus stops.' :
+                ul === 'zh' ? '请同时指定出发站和到达站。' : 'from と to の両方を指定してください。';
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang: ul }));
+  }
   // 乗り継ぎ探索モード（from + to 指定時）。案B: 異系統・異事業者間の最短経路。
   if (fromInput && toInput) {
     const fL = detectLanguage(fromInput);
@@ -1227,7 +1236,7 @@ export async function searchBus(args) {
         found: true,
         cross_modal: result.isCrossModal || false,
         from: getDisplayStationName(result.fromNode, userLang), to: getDisplayStationName(result.toNode, userLang),
-        transfers: segments.length - 1,
+        transfers: Math.max(0, segments.length - 1), // 🔴 同一駅なら -1 にならないようにクランプ
         route: segments,
         barrier_free_note: barrierFreeNote,
         note: crossModal || undefined,

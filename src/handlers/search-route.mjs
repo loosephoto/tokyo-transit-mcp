@@ -22,7 +22,12 @@ import { haversineDistance } from '../lib/geo.mjs';
 import { parseTestMode, detectFailureType } from '../advice/transit-advice.mjs';
 import { getWeatherAdvice, stationToJmaArea } from '../advice/weather.mjs';
 import { buildEarthquakeSafetyResponse } from '../advice/earthquake.mjs';
+import { buildKanaIndex, kanaToStationCandidates } from '../lib/kana.mjs';
 import axios from 'axios';
+
+// かな（ひらがな・カタカナ）入力の解決索引を構築（ローマ字 en 表示名 → 日本語駅名）。
+// 駅名辞書は不変データのため、モジュール読み込み時に1回だけ構築する。
+buildKanaIndex(STATION_DISPLAY_NAMES);
 
 export async function getStationRomanToJa() {
   // 🔴 #94: モジュール変数の無期限保持をやめ、cache（TTL付き）に一本化。
@@ -253,6 +258,16 @@ export function resolveStation(rawName) {
     const candidates = Object.keys(STATION_TO_LINES).filter(st => st === normalized &&
       (STATION_TO_LINES[st] || []).some(e => e.line === hint.line));
     if (candidates.length === 1) return { station: candidates[0], candidates, ambiguous: false, exact: true, landmark: null, railwayHint: hint.line };
+  }
+
+  // かな入力が複数の駅に当たる場合（例: 「せんがわ」→ 仙川／千川）は、
+  // サイレント推測せずグラフに実在する候補を提示する。
+  const kanaCands = kanaToStationCandidates(key);
+  if (kanaCands) {
+    const inGraph = kanaCands.filter((c) => STATION_TO_LINES[c]);
+    if (inGraph.length > 1) {
+      return { station: null, candidates: inGraph, ambiguous: true, exact: false, landmark: null };
+    }
   }
 
   // #64: 「駅名＋路線名」のスペース区切り指定（例: 入谷 相模線 / 入谷 日比谷線）で、
@@ -691,6 +706,15 @@ const _displayNameReverse = (() => {
 export function normalizeStationName(name) {
   const trimmed = String(name || '').trim();
   if (STATION_NAME_MAP[trimmed]) return STATION_NAME_MAP[trimmed];
+  // かな（ひらがな・カタカナ）入力: ローマ字索引から日本語駅名へ解決する。
+  // 候補が複数ある場合はグラフに実在する駅で絞り、それでも複数なら呼び出し側
+  // （resolveStation）に曖昧提示を任せるため、ここでは返さない。
+  const kanaCands = kanaToStationCandidates(trimmed);
+  if (kanaCands) {
+    if (kanaCands.length === 1) return kanaCands[0];
+    const inGraph = kanaCands.filter((c) => STATION_TO_LINES[c]);
+    if (inGraph.length === 1) return inGraph[0];
+  }
   const lower = trimmed.toLowerCase();
   const mapped = STATION_NAME_MAP_LOWER.get(lower);
   if (mapped) return mapped;
@@ -877,6 +901,17 @@ export async function searchRoute(args) {
 
   const fromName = normalizeStationName(fromInput);
   const toName = normalizeStationName(toInput);
+  // 🔴 空白のみの入力・同一駅は INVALID_INPUT にする（main_line:null の SUCCESS を返さない）
+  if (!String(fromInput || '').trim() || !String(toInput || '').trim()) {
+    const msg = userLang === 'en' ? 'Please specify both from and to stations.' :
+                userLang === 'zh' ? '请同时指定出发站和到达站。' : '出発駅と到着駅の両方を指定してください。';
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
+  }
+  if (fromName === toName) {
+    const msg = userLang === 'en' ? `Departure and arrival are the same station (${fromName}).` :
+                userLang === 'zh' ? `出发站和到达站是同一个站（${fromName}）。` : `出発駅と到着駅が同じです（${fromName}）。`;
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
+  }
   const webSearchUrl = `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}`;
 
   let isRainy = false, isSevereWeather = false, isSevereWind = false, weatherText = "未取得", isTrainSuspended = false, delayMessage = "";

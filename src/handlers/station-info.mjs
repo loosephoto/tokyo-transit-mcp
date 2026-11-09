@@ -55,7 +55,7 @@ export async function getStationInfo(args) {
   const stationName = normalizeStationName(rawStation);
   const operator = args.operator ? OPERATOR_MAP[args.operator] : null;
   const userLang = resolveLang(args) || detectLanguage(rawStation) || 'ja';
-  if (!rawStation) {
+  if (!rawStation || !String(rawStation).trim()) {
     const msg = userLang === 'en' ? 'Please specify a station name.' : userLang === 'zh' ? '请指定车站名称。' : '駅名を指定してください。';
     return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang }));
   }
@@ -108,7 +108,8 @@ export async function getStationInfo(args) {
       status: "SUCCESS",
       detected_language: userLang,
       station: displayStation,
-      results: stations.map(s => ({ id: (s?.['@id'] || '').replace('odpt:Station:', ''), name: s?.['dc:title'], code: s?.['odpt:stationCode'] })),
+      // 🔴 results[].name も表示言語に合わせる（station は翻訳されるが results は生値のままだった）
+      results: stations.map(s => ({ id: (s?.['@id'] || '').replace('odpt:Station:', ''), name: getDisplayStationName(s?.['dc:title'], userLang), code: s?.['odpt:stationCode'] })),
       // 駅周辺の文化施設（search_route と同じ自動選出ルーチン: LANDMARK_DEFS + 明示定義）
       cultural_facilities: getDestinationCulturalFacilities(stationName, userLang).length
         ? getDestinationCulturalFacilities(stationName, userLang)
