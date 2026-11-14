@@ -29,7 +29,7 @@ import axios from 'axios';
 // 駅名辞書は不変データのため、モジュール読み込み時に1回だけ構築する。
 buildKanaIndex(STATION_DISPLAY_NAMES);
 
-export async function getStationRomanToJa() {
+export async function getStationRomanToJa(signal = null) {
   // 🔴 #94: モジュール変数の無期限保持をやめ、cache（TTL付き）に一本化。
   // キャッシュ期限切れ後は再取得する（ODPTデータ更新を反映し、古いマップを返し続けない）。
   const cached = cache.get(cache.stationRomanToJa.key);
@@ -43,7 +43,7 @@ export async function getStationRomanToJa() {
   try {
     const ops = ['TokyoMetro', 'Toei'];
     const responses = await Promise.allSettled(ops.map(op =>
-      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 15000 })
+      axios.get(`${API_BASE_URL}/odpt:Station`, { params: getParams(op), timeout: 15000, signal })
     ));
     for (const r of responses) {
       if (r.status !== 'fulfilled') continue;
@@ -72,7 +72,7 @@ export function resolveSuspendedLineNames(railwayId) {
   return Object.keys(RAILWAY_LINES).filter(line => line === canonicalName);
 }
 
-export async function fetchBikeShareData() {
+export async function fetchBikeShareData(signal = null) {
   const cached = cache.get(cache.bikeShare.key);
   if (cached) return cached;
   // 🔴 v2.45.0: ドコモ・バイクシェア（東京都心）+ ハローサイクリング（日本全国・CC BY）を並列取得し統合。
@@ -82,8 +82,8 @@ export async function fetchBikeShareData() {
     { base: GBFS_BASE_HELLOCYCLING, network: 'hellocycling' }
   ];
   const fetched = await Promise.allSettled(networks.map(({ base }) => Promise.all([
-    axios.get(`${base}/station_information.json`, { timeout: 15000 }),
-    axios.get(`${base}/station_status.json`, { timeout: 15000 })
+    axios.get(`${base}/station_information.json`, { timeout: 15000, signal }),
+    axios.get(`${base}/station_status.json`, { timeout: 15000, signal })
   ])));
   const stations = [];
   const statuses = {};
@@ -842,7 +842,9 @@ export function buildLimitedExpressGuidance(userLang, fromInput, toInput) {
   return resp;
 }
 
-export async function searchRoute(args) {
+export async function searchRoute(args, ctx = {}) {
+  // 🔴 v2.58.21: キャンセルを HTTP まで貫通させる（extra.signal）
+  const signal = ctx?.signal || null;
   const parsedArgs = parseTestMode({ from: args.from, to: args.to, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
   let fromInput = parsedArgs.from, toInput = parsedArgs.to;
   let simulatedFailure = parsedArgs.simulatedFailure;
@@ -966,7 +968,7 @@ export async function searchRoute(args) {
         if (!odptBreaker.canExecute()) return { error: 'CIRCUIT_OPEN' };
         try {
           const operators = ['TokyoMetro', 'Toei', 'TamaMonorail', 'MIR', 'TWR'];
-          const results = await Promise.allSettled(operators.map(op => axios.get(`${API_BASE_URL}/odpt:TrainInformation`, { params: getParams(op), timeout: 15000 })));
+          const results = await Promise.allSettled(operators.map(op => axios.get(`${API_BASE_URL}/odpt:TrainInformation`, { params: getParams(op), timeout: 15000, signal })));
           const allDelays = []; let fb = false, fd = '';
           const transferCandidates = [];
           const fulfilledCount = results.filter(res => res.status === 'fulfilled').length;

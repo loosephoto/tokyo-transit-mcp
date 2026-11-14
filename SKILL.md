@@ -212,6 +212,14 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.21（2026-11-14）— キャンセルの HTTP 貫通（bus / running-status / search-route）
+
+- v2.58.16 で `get_timetable` / `search_flight` は対応済みだったが、`search_bus` / `get_running_status` / `search_route` は「CANCELLED を返すだけで通信は完走」だった。
+- bus は内部タイムアウト用の AbortController しか持っていなかったため、**`AbortSignal.any([内部, 外部])` で合成**して 4 本の取得（BusroutePattern / BusTimetable / BusstopStationLinks / StationGeo）に渡す。外部キャンセル時は「タイムアウト→空データで継続」にせず外へ投げ、`CANCELLED` を返す。
+- running-status は 6 本の取得（JR東日本・東武・京急のスクレイピング、odpt:Railway、odpt:TrainStatus、GTFS-RT）に signal を通し、キャンセルは「未取得」に縮退させず `CANCELLED`。
+- search-route も 3 本（odpt:Station / GBFS / odpt:TrainInformation）に signal を追加。
+- 実測: 事前 abort で search_bus 223ms / running-status 1〜3ms、実行中 abort で search_bus 277ms（従来は 30 秒ブロックで通信継続）。
+
 ### v2.58.20（2026-11-14）— プローブのレート制限リトライ（テストの flake 解消）
 
 - `npm test` の live probe が ODPT のレート制限で `search_fare` / `get_timetable` の en/zh を 4 件 FAIL にすることがあった（同じコードで 3 分後に 29/29）。**コードの退行とインフラの揺らぎを混同しない**ため、`src/lib/probe-retry.mjs` を追加。

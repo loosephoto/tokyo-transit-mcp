@@ -779,7 +779,7 @@ export function scorePath(segments) {
   return { transfers: Math.max(0, transfers - 1), estimated_minutes: estimatedMinutes, bus_count: segments.filter(s => s.mode === 'bus').length, train_count: segments.filter(s => s.mode === 'train').length };
 }
 
-export async function searchBusTransfer(fromInput, toInput, vehiclePref) {
+export async function searchBusTransfer(fromInput, toInput, vehiclePref, externalSignal = null) {
   const from = normalizeBusStop(fromInput);
   const to = normalizeBusStop(toInput);
   // 🔴 タイムアウト緩和: 直列 await を Promise.all で並列化（ODPT 4 API + 駅geo を同時取得）
@@ -790,6 +790,9 @@ export async function searchBusTransfer(fromInput, toInput, vehiclePref) {
   // 🔴 タイムアウト時に元のHTTPリクエストも中断する（Promise.raceだけでは通信が継続し、
   // 遅延完了したレスポンスがキャッシュを書き換える・負荷が残る問題があった）。
   const abortController = new AbortController();
+  // 🔴 v2.58.21: MCP のキャンセル（extra.signal）を内部タイムアウトの AbortController と合成する。
+  //   これまでキャンセルしても通信が完走していた（bus 系は内部タイムアウトでしか中断できなかった）。
+  const signal = externalSignal ? AbortSignal.any([abortController.signal, externalSignal]) : abortController.signal;
   const abortTimer = setTimeout(() => abortController.abort(new Error('bus transfer fetch timeout')), BUS_TRANSFER_FETCH_TIMEOUT_MS);
   try {
     const withTimeout = (p, label) => Promise.race([
@@ -797,12 +800,18 @@ export async function searchBusTransfer(fromInput, toInput, vehiclePref) {
       new Promise((_, rej) => setTimeout(() => rej(new Error(`bus transfer fetch timeout: ${label}`)), BUS_TRANSFER_FETCH_TIMEOUT_MS))
     ]);
     [graphData, ttData, links, stationGeoMap] = await Promise.all([
-      withTimeout(fetchBusGraph(abortController.signal), 'BusroutePattern'),
-      withTimeout(fetchBusTimetable(abortController.signal), 'BusTimetable'),
-      withTimeout(fetchBusStopStationLinks(500, abortController.signal), 'BusstopStationLinks'),
-      withTimeout(fetchStationGeo(abortController.signal), 'StationGeo')
+      withTimeout(fetchBusGraph(signal), 'BusroutePattern'),
+      withTimeout(fetchBusTimetable(signal), 'BusTimetable'),
+      withTimeout(fetchBusStopStationLinks(500, signal), 'BusstopStationLinks'),
+      withTimeout(fetchStationGeo(signal), 'StationGeo')
     ]);
   } catch (timeoutErr) {
+    // 外部キャンセルは「タイムアウトで空データ」にせず、呼び出し側へ伝える
+    if (externalSignal?.aborted) {
+      const e = new Error('aborted');
+      e.name = 'AbortError';
+      throw e;
+    }
     // タイムアウト時は残リクエストを中断し、空データで継続（グラフは空＝NOT_FOUND を返し、コミュニティバス接続案内は維持）
     abortController.abort(timeoutErr);
     console.error('[searchBusTransfer] fetch guard triggered:', timeoutErr.message);
@@ -1040,7 +1049,8 @@ export function levenshteinDist(a, b) {
   return curr[b.length];
 }
 
-export async function searchBus(args) {
+export async function searchBus(args, ctx = {}) {
+  const signal = ctx?.signal || null;
   const busstopName = (args.busstop_name || '').trim();
   const fromInput = (args.from || '').trim();
   const toInput = (args.to || '').trim();
@@ -1068,7 +1078,7 @@ export async function searchBus(args) {
     // searchBusTransfer 内で個別APIの障害を縮退処理する。
     // ここで早期 return すると、hard-coded / community-bus フォールバックまで遮断される。
     try {
-      const result = await searchBusTransfer(fromInput, toInput, vehicleInput);
+      const result = await searchBusTransfer(fromInput, toInput, vehicleInput, signal);
       // 駅⇔コミュニティバス接続（Phase 1: 足の悪いユーザーの駅までの足・駅からの足）
       const cbAccess = [
         buildCommunityBusAccessBlock(fromInput, userLang),
@@ -1281,6 +1291,10 @@ export async function searchBus(args) {
         simulated_failure_type: testAdv.failureType || undefined
       });
     } catch (error) {
+      // 🔴 v2.58.21: キャンセル（AbortSignal）で中断された場合は API エラーにせず CANCELLED を返す
+      if (signal?.aborted || error?.name === 'AbortError' || error?.name === 'CanceledError') {
+        return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+      }
       // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
       if (!isInternalError(error)) odptBreaker.onFailure(error);
       return handleApiError(error, { userLang });
@@ -1484,7 +1498,7 @@ export async function searchBus(args) {
     let stopTimetable;
     if (matched.length > 0) {
       try {
-        const poleEntries = await fetchBusstopPoleTimetables();
+        const poleEntries = await fetchBusstopPoleTimetables(signal);
         const stopKey = (resolvedBusstop || busstopName).replace(/(停留所|バス停|駅)$/, '');
         const filtered = poleEntries.filter((e) => e.stop.includes(stopKey) || (stopKey.length >= 2 && stopKey.includes(e.stop)));
         if (filtered.length) {
@@ -1532,6 +1546,10 @@ export async function searchBus(args) {
       simulated_failure_type: testAdv.failureType || undefined
     });
   } catch (error) {
+    // 🔴 v2.58.21: キャンセル（AbortSignal）で中断された場合は API エラーにせず CANCELLED を返す
+    if (signal?.aborted || error?.name === 'AbortError' || error?.name === 'CanceledError') {
+      return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+      }
     // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
     if (!isInternalError(error)) odptBreaker.onFailure(error);
     return handleApiError(error, { userLang });

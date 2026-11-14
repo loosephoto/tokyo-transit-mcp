@@ -35,9 +35,9 @@ export function classifyStatus(text) {
 }
 
 // ---------- アダプタ: JR東日本（関東エリア） ----------
-async function fetchJREast() {
+async function fetchJREast(signal = null) {
   const url = 'https://traininfo.jreast.co.jp/train_info/kanto.aspx';
-  const html = (await axios.get(url, { timeout: 15000, headers: { 'User-Agent': UA } })).data;
+  const html = (await axios.get(url, { timeout: 15000, headers: { 'User-Agent': UA }, signal })).data;
   const re = /traininfo-routes__name">([^<]+)<\/span>.*?traininfo-routes__status\s+[a-z]+">\s*<span>([^<]*)<\/span>(.*?)(?=traininfo-routes__name">|$)/gs;
   const lines = [];
   for (const m of html.matchAll(re)) {
@@ -80,9 +80,9 @@ async function fetchJREast() {
 }
 
 // ---------- アダプタ: 東武鉄道（trainop.xml） ----------
-async function fetchTobu() {
+async function fetchTobu(signal = null) {
   const url = 'https://www.tobu.co.jp/file/trainop/trainop.xml';
-  const xml = (await axios.get(url, { timeout: 15000, headers: { 'User-Agent': UA } })).data;
+  const xml = (await axios.get(url, { timeout: 15000, headers: { 'User-Agent': UA }, signal })).data;
   // <line>X</line><description>Y</description> の交互ペアを抽出
   const pairRe = /<line>([\s\S]*?)<\/line>\s*<description>([\s\S]*?)<\/description>/g;
   const lines = [];
@@ -99,9 +99,9 @@ async function fetchTobu() {
 }
 
 // ---------- アダプタ: 京浜急行（京急線全体の単一ステータス） ----------
-async function fetchKeikyu() {
+async function fetchKeikyu(signal = null) {
   const url = 'https://unkou.keikyu.co.jp/';
-  const html = (await axios.get(url, { timeout: 15000, headers: { 'User-Agent': UA } })).data;
+  const html = (await axios.get(url, { timeout: 15000, headers: { 'User-Agent': UA }, signal })).data;
   // <dt>2026/08/18 00:29更新</dt> <dd>京急線は平常通り運転しています。</dd>
   const m = html.match(/<dt>([^<]*)更新<\/dt>\s*<dd>(.*?)<\/dd>/s);
   const statusText = m ? m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
@@ -115,13 +115,13 @@ async function fetchKeikyu() {
 // 🔴 v2.58.14: モジュール変数の無期限保持をやめ、TTL 付き cache に載せる（#94 の方針に合わせる）。
 const RAILWAY_NAME_CACHE_KEY = 'running-status:railwayNameMap';
 const RAILWAY_NAME_TTL_MS = 6 * 60 * 60 * 1000; // 6 時間
-async function getRailwayNameMap() {
+async function getRailwayNameMap(signal = null) {
   const cached = cache.get(RAILWAY_NAME_CACHE_KEY);
   if (cached) return cached;
   const map = {};
   try {
     const res = await axios.get(`${API_BASE_URL}/odpt:Railway`, {
-      params: { 'acl:consumerKey': API_KEY }, timeout: 15000
+      params: { 'acl:consumerKey': API_KEY }, timeout: 15000, signal
     });
     for (const r of Array.isArray(res.data) ? res.data : []) {
       const id = String(r['owl:sameAs'] || '').split('.').pop();
@@ -140,9 +140,9 @@ async function getRailwayNameMap() {
 
 // 指定事業者の ODPT TrainStatus を取得し路線別ステータスへ正規化。
 // ライセンス未付与（"There is no rdf:type"）やデータ無しは throw → 呼び出し元で unavailable に縮退。
-async function fetchODPTStatus(odptOperator) {
+async function fetchODPTStatus(odptOperator, signal = null) {
   const res = await axios.get(`${API_BASE_URL}/odpt:TrainStatus`, {
-    params: { 'acl:consumerKey': API_KEY, 'odpt:operator': `odpt.Operator:${odptOperator}` }, timeout: 15000
+    params: { 'acl:consumerKey': API_KEY, 'odpt:operator': `odpt.Operator:${odptOperator}` }, timeout: 15000, signal
   });
   const data = res.data;
   if (!Array.isArray(data)) throw new Error('NO_TRAIN_STATUS'); // ライセンス未付与等
@@ -150,7 +150,7 @@ async function fetchODPTStatus(odptOperator) {
     // 平常時はエントリなし（全線平常運転）とみなす
     return { lines: [{ line: '全線', status: 'normal', status_text: '平常運転', detail: undefined }], updated: undefined };
   }
-  const railMap = await getRailwayNameMap();
+  const railMap = await getRailwayNameMap(signal);
   const lines = data.map((s) => {
     const railwayId = String(s['odpt:railway'] || '').split('.').pop();
     const txt = s['odpt:trainStatusText'];
@@ -170,9 +170,9 @@ async function fetchODPTStatus(odptOperator) {
 // ---------- アダプタ: ODPT GTFS-RT 列車alert（標準ライセンス事業者向け） ----------
 // odpt:TrainStatus がキー未付与でも、GTFS-RT alert は取得可能（メトロ・TX・りんかい・多摩モノレール）。
 // 依存なしの protobuf デコーダ（src/lib/gtfs-realtime.mjs）でパースする。
-async function fetchGtfsRtAlerts(feedName) {
+async function fetchGtfsRtAlerts(feedName, signal = null) {
   const res = await axios.get(`${API_BASE_URL}/gtfs/realtime/${feedName}`, {
-    params: { 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: 15000
+    params: { 'acl:consumerKey': API_KEY }, responseType: 'arraybuffer', timeout: 15000, signal
   });
   const feed = parseGtfsRtFeed(new Uint8Array(res.data));
   const alerts = (feed.entities || []).filter((e) => e.alert).map((e) => e.alert);
@@ -180,7 +180,7 @@ async function fetchGtfsRtAlerts(feedName) {
     // alert が無い = 平常時
     return { lines: [{ line: '全線', status: 'normal', status_text: '平常運転', detail: undefined }], updated: undefined };
   }
-  const railMap = await getRailwayNameMap();
+  const railMap = await getRailwayNameMap(signal);
   const lines = alerts.map((a) => {
     const text = (a.header || a.description || '運行情報').trim();
     // 🔴 v2.58.10: route_id が内蔵の路線名に解決できない場合（ODPT の GTFS-RT は "4" のような
@@ -212,7 +212,7 @@ const REGISTRY = {
     key: 'tokyometro',
     name: { ja: '東京メトロ', en: 'Tokyo Metro', zh: '东京地铁' },
     url: 'https://www.tokyometro.jp/unkou/index.html',
-    fetch: () => fetchGtfsRtAlerts('tokyometro_odpt_train_alert')
+    fetch: (sig) => fetchGtfsRtAlerts('tokyometro_odpt_train_alert', sig)
   },
   tobu: {
     key: 'tobu',
@@ -224,31 +224,31 @@ const REGISTRY = {
     key: 'toei',
     name: { ja: '都営交通', en: 'Toei', zh: '都营交通' },
     url: 'https://www.kotsu.metro.tokyo.jp/train/topics.html',
-    fetch: () => fetchGtfsRtAlerts('toei_odpt_train_alert')
+    fetch: (sig) => fetchGtfsRtAlerts('toei_odpt_train_alert', sig)
   },
   mir: {
     key: 'mir',
     name: { ja: 'つくばエクスプレス', en: 'Tsukuba Express', zh: '筑波快线' },
     url: 'https://www.mir.co.jp/route/unten/',
-    fetch: () => fetchGtfsRtAlerts('mir_odpt_train_alert')
+    fetch: (sig) => fetchGtfsRtAlerts('mir_odpt_train_alert', sig)
   },
   twr: {
     key: 'twr',
     name: { ja: 'りんかい線', en: 'TWR Rinkai Line', zh: '临海线' },
     url: 'https://www.twr.co.jp/unkou/',
-    fetch: () => fetchGtfsRtAlerts('twr_odpt_train_alert')
+    fetch: (sig) => fetchGtfsRtAlerts('twr_odpt_train_alert', sig)
   },
   yokohamamunicipal: {
     key: 'yokohamamunicipal',
     name: { ja: '横浜市営地下鉄', en: 'Yokohama Municipal Subway', zh: '横滨市营地铁' },
     url: 'https://www.city.yokohama.lg.jp/kotsu/subway/unkou/',
-    fetch: () => fetchODPTStatus('YokohamaMunicipal')
+    fetch: (sig) => fetchODPTStatus('YokohamaMunicipal', sig)
   },
   tamamonorail: {
     key: 'tamamonorail',
     name: { ja: '多摩モノレール', en: 'Tama Toshi Monorail', zh: '多摩单轨' },
     url: 'https://www.tama-monorail.co.jp/unkou/',
-    fetch: () => fetchGtfsRtAlerts('tamamonorail_odpt_train_alert')
+    fetch: (sig) => fetchGtfsRtAlerts('tamamonorail_odpt_train_alert', sig)
   },
   seibu: {
     key: 'seibu',
@@ -329,7 +329,9 @@ export function localizeStatusLine(line, userLang) {
   };
 }
 
-export async function getRunningStatus(args) {
+export async function getRunningStatus(args, ctx = {}) {
+  // 🔴 v2.58.21: キャンセルを HTTP まで貫通させる（extra.signal）
+  const signal = ctx?.signal || null;
   // 🔴 operator キー（all / jreast / tokyometro）は言語判定に使わない（キーは英字のため
   //   detectLanguage が en を返し、日本語ユーザーが英語応答になっていた）。
   const userLang = resolveLang(args) || 'ja';
@@ -341,6 +343,7 @@ export async function getRunningStatus(args) {
   const operatorResults = new Map();
 
   // 並行フェッチ（一部失敗しても全体は成功を返す）
+  let cancelled = false;
   await Promise.all(wanted.map(async (key) => {
     const def = REGISTRY[key];
     if (!def) {
@@ -349,13 +352,18 @@ export async function getRunningStatus(args) {
     }
     try {
       if (!def.fetch) throw new Error('NO_ADAPTER');
-      const data = await def.fetch();
+      const data = await def.fetch(signal);
       const lines = (data.lines || []).map((l) => localizeStatusLine(l, userLang));
       operatorResults.set(key, {
         operator: def.key, name: def.name[userLang] || def.name.ja, available: true, updated: data.updated,
         url: def.url, lines
       });
     } catch (error) {
+      // 🔴 v2.58.21: キャンセルは「未取得」に縮退させず、全体を CANCELLED にする
+      if (signal?.aborted || error?.name === 'AbortError' || error?.name === 'CanceledError') {
+        cancelled = true;
+        return;
+      }
       // ボット保護・JS描画・未実装アダプタ等は未取得として公式リンクへ縮退
       operatorResults.set(key, {
         operator: def.key, name: def.name[userLang] || def.name.ja, available: false, url: def.url,
@@ -367,5 +375,9 @@ export async function getRunningStatus(args) {
   }));
   result.operators = wanted.map((key) => operatorResults.get(key)).filter(Boolean);
 
+  // 🔴 v2.58.21: キャンセル（AbortSignal）で中断された場合は CANCELLED を返す
+  if (cancelled || signal?.aborted) {
+    return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+  }
   return jsonResponse(result);
 }
