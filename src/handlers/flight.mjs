@@ -86,7 +86,7 @@ export function normalizeOdpFlight(f, direction, userLang) {
   };
 }
 
-export async function fetchFlightsOdp(params) {
+export async function fetchFlightsOdp(params, signal = null) {
   if (!API_KEY) return null;
   const isDep = params.direction === 'departure';
   const type = isDep ? 'odpt:FlightInformationDeparture' : 'odpt:FlightInformationArrival';
@@ -104,8 +104,8 @@ export async function fetchFlightsOdp(params) {
     //   ODPT への累計リクエスト数が増える probe 実行中は flight まで 429 を受けることがあり、
     //   そのまま失敗すると search_flight が FAIL になっていた（実測）。
     const res = await retryOnRateLimit(
-      () => axios.get(`${API_BASE_URL}/${type}`, { params: q, timeout: 15000 }),
-      { label: `flight/${type}` }
+      () => axios.get(`${API_BASE_URL}/${type}`, { params: q, timeout: 15000, signal }),
+      { label: `flight/${type}`, signal }
     );
     const data = Array.isArray(res.data) ? res.data : [];
     cache.set(cacheKey, data, cache.flightData.ttl);
@@ -116,7 +116,7 @@ export async function fetchFlightsOdp(params) {
   }
 }
 
-export async function fetchFlights(params) {
+export async function fetchFlights(params, signal = null) {
   if (!FLIGHT_API_KEY) return null;
   const buildQuery = (p) => {
     const qs = new URLSearchParams({ access_key: FLIGHT_API_KEY, limit: String(p.limit || 20) });
@@ -134,7 +134,8 @@ export async function fetchFlights(params) {
   if (cached) return cached;
   const hasRestrictedParams = !!(params.flight_status || params.flight_date || params.airline_iata);
   const call = async (u) => {
-    const res = await axios.get(u, { timeout: 12000 });
+    // 🔴 v2.58.16: キャンセルで HTTP を中断する
+    const res = await axios.get(u, { timeout: 12000, signal });
     // AviationStack はエラー時 { error: { ... } } を返す（無効キー・パラメータ制限等）
     if (res.data && res.data.error) {
       throw new Error(res.data.error.message || res.data.error.type);
@@ -203,7 +204,8 @@ export function normalizeFlight(f, direction, userLang) {
   };
 }
 
-export async function searchFlight(args) {
+export async function searchFlight(args, ctx = {}) {
+  const signal = ctx?.signal || null;
   const airportRaw = args?.airport || args?.airport_name || '';
   const flightNumber = args?.flight_number || args?.flight_iata || '';
   const direction = (args?.direction === 'departure') ? 'departure' : 'arrival';
@@ -273,13 +275,19 @@ export async function searchFlight(args) {
     if (airlineIata) flightParams.airline_iata = airlineIata.toUpperCase();
     // ODPT を先に試す（APIキー設定済みなら常に利用可能・429レート制限なし）
     if (API_KEY) {
-      try { flights = await fetchFlightsOdp(flightParams); }
-      catch (error) { flightApiError = error; }
+      try { flights = await fetchFlightsOdp(flightParams, signal); }
+      catch (error) {
+        if (signal?.aborted) throw error; // キャンセルは API エラー扱いせず外へ抜ける
+        flightApiError = error;
+      }
     }
     // ODPT で取得できない場合のみ AviationStack にフォールバック
     if ((!flights || flights.length === 0) && FLIGHT_API_KEY) {
-      try { flights = await fetchFlights(flightParams); }
-      catch (error) { flightApiError = error; }
+      try { flights = await fetchFlights(flightParams, signal); }
+      catch (error) {
+        if (signal?.aborted) throw error; // キャンセルは API エラー扱いせず外へ抜ける
+        flightApiError = error;
+      }
     }
 
     // API障害と、APIが正常に空結果を返した場合を区別する。
@@ -407,6 +415,10 @@ export async function searchFlight(args) {
       simulated_failure_type: testAdv.failureType || undefined
     });
   } catch (error) {
+    // 🔴 v2.58.16: キャンセル（AbortSignal）で中断された場合は API エラーにせず CANCELLED を返す
+    if (signal?.aborted || error?.name === 'CanceledError' || error?.name === 'AbortError') {
+      return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+    }
     return handleApiError(error, { userLang });
   }
 }

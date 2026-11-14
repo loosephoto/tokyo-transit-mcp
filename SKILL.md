@@ -212,6 +212,13 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.16（2026-11-14）— キャンセルを HTTP まで貫通させる（AbortSignal の横断）
+
+- MCP の `notifications/cancelled` で `runTool` が早期に `CANCELLED` を返しても、**handler 内の HTTP は完走していた**（31 秒ブロックの実測）。→ `runTool` が `handler(args, { signal })` を渡し、`get_timetable` / `search_flight` が `axios` と 429 バックオフ待ちを中断する。
+- `abortableSleep(ms, signal)` を追加し、`retryOnRateLimit` が待機中でも中断に応答するようにした（従来は最大 30 秒のバックオフを待ち切った）。
+- handler はキャンセル時に API エラーではなく `status: 'CANCELLED'` を返す（`isError: true`）。
+- 実測: 事前 abort で `get_timetable` 3ms / `search_flight` 即時、実行中 abort で 173〜309ms に短縮（従来は 15〜31 秒）。
+
 ### v2.58.15（2026-11-14）— 駅名の読み（かな）の欠落 220 駅を 74 駅まで補完
 
 **背景**: `STATION_READINGS` が 220/1,476 駅（14.9%）欠落していた（監査で実測）。かな入力（「うえの」「アサカ」）は読み辞書を優先するため、欠落駅はローマ字索引へのフォールバックになり精度が落ちる。

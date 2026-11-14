@@ -177,12 +177,35 @@ export async function withOdptSlot(fn) {
   }
 }
 
+// 🔴 v2.58.16: キャンセル（AbortSignal）で待機を中断できる sleep。
+//   MCP の notifications/cancelled で signal が中断されたら、429 のバックオフ待ちも即座に抜ける。
+export function abortableSleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      const e = new Error('aborted');
+      e.name = 'AbortError';
+      return reject(e);
+    }
+    const timer = setTimeout(() => {
+      if (signal) signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      const e = new Error('aborted');
+      e.name = 'AbortError';
+      reject(e);
+    };
+    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 /**
  * 429（レート制限）に対応するリトライ。
  * - 429 はサーキットブレーカーに失敗を通知しない（回復可能な一時障害のため）
  * - Retry-After ヘッダがあればそれを、なければ指数バックオフ（1s→2s→4s）を使う
  */
-export async function retryOnRateLimit(fn, { maxRetries = 5, label = 'ODPT', totalBudgetMs = 20000, maxWaitMs = 6000 } = {}) {
+export async function retryOnRateLimit(fn, { maxRetries = 5, label = 'ODPT', totalBudgetMs = 20000, maxWaitMs = 6000, signal = null } = {}) {
   const startedAt = Date.now();
   let delay = 1000;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -221,7 +244,7 @@ export async function retryOnRateLimit(fn, { maxRetries = 5, label = 'ODPT', tot
         throw err;
       }
       console.warn(`[${label}] HTTP 429 レート制限のため ${jittered}ms 待機してリトライ (${attempt + 1}/${maxRetries})`);
-      await new Promise(r => setTimeout(r, jittered));
+      await abortableSleep(jittered, signal);
       delay *= 2;
     }
   }

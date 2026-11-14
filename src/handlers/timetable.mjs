@@ -68,14 +68,15 @@ export function stationRecordMatches(record, stationName, romanToJa = {}) {
 
 export const TIMETABLE_OPERATORS = ['TokyoMetro', 'Toei', 'YokohamaMunicipal', 'TWR', 'MIR', 'TamaMonorail'];
 
-export async function getTimetableRailways() {
+export async function getTimetableRailways(signal = null) {
   // 🔴 #94: モジュール変数の無期限保持をやめ、cache（TTL付き）に一本化。
   // 障害中に取得した古い路線リストを復旧後も返し続ける問題を防ぐ。
   const cacheKey = `${cache.trainTimetable.key}:railways`;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
   try {
-    const res = await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: getParams(), timeout: 20000 });
+    // 🔴 v2.58.16: キャンセル（AbortSignal）で HTTP 自体を中断する
+    const res = await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: getParams(), timeout: 20000, signal });
     const lines = (res.data || [])
       .filter(r => {
         const op = r['odpt:operator'] || '';
@@ -92,7 +93,8 @@ export async function getTimetableRailways() {
   }
 }
 
-export async function getTimetable(args) {
+export async function getTimetable(args, ctx = {}) {
+  const signal = ctx?.signal || null;
   const rawStation = args.station_name || '';
   const stationName = normalizeStationName(rawStation);
   const railwayFilter = args.railway || null;
@@ -127,7 +129,7 @@ export async function getTimetable(args) {
         const rKey = r.split('.').pop() || r;
         return r.includes(railwayKey) || rKey.includes(railwayKey) || railwayKey.includes(rKey);
       };
-      const allRailways = await getTimetableRailways();
+      const allRailways = await getTimetableRailways(signal);
       fetchRailways = allRailways.filter(matchRailwayId);
       if (!fetchRailways.length) {
         const coverage0 = userLang === 'en'
@@ -155,13 +157,13 @@ export async function getTimetable(args) {
     let missingSources = 0;
     if (cached && !cached.truncated) { allTimetables = cached.merged; truncated = false; }
     else {
-      const railways = fetchRailways || await getTimetableRailways();
+      const railways = fetchRailways || await getTimetableRailways(signal);
       // 各路線 × 2 calendar を取得（1000件上限回避のため calendar を明示指定）。
       // 🔴 v2.58.11: 従来は Promise.allSettled の無制限並列でセマフォもリトライも迂回していた。
       //   retryOnRateLimit 配下（同時 3・最小間隔 120ms・総予算 20 秒）に置く。
       const responses = await Promise.allSettled(railways.flatMap(rw =>
         ['odpt.Calendar:Weekday', 'odpt.Calendar:SaturdayHoliday'].map(cal =>
-          retryOnRateLimit(() => axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(null, { 'odpt:railway': rw, 'odpt:calendar': cal }), timeout: 20000 }), { label: `odpt:TrainTimetable ${String(rw).split(/[.:]/).pop()}` })
+          retryOnRateLimit(() => axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(null, { 'odpt:railway': rw, 'odpt:calendar': cal }), timeout: 20000, signal }), { label: `odpt:TrainTimetable ${String(rw).split(/[.:]/).pop()}`, signal })
         )
       ));
       const fulfilled = responses.filter(r => r.status === 'fulfilled' && Array.isArray(r.value.data));
@@ -366,6 +368,10 @@ export async function getTimetable(args) {
     }
     return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), truncated: truncated || undefined, partial: partial || undefined, missing_sources: partial ? missingSources : undefined, total: sortedMatched.length, timetable: sortedMatched.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable (路線×calendar別取得)", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
   } catch (error) {
+    // 🔴 v2.58.16: キャンセル（AbortSignal）で中断された場合は API エラーにせず CANCELLED を返す
+    if (signal?.aborted || error?.name === 'CanceledError' || error?.name === 'AbortError') {
+      return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+    }
     // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
     // 外部 API 障害のみ onFailure でカウントする。ヘルパー（getTimetableRailways）側で
     // onFailure を呼ばないようにしたため、ここで1回だけカウントされる（二重カウント防止）。
