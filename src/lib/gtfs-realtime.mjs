@@ -96,18 +96,24 @@ function translatedText(fields) {
 // Alert メッセージを人間可読な運行情報へ変換
 function parseAlert(alertBytes) {
   const a = decodeMessage(alertBytes);
-  const header = translatedText(fieldBytes(a, 8) ? decodeMessage(fieldBytes(a, 8)) : {});
-  const desc = translatedText(fieldBytes(a, 10) ? decodeMessage(fieldBytes(a, 10)) : {});
-  // informed_entity (repeated, field4) の route_id を収集
+  // 🔴 v2.58.10: 公式 gtfs-realtime.proto の Alert は
+  //   informed_entity=5 / cause=6 / effect=7 / url=8 / header_text=10 / description_text=11。
+  //   従来は header=8(url)・desc=10(header_text)・informed_entity=4(存在しない)・
+  //   effect=6(cause)・cause=5(informed_entity) と読んでいたため、実フィード
+  //   (tokyometro_odpt_train_alert 247B/1alert) で header="" / routes=[] / effect=cause となり、
+  //   運行情報が常に「全線」1件になり詳細文(field 11)が一度も表示されなかった。
+  const header = translatedText(fieldBytes(a, 10) ? decodeMessage(fieldBytes(a, 10)) : {});
+  const desc = translatedText(fieldBytes(a, 11) ? decodeMessage(fieldBytes(a, 11)) : {});
+  // informed_entity (repeated, field5) の route_id を収集
   const routes = [];
-  for (const ent of a[4] || []) {
+  for (const ent of a[5] || []) {
     const es = decodeMessage(ent.value);
     const rid = firstField(es, 2); // route_id
     const routeId = decodeUtf8(typeof rid === 'object' && rid ? rid : null);
     if (routeId) routes.push(routeId);
   }
-  const effect = firstField(a, 6); // enum (varint)
-  const cause = firstField(a, 5);  // enum (varint)
+  const effect = firstField(a, 7); // enum (varint)
+  const cause = firstField(a, 6);  // enum (varint)
   return { header: header.trim(), description: desc.trim(), routes: [...new Set(routes)], effect: typeof effect === 'bigint' ? Number(effect) : undefined, cause: typeof cause === 'bigint' ? Number(cause) : undefined };
 }
 

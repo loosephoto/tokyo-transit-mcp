@@ -119,8 +119,9 @@ console.log('-- H-7: CircuitBreaker --');
   cb.cooldownPeriod = 50;
   cb.lastStateChanged = Date.now();
   await new Promise((r) => setTimeout(r, 70));
-  cb.canExecute();
-  let allow = 0;
+  // 🔴 v2.58.10: OPEN→HALF-OPEN の遷移コール自体が「探査1件目」になった
+  //   （従来は遷移時にフラグを立てず true を返していたため、遷移＋同時リクエストで2件通った）。
+  let allow = cb.canExecute() ? 1 : 0;
   for (let i = 0; i < 100; i++) if (cb.canExecute()) allow++;
   if (allow === 1) ok('HALF-OPEN は探査1件のみ許可');
   else fail(`HALF-OPEN の許可件数 = ${allow}, expected 1`);

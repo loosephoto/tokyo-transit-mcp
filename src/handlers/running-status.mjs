@@ -176,10 +176,13 @@ async function fetchGtfsRtAlerts(feedName) {
   const railMap = await getRailwayNameMap();
   const lines = alerts.map((a) => {
     const text = (a.header || a.description || '運行情報').trim();
+    // 🔴 v2.58.10: route_id が内蔵の路線名に解決できない場合（ODPT の GTFS-RT は "4" のような
+    //   数値 route_id を返すことがある）は「全線」にフォールバックする。解決できない ID を
+    //   そのまま路線名として出すと "4・5・9" のような意味不明な表示になる。
     const routeNames = (a.routes || []).map((r) => {
       const last = String(r).split('.').pop();
-      return railMap[last] || railMap[r] || last;
-    });
+      return railMap[last] || railMap[r] || null;
+    }).filter(Boolean);
     return {
       line: routeNames.length ? routeNames.join('・') : '全線',
       status: classifyStatus(text),

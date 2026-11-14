@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.58.9 (Production Ready)
+ * Tokyo Transit MCP Server v2.58.10 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -17,7 +17,7 @@ import './config.mjs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { OPERATOR_MAP } from './data/misc.mjs';
+import { OPERATOR_MAP, NON_RAIL_OPERATORS } from './data/misc.mjs';
 import { WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES } from './data/railway-lines.mjs';
 import { jsonResponse, buildErrorResponse } from './lib/common.mjs';
 import { detectLanguage, resolveLang, translateTrainInfoDetail, translateWeather } from './lib/lang.mjs';
@@ -38,7 +38,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 // 各ツールは registerTool で登録し、ListTools / CallTool の手動ハンドラと switch を廃止した。
 // SDK が zod スキーマから tools/list の JSON Schema を自動生成する（additionalProperties:false 等も自動付与）。
 const server = new McpServer(
-  { name: 'tokyo-transit-mcp', version: '2.58.9' },
+  { name: 'tokyo-transit-mcp', version: '2.58.10' },
   { capabilities: { tools: {}, logging: {} } }
 );
 
@@ -120,7 +120,10 @@ server.registerTool('get_station_info', {
   description: '駅情報取得 - 駅の基本情報をODPT APIから取得。language（ja/en/zh）指定で応答言語を強制可能。',
   inputSchema: {
     station_name: z.string().describe('駅名'),
-    operator: z.enum(Object.keys(OPERATOR_MAP)).optional().describe('事業者キー'),
+    // 🔴 v2.58.10: OPERATOR_MAP（鉄道23）だけを enum にしていたため、list_transit_operators が
+    //   返す非鉄道28キー（yurikamome / toden / 各バス / フェリー2社）が zod で弾かれていた。
+    //   同じ語彙を両ツールで共有する。
+    operator: z.enum([...new Set([...Object.keys(OPERATOR_MAP), ...Object.keys(NON_RAIL_OPERATORS)])]).optional().describe('事業者キー（list_transit_operators が返す key）'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は駅名から自動判定）')
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS
@@ -165,7 +168,9 @@ server.registerTool('list_transit_operators', {
   description: '交通事業者一覧 - 鉄道・AGT・モノレール・路面電車・フェリーの全事業者を種別フィルター付きで表示。',
   inputSchema: {
     language: z.enum(['ja', 'en', 'zh']).optional(),
-    type_filter: z.enum(['rail', 'agt', 'monorail', 'tram', 'all']).optional()
+    // 🔴 v2.58.10: bus / ferry が無く、実装が返す 50 事業者のうち 18 社（bus 16 + ferry 2）に
+    //   どのフィルタ値でも到達できなかった（実測: enum 5 値で拾えるのは 32 件）。
+    type_filter: z.enum(['rail', 'agt', 'monorail', 'tram', 'bus', 'ferry', 'all']).optional()
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS
 }, (args) => runTool('list_transit_operators', args, listTransitOperators));

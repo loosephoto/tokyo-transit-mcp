@@ -52,6 +52,11 @@ class CircuitBreaker {
     if (this.state === 'OPEN') {
       if (Date.now() - this.lastStateChanged > this.cooldownPeriod) {
         this.setState('HALF-OPEN');
+        // 🔴 v2.58.10: 遷移させた本人が探査1件目なので、ここでフラグを立てる。
+        //   従来は立てずに true を返していたため、クールダウン明けの同時リクエストが
+        //   実測 5 回中 2 回通過し（設計は 1 件）、段階的クールダウンが機能しなかった。
+        this.halfOpenProbeInFlight = true;
+        this._probeStartedAt = Date.now();
         return true;
       }
       return false;
@@ -59,8 +64,15 @@ class CircuitBreaker {
     // 🔴 HALF-OPEN では探査1件のみ通す。並列リクエストが一斉に通り、
     //   失敗が貯まって即座に再 OPEN になるのを防ぐ。
     if (this.state === 'HALF-OPEN') {
+      // 🔴 v2.58.10: 探査の自動失効。報告漏れ（onSuccess/onFailure 未呼び出し）が
+      //   1 件でも起きると halfOpenProbeInFlight が立ったまま残り、クールダウン経過後も
+      //   canExecute() が永久 false になっていた（再起動まで全 ODPT ツールが 503）。
+      if (this.halfOpenProbeInFlight && Date.now() - (this._probeStartedAt || this.lastStateChanged) > this.cooldownPeriod) {
+        this.halfOpenProbeInFlight = false;
+      }
       if (this.halfOpenProbeInFlight) return false;
       this.halfOpenProbeInFlight = true;
+      this._probeStartedAt = Date.now();
     }
     return true;
   }
@@ -170,7 +182,8 @@ export async function withOdptSlot(fn) {
  * - 429 はサーキットブレーカーに失敗を通知しない（回復可能な一時障害のため）
  * - Retry-After ヘッダがあればそれを、なければ指数バックオフ（1s→2s→4s）を使う
  */
-export async function retryOnRateLimit(fn, { maxRetries = 5, label = 'ODPT' } = {}) {
+export async function retryOnRateLimit(fn, { maxRetries = 5, label = 'ODPT', totalBudgetMs = 20000, maxWaitMs = 6000 } = {}) {
+  const startedAt = Date.now();
   let delay = 1000;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -178,14 +191,37 @@ export async function retryOnRateLimit(fn, { maxRetries = 5, label = 'ODPT' } = 
     } catch (e) {
       const status = e?.response?.status;
       if (status !== 429 || attempt === maxRetries) throw e;
-      const retryAfter = Number(e?.response?.headers?.['retry-after']);
-      // 🔴 v2.58.7: 待機時間を 1s→2s→4s→8s→16s と伸ばす（最大5回）。
-      //   短い間隔だと ODPT のウィンドウ内に再送出され続けて失敗する（実測: 3回では 429 継続）。
-      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
-        ? retryAfter * 1000
-        : delay;
-      console.warn(`[${label}] HTTP 429 レート制限のため ${waitMs}ms 待機してリトライ (${attempt + 1}/${maxRetries})`);
-      await new Promise(r => setTimeout(r, waitMs));
+      // 🔴 v2.58.10: 待ち時間の上限を入れる。
+      //   従来は Retry-After をそのまま使い、指数バックオフも 1+2+4+8+16 秒で
+      //   1 呼び出しが実測 31,136ms ブロックした（search_bus は 34,224ms）。
+      //   → Retry-After は数値/HTTP-date の両方を解釈し maxWaitMs にクランプ、
+      //     総予算 totalBudgetMs を超える待機はせず即座に呼び出し側へ返して縮退させる。
+      //   予算 20 秒は「1+2+4+6+6 秒」まで粘れる幅。ODPT のレート制限ウィンドウは
+      //   数十秒続くことがあり、短すぎると回復可能な 429 を即エラーにしてしまう。
+      const raw = e?.response?.headers?.['retry-after'];
+      let retryAfterMs = NaN;
+      if (raw != null) {
+        const num = Number(raw);
+        if (Number.isFinite(num) && num >= 0) {
+          retryAfterMs = num * 1000;
+        } else {
+          const at = Date.parse(String(raw));
+          if (Number.isFinite(at)) retryAfterMs = Math.max(0, at - Date.now());
+        }
+      }
+      const base = Number.isFinite(retryAfterMs) && retryAfterMs > 0 ? retryAfterMs : delay;
+      const clamped = Math.min(base, maxWaitMs);
+      const jittered = Math.round(clamped * (0.8 + Math.random() * 0.4));
+      const elapsed = Date.now() - startedAt;
+      if (elapsed + jittered > totalBudgetMs) {
+        const err = new Error(`${label}: 429 リトライの総予算 ${totalBudgetMs}ms を超過（経過 ${elapsed}ms、次の待機 ${jittered}ms）`);
+        err.code = 'RATE_LIMIT_BUDGET_EXCEEDED';
+        err.cause = e;
+        err.retryAfterMs = Number.isFinite(retryAfterMs) ? retryAfterMs : undefined;
+        throw err;
+      }
+      console.warn(`[${label}] HTTP 429 レート制限のため ${jittered}ms 待機してリトライ (${attempt + 1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, jittered));
       delay *= 2;
     }
   }

@@ -1598,7 +1598,7 @@ export const STATION_DISPLAY_NAMES = {
   "国領": { en: "Kokuryo", zh: "国领" },
   "柴崎": { en: "Shibasaki", zh: "柴崎" },
   "つつじヶ丘": { en: "Tsutsujigaoka", zh: "つつじヶ丘" },
-  "仙川": { en: "Senkawa", zh: "仙川" },
+  "仙川": { en: "Sengawa", zh: "仙川" },
   "千歳烏山": { en: "Chitose-Karasuyama", zh: "千岁乌山" },
   "芦花公園": { en: "Roka-Koen", zh: "芦花公园" },
   "八幡山": { en: "Hachiman-yama", zh: "八幡山" },

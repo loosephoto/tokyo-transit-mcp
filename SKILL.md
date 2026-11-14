@@ -212,6 +212,22 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.10（2026-11-14）— 監査バッチ1: 運行情報パーサのフィールド誤りと 429 無防備の修正
+
+**運行情報（最重要）**
+- GTFS-RT Alert のフィールド番号が公式 proto と全てずれていた（header=8/desc=10/informed_entity=4/effect=6/cause=5）。実フィード（東京メトロ 247B/1alert）では存在するフィールドが 5,6,7,10,11 のみで、header 空・routes 空・effect と cause が入れ替わっていた。→ header_text=10 / description_text=11 / informed_entity=5 / cause=6 / effect=7 に修正。運行情報の詳細文と路線別情報が復活した。
+- route_id が路線名に解決できない場合（ODPT は "4" のような数値 ID を返す）は「全線」へフォールバック（"4・5・9" のような意味不明な表示を防ぐ）。
+
+**レート制限・障害時の挙動**
+- `get_operator_routes` が素の axios.get で 429 をリトライしなかった（`npm test` の FAIL 2 件の原因）→ `retryOnRateLimit` 配下に置き、失敗時は内蔵 RAILWAY_LINES から路線一覧を組み立てて `degraded: true` で返す。
+- `retryOnRateLimit` に総予算（既定 20 秒）と 1 回の待機上限（5 秒）・ジッタを導入。実測 31,136ms ブロックしていた 429 退避が上限付きになる。Retry-After は数値と HTTP-date の両方を解釈。
+- CircuitBreaker の OPEN→HALF-OPEN 遷移で探査フラグを立てておらず、同時 2 件が通過していた（実測 5 回中 2 件）→ 遷移時に 1 件だけ通す。報告漏れがあってもクールダウン経過後に探査が復活する（恒久停止の解消）。
+
+**スキーマとデータ**
+- `get_station_info.operator` の enum に非鉄道 28 事業者（ゆりかもめ・都電・各バス・フェリー2社）を追加。`list_transit_operators.type_filter` に bus / ferry を追加（18 社に到達できなかった）。
+- 「仙川」の英語名 Senkawa（千川と衝突）→ Sengawa。
+- JR埼京線に「さいたま新都心」を追加（19→20駅、期待駅数も同期）。
+
 ### v2.58.9（2026-11-10）— かな入力対応とデータ不整合の修正（駅列切断・表記分裂・英語名の誤字）
 
 **かな入力の対応**

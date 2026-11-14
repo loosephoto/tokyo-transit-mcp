@@ -2,7 +2,7 @@
  * 駅情報・事業者一覧ハンドラ（モノリス分割 Phase 4b-5）
  * 依存: config / data / lib / advice / handlers/search-route（駅名解決）
  */
-import { cache, odptBreaker, API_BASE_URL, API_KEY } from '../config.mjs';
+import { cache, odptBreaker, API_BASE_URL, API_KEY, retryOnRateLimit } from '../config.mjs';
 import { OPERATOR_MAP, NON_RAIL_OPERATORS } from '../data/misc.mjs';
 import { RAILWAY_NAME_MAP, ODPT_RAILWAY_NAME_MAP } from '../data/station-names.mjs';
 import { RAILWAY_LINES } from '../data/railway-lines.mjs';
@@ -198,7 +198,10 @@ export async function getOperatorRoutes(args) {
   else return jsonResponse(buildErrorResponse('INVALID_INPUT', `不明: ${opKey}。list_transit_operators で確認。`, { userLang }));
   if (!odptBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', 'ODPT API利用不可。', { userLang }));
   try {
-    let railways = (await axios.get(`${API_BASE_URL}/odpt:Railway`, { params: { 'acl:consumerKey': API_KEY, 'odpt:operator': `odpt.Operator:${opId}` }, timeout: 15000 })).data;
+    // 🔴 v2.58.10: 素の axios.get だったため 429 を 1 回食らうと即 ERROR になっていた
+    //   （probe-all-lang の get_operator_routes en/zh が FAIL した直接原因）。
+    //   retryOnRateLimit 経由にしてセマフォ・最小間隔・総予算付きリトライの配下に置く。
+    let railways = (await retryOnRateLimit(() => axios.get(`${API_BASE_URL}/odpt:Railway`, { params: { 'acl:consumerKey': API_KEY, 'odpt:operator': `odpt.Operator:${opId}` }, timeout: 15000 }), { label: 'odpt:Railway' })).data;
     if (opMeta.railwayId) { const tid = `odpt.Railway:${opMeta.railwayId}`; railways = railways.filter(r => r['owl:sameAs'] === tid); }
     odptBreaker.onSuccess();
     const routes = railways.map(r => ({
@@ -280,6 +283,32 @@ export async function getOperatorRoutes(args) {
   } catch (error) {
     // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
     if (!isInternalError(error)) odptBreaker.onFailure(error);
+    // 🔴 v2.58.10: ODPT が落ちても内蔵 RAILWAY_LINES から事業者の路線一覧を組み立てて返す。
+    //   従来は ERROR を返していたため、レート制限や障害時に「路線一覧が出ない」だけでなく
+    //   回帰プローブまで FAIL していた。内蔵データが無い事業者のみエラーにする。
+    const fallbackPrefix = LOCAL_LINE_PREFIX[opId];
+    const internalRoutes = fallbackPrefix ? Object.entries(RAILWAY_LINES)
+      .filter(([lineName]) => lineName === fallbackPrefix || lineName.startsWith(fallbackPrefix))
+      .map(([lineName, stationsArr]) => ({
+        railway: getLineDisplayName(lineName, userLang),
+        id: `local:${lineName}`,
+        stations: stationsArr.map((st, idx) => ({ index: idx, name: getDisplayStationName(st, userLang) })),
+        station_count: stationsArr.length,
+        source: 'internal_graph'
+      })) : [];
+    if (internalRoutes.length) {
+      return jsonResponse({
+        status: 'SUCCESS',
+        degraded: true,
+        degraded_reason: 'ODPT_UNAVAILABLE',
+        detected_language: userLang,
+        operator_name: opKey,
+        type: opMeta.type,
+        routes: internalRoutes,
+        total_routes: internalRoutes.length,
+        website: opMeta.website || null
+      });
+    }
     return handleApiError(error, { userLang });
   }
 }

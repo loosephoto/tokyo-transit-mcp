@@ -15,7 +15,7 @@ export const EXPECTED_RAILWAY_STATION_COUNTS = {
   'JR京葉線': 19,
   'JR五日市線': 7,
   'JR高崎線': 24,
-  'JR埼京線': 19,
+  'JR埼京線': 20,
   'JR山手線': 30,
   'JR湘南新宿ライン': 19,
   'JR湘南新宿ライン（宇都宮線直通）': 36,
