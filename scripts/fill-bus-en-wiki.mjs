@@ -123,7 +123,9 @@ function collectStops() {
 
 function kanaOf(title, text) {
   if (!text) return null;
-  const head = text.slice(0, 300);
+  // 🔴 冒頭 300 文字だと Infobox テンプレートで埋まって読みに届かない記事がある（実測）。
+  //   4,000 文字まで見る。
+  const head = text.slice(0, 4000);
   const esc = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const m = head.match(new RegExp('^\\s*' + esc + '\\s*[（(]([ぁ-んァ-ヶー]{2,})[）)]'));
   return m ? m[1] : null;
@@ -140,15 +142,31 @@ for (const name of stops) {
 }
 
 const extracts = new Map();
+// 🔴 redirects=1 だとページのキーが転送先タイトルになるため、転送元→転送先の対応を保持する。
+//   これが無いと「清川 → 清川 (台東区)」のような記事を取りこぼす（実測 0 件の原因）。
+const alias = new Map();
 for (let i = 0; i < titles.length; i += 20) {
   const chunk = titles.slice(i, i + 20);
   const json = await fetchJson({ action: 'query', prop: 'extracts', exintro: '1', explaintext: '1', exlimit: 'max', redirects: '1', titles: chunk.join('|') });
+  for (const r of json?.query?.redirects || []) alias.set(r.from, r.to);
+  for (const n of json?.query?.normalized || []) alias.set(n.from, n.to);
   for (const p of json?.query?.pages || []) {
     if (p.missing || !p.extract) continue;
     extracts.set(p.title, p.extract);
   }
   await sleep(1200);
 }
+/** 転送を辿って記事冒頭を引く */
+const lookup = (title) => {
+  if (!title) return null;
+  if (extracts.has(title)) return extracts.get(title);
+  let t = title;
+  for (let hop = 0; hop < 3 && alias.has(t); hop++) {
+    t = alias.get(t);
+    if (extracts.has(t)) return extracts.get(t);
+  }
+  return null;
+};
 console.log(`記事冒頭: ${extracts.size} ページ / タイトル候補 ${titles.length}`);
 
 const romajiOf = (kana) => titleCase(simplify(kanaToRomaji(kana)));
@@ -162,19 +180,19 @@ for (const name of stops) {
   let hit = null;
 
   if (chome) {
-    const kana = kanaOf(chome.base, extracts.get(chome.base));
+    const kana = kanaOf(chome.base, lookup(chome.base));
     if (kana) hit = { en: `${romajiOf(kana)} ${chome.num}-chome`, zh: `${romajiOf(kana)} ${chome.num}丁目` };
   } else if (sp) {
-    const full = kanaOf(name, extracts.get(name));
+    const full = kanaOf(name, lookup(name));
     if (full && full.endsWith(sp.kana) && full.length > sp.kana.length) {
       const baseKana = full.slice(0, -sp.kana.length);
       hit = { en: `${romajiOf(baseKana)}${sp.en}`, zh: `${romajiOf(baseKana)}${sp.zh}` };
     } else {
-      const baseKana = kanaOf(sp.base, extracts.get(sp.base));
+      const baseKana = kanaOf(sp.base, lookup(sp.base));
       if (baseKana) hit = { en: `${romajiOf(baseKana)}${sp.en}`, zh: `${romajiOf(baseKana)}${sp.zh}` };
     }
   } else {
-    const kana = kanaOf(name, extracts.get(name));
+    const kana = kanaOf(name, lookup(name));
     if (kana) hit = { en: romajiOf(kana), zh: romajiOf(kana) };
   }
 
