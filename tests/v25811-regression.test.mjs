@@ -44,8 +44,12 @@ const { getTimetable } = await import('../src/handlers/timetable.mjs');
 
 let NET_OK = true;
 try {
+  // 🔴 v2.58.13: ERROR 応答でも structuredContent は返るため、到達判定は status === 'SUCCESS' で行う。
+  //   これが無いと CI（キー未設定・外部ネットワーク無し）で「到達可能」と誤判定し、
+  //   NO_DATA 系のアサーションが ERROR で落ちる（実際に GitHub Actions が赤くなった）。
+  if (!process.env.ODPT_API_KEY) NET_OK = false;
   const probe = await searchFare({ from: '新宿', to: '東京', language: 'ja' });
-  if (!probe?.structuredContent) NET_OK = false;
+  if (probe?.structuredContent?.status !== 'SUCCESS') NET_OK = false;
 } catch {
   NET_OK = false;
 }

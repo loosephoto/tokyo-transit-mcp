@@ -212,6 +212,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.13（2026-11-14）— CI の初回実行で見つかったテストの誤判定を修正
+
+- `tests/v25811-regression.test.mjs` の「ODPT に到達できるか」の判定が `structuredContent` の有無だけで、**ERROR 応答でも到達可能と誤判定**していた。GitHub Actions（キー未設定・外部ネットワーク無し）ではこれが原因で NO_DATA 系のアサーションが ERROR で落ち、CI が赤くなった（実測: v2.58.12 の初回 CI 実行が failure）。
+- 判定を `status === 'SUCCESS'` かつ `ODPT_API_KEY` が設定されている場合に限定し、未到達時は通信系の検証を SKIP する。CI では SKIP して緑、ローカル（キーあり）では従来どおり全項目を検証する。
+- 機能変更なし（テストのみ）。
+
 ### v2.58.12（2026-11-14）— 監査バッチ3: 言語判定の誤判定・ゲートの骨格・CI・outputSchema
 
 **言語判定**
