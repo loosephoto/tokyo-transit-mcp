@@ -605,9 +605,9 @@ for (const [k, v] of Object.entries(STATION_COORDS_EXTRA)) {
   if (!BIKE_COORD_LOOKUP[k]) BIKE_COORD_LOOKUP[k] = { lat, lon };
 }
 
-export async function findNearestBikeStations(stationName, userLocation = null, maxResults = 5, maxDistance = 2000) {
+export async function findNearestBikeStations(stationName, userLocation = null, maxResults = 5, maxDistance = 2000, signal = null) {
   try {
-    const data = await fetchBikeShareData();
+    const data = await fetchBikeShareData(signal);
     // 基準座標: ユーザーの現在位置（GPS）が指定されていればそれを優先、なければ出発駅座標
     let coord = (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lon === 'number')
       ? { lat: userLocation.lat, lon: userLocation.lon }
@@ -842,7 +842,32 @@ export function buildLimitedExpressGuidance(userLang, fromInput, toInput) {
   return resp;
 }
 
+/**
+ * キャンセル（extra.signal）を統一する薄いラッパー。
+ * 🔴 v2.58.24: 内部の取得は Promise.allSettled のため中断が例外にならず、
+ *   「縮退した SUCCESS」を返していた（bus / running-status と挙動が不揃い）。
+ *   本体の戻り値に関わらず、signal が中断されていれば CANCELLED に揃える。
+ */
 export async function searchRoute(args, ctx = {}) {
+  const signal = ctx?.signal || null;
+  if (signal?.aborted) {
+    return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+  }
+  try {
+    const res = await searchRouteInner(args, { ...ctx, signal });
+    if (signal?.aborted) {
+      return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+    }
+    return res;
+  } catch (error) {
+    if (signal?.aborted || error?.name === 'AbortError' || error?.name === 'CanceledError') {
+      return jsonResponse({ status: 'CANCELLED', cancelled: true, message: 'Request cancelled.' }, { isError: true });
+    }
+    throw error;
+  }
+}
+
+async function searchRouteInner(args, ctx = {}) {
   // 🔴 v2.58.21: キャンセルを HTTP まで貫通させる（extra.signal）
   const signal = ctx?.signal || null;
   const parsedArgs = parseTestMode({ from: args.from, to: args.to, '-test': args['-test'], test: args.test, test_mode: args.test_mode });
@@ -1066,12 +1091,12 @@ export async function searchRoute(args, ctx = {}) {
   let bikeShareInfo = null;
   let destinationBikeShareInfo = null;
   if (isTrainSuspended && !isSevereWeather && !isSevereWind && !isSnowRisk && !isDisasterRisk) {
-    bikeShareInfo = await findNearestBikeStations(fromName, userLocation);
+    bikeShareInfo = await findNearestBikeStations(fromName, userLocation, 5, 2000, signal);
   }
   // 荒天・降雪・凍結時を除き、到着地点周辺のラストワンマイル用ポートを案内する。
   // リアルタイムAPIが取得できない場合は推測せず、案内ブロック自体を省略する。
   if (!isSevereWeather && !isSevereWind && !isSnowRisk && !isDisasterRisk) {
-    destinationBikeShareInfo = await findNearestBikeStations(toName, null);
+    destinationBikeShareInfo = await findNearestBikeStations(toName, null, 5, 2000, signal);
   }
 
   const displayFrom = getDisplayStationName(fromName, userLang);

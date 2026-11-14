@@ -212,6 +212,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.24（2026-11-14）— search_route の CANCELLED 統一・シェアサイクルの signal 対応
+
+- `searchRoute` の本体を `searchRouteInner` に分離し、外側で**キャンセルを統一**。内部の取得は `Promise.allSettled` のため中断が例外にならず「縮退した SUCCESS」を返していた（bus / running-status と挙動が不揃い）。signal 中断時は必ず `CANCELLED`。
+- `findNearestBikeStations(..., signal)` を追加し、GBFS 取得（`fetchBikeShareData`）まで渡す。中断時は即座に空で返る。
+- 実測: 事前 abort 0ms / 実行中 abort 335ms / signal 無しは SUCCESS のまま。
+
 ### v2.58.23（2026-11-14）— バス停読み取りの取りこぼし修正（リダイレクト追従・冒頭 4,000 字）
 
 - `fill-bus-en-wiki.mjs` の 2 つの取りこぼしを修正:
