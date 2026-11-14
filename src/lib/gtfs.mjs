@@ -12,6 +12,11 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
 
+// 🔴 v2.58.14: GTFS の応答が zip かどうかを判定する（200 で返る HTML/JSON エラーページ対策）。
+export function isZipBuffer(buf) {
+  return Buffer.isBuffer(buf) && buf.length > 22 && buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+}
+
 // 🔴 v2.58.7: GTFS zip バッファのディスクキャッシュ。
 //   GTFS zip は1事業者あたり数MB〜10MB超（川崎市バスは7.4MB）で、
 //   `date=current` のたびに再ダウンロード・再解凍・再パースしていた。
@@ -107,6 +112,13 @@ export async function fetchGtfsZipBuffer(src, timeoutMs = 20000) {
         { label: 'GTFS-zip' }
       );
       const buf = Buffer.from(res.data);
+      // 🔴 v2.58.14: 200 で返る HTML/JSON エラーページを zip として保存しない。
+      //   従来は検証せずメモリ＋ディスクに 1 時間キャッシュし、解凍で例外 → その間ずっと全滅した
+      //   （実測: 43 バイトの HTML が 2 回目以降 HTTP 0 回で返り ADM-ZIP 例外）。
+      const isZip = isZipBuffer(buf);
+      if (!isZip) {
+        throw new Error(`GTFS: not a zip body (len=${buf.length}, head=${buf.subarray(0, 16).toString('utf8').replace(/\s+/g, ' ').slice(0, 32)})`);
+      }
       _memZipCache.set(memKey, { buf, ts: Date.now() });
       while (_memZipCache.size > _MEM_MAX_ENTRIES) {
         _memZipCache.delete(_memZipCache.keys().next().value);

@@ -1409,16 +1409,23 @@ export function buildDisplayText(payload, lang) {
         : L === 'zh' ? `路线：${s_.from} → ${s_.to}`
         : `${s_.from} から ${s_.to} までの経路`;
       const meta = [];
-      if (typeof s_.estimated_minutes === 'number') meta.push(L === 'en' ? `${s_.estimated_minutes} min` : `約${s_.estimated_minutes}分`);
-      if (typeof s_.transfers === 'number') meta.push(L === 'en' ? `${s_.transfers} transfers` : `乗換${s_.transfers}回`);
+      // 🔴 v2.58.14: zh でも日本語の単位（約10分 / 乗換0回）が残っていた。
+      if (typeof s_.estimated_minutes === 'number') {
+        meta.push(L === 'en' ? `${s_.estimated_minutes} min` : L === 'zh' ? `约${s_.estimated_minutes}分钟` : `約${s_.estimated_minutes}分`);
+      }
+      if (typeof s_.transfers === 'number') {
+        meta.push(L === 'en' ? `${s_.transfers} transfers` : L === 'zh' ? `换乘${s_.transfers}次` : `乗換${s_.transfers}回`);
+      }
       add(`${label}${meta.length ? `（${meta.join(' / ')}）` : ''}`);
     }
     for (const seg of r.segments || []) {
       const walk = seg.walk_minutes !== undefined;
       if (walk) {
-        add(`${seg.line}: ${seg.from} → ${seg.to}${seg.walk_minutes ? `（約${seg.walk_minutes}分徒歩）` : ''}`);
+        const walkText = L === 'en' ? ` (${seg.walk_minutes} min walk)` : L === 'zh' ? `（步行约${seg.walk_minutes}分钟）` : `（約${seg.walk_minutes}分徒歩）`;
+        add(`${seg.line}: ${seg.from} → ${seg.to}${seg.walk_minutes ? walkText : ''}`);
       } else {
-        add(`${seg.line}: ${seg.from} → ${seg.to}${seg.stops ? `（${seg.stops}駅）` : ''}`);
+        const stopsText = L === 'en' ? ` (${seg.stops} stops)` : L === 'zh' ? `（${seg.stops}站）` : `（${seg.stops}駅）`;
+        add(`${seg.line}: ${seg.from} → ${seg.to}${seg.stops ? stopsText : ''}`);
       }
     }
     lines.push('');

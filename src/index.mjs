@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.58.13 (Production Ready)
+ * Tokyo Transit MCP Server v2.58.14 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -38,7 +38,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 // 各ツールは registerTool で登録し、ListTools / CallTool の手動ハンドラと switch を廃止した。
 // SDK が zod スキーマから tools/list の JSON Schema を自動生成する（additionalProperties:false 等も自動付与）。
 const server = new McpServer(
-  { name: 'tokyo-transit-mcp', version: '2.58.13' },
+  { name: 'tokyo-transit-mcp', version: '2.58.14' },
   { capabilities: { tools: {}, logging: {} } }
 );
 
@@ -92,18 +92,75 @@ function resolveErrLang(args) {
   return 'ja';
 }
 
-// 各ツールのハンドラを呼び、logging 通知と isError の付与を行う共通ラッパー（#101/#104）
-async function runTool(name, args, handler) {
+// 各ツールのハンドラを呼び、logging 通知・進捗通知・キャンセル・isError の付与を行う共通ラッパー（#101/#104）
+// 🔴 v2.58.14: MCP の progress 通知とキャンセルに対応した。
+//   従来は 429 退避で 20 秒近くブロックしても進捗が出ず、クライアントから中断する手段も無かった。
+async function runTool(name, args, handler, extra) {
   log('debug', `tool called: ${name}`);
+  const progressToken = extra?._meta?.progressToken;
+  const signal = extra?.signal;
+  const notify = async (progress, total, message) => {
+    if (progressToken === undefined || progressToken === null || typeof extra?.sendNotification !== 'function') return;
+    try {
+      await extra.sendNotification({
+        method: 'notifications/progress',
+        params: { progressToken, progress, total, message }
+      });
+    } catch { /* クライアントが未対応でも本処理は続行する */ }
+  };
   try {
-    const result = await handler(args);
+    await notify(0, 100, `${name}: started`);
+    const work = Promise.resolve().then(() => handler(args));
+    let finished = false;
+    // 完了まで 5 秒間隔で「まだ動いている」ことを知らせる（長時間ツールの体感対策）
+    const ticker = setInterval(() => {
+      if (!finished) void notify(50, 100, `${name}: in progress`);
+    }, 5000);
+    let result;
+    if (signal && typeof signal.addEventListener === 'function') {
+      let onAbort;
+      const aborted = new Promise((resolve) => {
+        onAbort = () => resolve(SYMBOL_CANCELLED);
+        if (signal.aborted) onAbort();
+        else signal.addEventListener('abort', onAbort, { once: true });
+      });
+      // 中断後に handler が reject しても未処理の rejection にしない
+      work.catch(() => {});
+      result = await Promise.race([work, aborted]);
+      finished = true;
+      clearInterval(ticker);
+      signal.removeEventListener('abort', onAbort);
+      if (result === SYMBOL_CANCELLED) {
+        log('info', `tool cancelled: ${name}`);
+        // 一部のクライアントはキャンセルされた要求の応答を捨てるため、進捗としても知らせる。
+        await notify(100, 100, `${name}: cancelled`);
+        return jsonResponse({
+          status: 'CANCELLED',
+          cancelled: true,
+          message: cancelledMessage(resolveErrLang(args))
+        }, { isError: true });
+      }
+    } else {
+      result = await work;
+      finished = true;
+      clearInterval(ticker);
+    }
     const isErr = !!(result && result.isError);
+    await notify(100, 100, `${name}: finished`);
     log('info', `tool finished: ${name} ${isErr ? '(error)' : '(ok)'}`);
     return result;
   } catch (error) {
     log('error', `tool failed: ${name}: ${error.message || String(error)}`);
     return jsonResponse(buildErrorResponse('UNKNOWN_ERROR', error.message || String(error), { userLang: resolveErrLang(args) }));
   }
+}
+
+// キャンセル応答の文言（3 言語）
+const SYMBOL_CANCELLED = Symbol('cancelled');
+function cancelledMessage(lang) {
+  return lang === 'en' ? 'The request was cancelled by the client.'
+    : lang === 'zh' ? '请求已被客户端取消。'
+      : 'リクエストはクライアントにより中断されました。';
 }
 
 // ==========================================
@@ -125,7 +182,7 @@ server.registerTool('search_route', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('search_route', args, searchRoute));
+}, (args, extra) => runTool('search_route', args, searchRoute, extra));
 
 // get_station_info
 server.registerTool('get_station_info', {
@@ -141,7 +198,7 @@ server.registerTool('get_station_info', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('get_station_info', args, getStationInfo));
+}, (args, extra) => runTool('get_station_info', args, getStationInfo, extra));
 
 // get_weather
 server.registerTool('get_weather', {
@@ -153,7 +210,7 @@ server.registerTool('get_weather', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('get_weather', args, getWeather));
+}, (args, extra) => runTool('get_weather', args, getWeather, extra));
 
 // list_ferry_ports
 server.registerTool('list_ferry_ports', {
@@ -164,7 +221,7 @@ server.registerTool('list_ferry_ports', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('list_ferry_ports', args, listFerryPorts));
+}, (args, extra) => runTool('list_ferry_ports', args, listFerryPorts, extra));
 
 // search_ferry
 server.registerTool('search_ferry', {
@@ -177,7 +234,7 @@ server.registerTool('search_ferry', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('search_ferry', args, searchFerry));
+}, (args, extra) => runTool('search_ferry', args, searchFerry, extra));
 
 // list_transit_operators
 server.registerTool('list_transit_operators', {
@@ -191,7 +248,7 @@ server.registerTool('list_transit_operators', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('list_transit_operators', args, listTransitOperators));
+}, (args, extra) => runTool('list_transit_operators', args, listTransitOperators, extra));
 
 // list_community_buses
 server.registerTool('list_community_buses', {
@@ -202,7 +259,7 @@ server.registerTool('list_community_buses', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('list_community_buses', args, listCommunityBuses));
+}, (args, extra) => runTool('list_community_buses', args, listCommunityBuses, extra));
 
 // get_operator_routes
 server.registerTool('get_operator_routes', {
@@ -214,7 +271,7 @@ server.registerTool('get_operator_routes', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('get_operator_routes', args, getOperatorRoutes));
+}, (args, extra) => runTool('get_operator_routes', args, getOperatorRoutes, extra));
 
 // search_flight
 server.registerTool('search_flight', {
@@ -231,7 +288,7 @@ server.registerTool('search_flight', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('search_flight', args, searchFlight));
+}, (args, extra) => runTool('search_flight', args, searchFlight, extra));
 
 // search_fare
 server.registerTool('search_fare', {
@@ -244,7 +301,7 @@ server.registerTool('search_fare', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('search_fare', args, searchFare));
+}, (args, extra) => runTool('search_fare', args, searchFare, extra));
 
 // get_timetable
 server.registerTool('get_timetable', {
@@ -259,7 +316,7 @@ server.registerTool('get_timetable', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('get_timetable', args, getTimetable));
+}, (args, extra) => runTool('get_timetable', args, getTimetable, extra));
 
 // search_bus
 server.registerTool('search_bus', {
@@ -274,7 +331,7 @@ server.registerTool('search_bus', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('search_bus', args, searchBus));
+}, (args, extra) => runTool('search_bus', args, searchBus, extra));
 
 // get_running_status
 server.registerTool('get_running_status', {
@@ -286,7 +343,7 @@ server.registerTool('get_running_status', {
   },
   annotations: DEFAULT_TOOL_ANNOTATIONS,
   outputSchema: TOOL_OUTPUT_SCHEMA
-}, (args) => runTool('get_running_status', args, getRunningStatus));
+}, (args, extra) => runTool('get_running_status', args, getRunningStatus, extra));
 
 export { server, searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES, calculateFlightDelayMinutes, parseCsvLine, validateFlightDate, normalizeAirportIata, gtfsFetchDates, getRunningStatus };
 

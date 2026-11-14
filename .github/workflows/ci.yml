@@ -37,6 +37,8 @@ jobs:
           node tests/v2589-regression.test.mjs
           node tests/v25810-regression.test.mjs
           node tests/v25811-regression.test.mjs
+          node tests/v25812-regression.test.mjs
+          node tests/v25814-regression.test.mjs
           node tests/samename-transfer.test.mjs
           node tests/resolve-suspended.test.mjs
           node tests/line-geometry-regression.test.mjs

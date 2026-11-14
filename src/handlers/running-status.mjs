@@ -8,7 +8,7 @@
 import axios from 'axios';
 import { jsonResponse, buildErrorResponse } from '../lib/common.mjs';
 import { getDisplayLineName, translateTrainInfoDetail, resolveLang, detectLanguage } from '../lib/lang.mjs';
-import { API_KEY, API_BASE_URL } from '../config.mjs';
+import { API_KEY, API_BASE_URL, cache } from '../config.mjs';
 import { parseGtfsRtFeed } from '../lib/gtfs-realtime.mjs';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36';
@@ -112,9 +112,12 @@ async function fetchKeikyu() {
 }
 
 // ---------- アダプタ: ODPT TrainStatus（標準ライセンス事業者向け） ----------
-let railwayNameCache = null;
+// 🔴 v2.58.14: モジュール変数の無期限保持をやめ、TTL 付き cache に載せる（#94 の方針に合わせる）。
+const RAILWAY_NAME_CACHE_KEY = 'running-status:railwayNameMap';
+const RAILWAY_NAME_TTL_MS = 6 * 60 * 60 * 1000; // 6 時間
 async function getRailwayNameMap() {
-  if (railwayNameCache) return railwayNameCache;
+  const cached = cache.get(RAILWAY_NAME_CACHE_KEY);
+  if (cached) return cached;
   const map = {};
   try {
     const res = await axios.get(`${API_BASE_URL}/odpt:Railway`, {
@@ -126,8 +129,12 @@ async function getRailwayNameMap() {
       const ja = typeof title === 'object' ? (title.ja || title.en) : (title ? String(title) : '');
       if (id && ja) map[id] = ja;
     }
-  } catch (_) { /* 路線名辞書が取れなくても trainStatusText があれば動く */ }
-  railwayNameCache = map;
+  } catch (_) {
+    /* 路線名辞書が取れなくても trainStatusText があれば動く。失敗はキャッシュしない */
+    return map;
+  }
+  // 中身が空のまま固定化しない（次回の呼び出しで再取得できるようにする）
+  if (Object.keys(map).length > 0) cache.set(RAILWAY_NAME_CACHE_KEY, map, RAILWAY_NAME_TTL_MS);
   return map;
 }
 

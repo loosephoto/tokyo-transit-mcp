@@ -6,6 +6,7 @@ import { jmaBreaker, cache } from '../config.mjs';
 import { MULTILINGUAL_ADVICE, JMA_AREA_MAP, JMA_AREA_LABELS, PLACE_MUNICIPALITY, PLACE_SUBAREA, TEMP_AREA_BY_SUBAREA } from '../data/misc.mjs';
 import { STATION_COORDS } from '../data/railway-lines.mjs';
 import { STATION_COORDS_EXTRA } from '../data/station-coords-extra.mjs';
+import { STATION_DISPLAY_NAMES } from '../data/station-names.mjs';
 import { PREFECTURE_BOUNDS } from '../data/prefecture-bounds.mjs';
 import { resolveLang, detectLanguage, translateWeather, toJapaneseStationName } from '../lib/lang.mjs';
 import { jsonResponse, buildErrorResponse } from '../lib/common.mjs';
@@ -189,7 +190,46 @@ export function stationToJmaArea(name) {
   const coordCode = jmaCodeFromStationCoords(raw) || jmaCodeFromStationCoords(norm)
     || jmaCodeFromStationCoords(jaName) || jmaCodeFromStationCoords(jaName?.replace(/駅$/, ''));
   if (coordCode) return coordCode;
-  return '130000'; // デフォルト: 東京
+  return '130000'; // デフォルト: 東京（呼び出し側は resolveJmaArea で「未解決」を判定できる）
+}
+
+// 中国語表記の駅・地域名 → 日本語（toJapaneseStationName は CJK を含むと早期 return するため別途必要）
+const ZH_TO_JA = new Map();
+for (const [ja, v] of Object.entries(STATION_DISPLAY_NAMES)) {
+  const zh = v && v.zh;
+  if (zh && !ZH_TO_JA.has(zh)) ZH_TO_JA.set(zh, ja);
+}
+function zhJaName(name) {
+  const raw = String(name || '').trim();
+  return ZH_TO_JA.get(raw) || ZH_TO_JA.get(raw.replace(/駅$/, '')) || raw;
+}
+
+// 🔴 v2.58.14: 解決できなかった場合に null を返す版。getWeather はこちらを使い、
+//   未対応の地域名（空文字・海外都市）を無言で東京に置換して SUCCESS を返さない。
+export function resolveJmaArea(name) {
+  const raw = (name || '').trim();
+  if (!raw) return null;
+  const ja = zhJaName(raw);
+  const code = stationToJmaArea(ja);
+  if (code !== '130000') return code;
+  return (isTokyoAreaName(raw) || isTokyoAreaName(ja)) ? code : null;
+}
+
+// 東京（130000）に正当に解決される名前かどうか（既定値との区別に使う）
+function isTokyoAreaName(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return false;
+  const zhJa = ZH_TO_JA.get(raw);
+  if (zhJa && zhJa !== raw) return isTokyoAreaName(zhJa);
+  if (JMA_AREA_MAP[raw] === '130000') return true;
+  const norm = raw.replace(/駅$/, '');
+  if (JMA_AREA_MAP[norm] === '130000') return true;
+  const jaName = toJapaneseStationName(raw);
+  if (jaName && JMA_AREA_MAP[jaName.replace(/駅$/, '')] === '130000') return true;
+  const muni = PLACE_MUNICIPALITY[raw] || PLACE_MUNICIPALITY[norm] || PLACE_MUNICIPALITY[jaName];
+  if (muni && /東京都|東京/.test(muni.ja || '')) return true;
+  // 座標から東京に解決できる駅名
+  return (jmaCodeFromStationCoords(raw) || jmaCodeFromStationCoords(norm)) === '130000';
 }
 
 // #93: 駅名・場所 → 自治体名ラベル（3言語）。該当なしは null
@@ -210,8 +250,24 @@ export async function getWeather(args) {
   const rawArea = args.area_name || '';
   const userLang = resolveLang(args) || detectLanguage(rawArea) || 'ja';
   // 🔴 #93: stationToJmaArea 経由で府県予報区コードを解決（無効な区・市コードを使わない）
-  const areaCode = stationToJmaArea(rawArea);
-  const areaName = rawArea || "東京";
+  // 🔴 v2.58.14: 未対応の地域名を無言で東京に置換しない（従来は 'ソウル' でも東京の天気を SUCCESS で返した）。
+  const resolvedCode = resolveJmaArea(rawArea);
+  if (!resolvedCode) {
+    if (!rawArea.trim()) {
+      const emptyMsg = userLang === 'en' ? 'Please specify an area or station name (e.g. Tokyo, Yokohama, Shibuya).'
+        : userLang === 'zh' ? '请指定地域或车站名称（如 东京、横滨、涩谷）。'
+          : '地域名または駅名を指定してください（東京・横浜・渋谷など）。';
+      return jsonResponse(buildErrorResponse('INVALID_INPUT', emptyMsg, { userLang }));
+    }
+    const msg = userLang === 'en'
+      ? `Weather is not available for "${rawArea}". Specify a Japanese area or station (e.g. Tokyo, Yokohama, Shibuya).`
+      : userLang === 'zh'
+        ? `无法获取「${rawArea}」的天气。请指定日本的地域或车站（如 东京、横滨、涩谷）。`
+        : `「${rawArea}」の天気は取得できません。日本の地域名または駅名（東京・横浜・渋谷など）を指定してください。`;
+    return jsonResponse(buildErrorResponse('INVALID_INPUT', msg, { userLang, area: rawArea }));
+  }
+  const areaCode = resolvedCode;
+  const areaName = rawArea || '東京';
   if (!jmaBreaker.canExecute()) return jsonResponse(buildErrorResponse('CIRCUIT_BREAKER_OPEN', '気象庁APIが利用できません。', { userLang, area: areaName, breakerName: jmaBreaker.name, breakerState: jmaBreaker.state }));
   try {
     // 🔴 #93: 一次細分区域（伊豆諸島・小笠原の島）を選択。区域名（東京地方等）も取得。

@@ -7,6 +7,11 @@
 import { API_KEY } from '../config.mjs';
 
 export function buildErrorResponse(errorType, errorMessage, details = {}) {
+  // 🔴 v2.58.14: CIRCUIT_BREAKER_OPEN は provider と言語から文言を確定する
+  if (errorType === 'CIRCUIT_BREAKER_OPEN') {
+    const _lang = (details && (details.userLang || details.language)) || 'ja';
+    errorMessage = breakerMessage(_lang, (details && (details.breakerName || details.provider)) || 'ODPT');
+  }
   const timestamp = new Date().toISOString();
   const ERROR_META = {
     API_TIMEOUT: { httpCode: 408, retryable: true,
@@ -15,11 +20,13 @@ export function buildErrorResponse(errorType, errorMessage, details = {}) {
         en: ["The API server is busy. Please try again in a few minutes.", "Please use alternative services like Yahoo! Transit."],
         zh: ["API服务器繁忙，请几分钟后重试。", "请使用雅虎路线信息等替代搜索。"] },
       suggestionKey: "RETRY_LATER" },
+    // 🔴 v2.58.14: 特定事業者名（ODPT）を固定で書かない。JMA 断でも「ODPT API is unavailable」と
+    //   出ていた（実測）。上流API名は error_message 側で provider に応じて出し分ける。
     CIRCUIT_BREAKER_OPEN: { httpCode: 503, retryable: true,
       suggestions: {
-        ja: ["現在ODPT APIが利用できません。サーキットブレイカーが作動中です。", "しばらく待ってから再度お試しください。"],
-        en: ["ODPT API is currently unavailable. Circuit breaker is active.", "Please wait and try again later."],
-        zh: ["ODPT API当前不可用。断路器已激活。", "请稍后再试。"] },
+        ja: ["データ提供元のAPIが現在利用できません。サーキットブレイカーが作動中です。", "しばらく待ってから再度お試しください。"],
+        en: ["The upstream data API is currently unavailable. Circuit breaker is active.", "Please wait and try again later."],
+        zh: ["上游数据 API 当前不可用。断路器已激活。", "请稍后再试。"] },
       suggestionKey: "CIRCUIT_OPEN" },
     NETWORK_ERROR: { httpCode: 502, retryable: false,
       suggestions: {
@@ -107,6 +114,21 @@ export function buildErrorResponse(errorType, errorMessage, details = {}) {
   if (details.internal !== undefined) response.internal = details.internal;
   if (details.disambiguation) response.disambiguation = details.disambiguation;
   return response;
+}
+
+// 🔴 v2.58.14: サーキットブレーカー由来のエラー文言を要求言語に合わせる。
+//   従来は呼び出し側が日本語リテラルを渡しており、language:'en' でも
+//   『ODPT API利用不可。』が返っていた（実測）。provider は details.breakerName から推定する。
+export function breakerMessage(userLang, provider = 'ODPT') {
+  const isJma = /JMA/i.test(String(provider));
+  const label = isJma ? '気象庁API' : 'ODPT API';
+  const labelEn = isJma ? 'The JMA API' : 'The ODPT API';
+  const labelZh = isJma ? '气象厅 API' : 'ODPT API';
+  return userLang === 'en'
+    ? `${labelEn} is currently unavailable (circuit breaker open). Please try again later.`
+    : userLang === 'zh'
+      ? `${labelZh} 当前不可用（断路器已开启）。请稍后再试。`
+      : `${label}が現在利用できません（サーキットブレイカー作動中）。しばらく待ってから再度お試しください。`;
 }
 
 export function jsonResponse(data, options = {}) {

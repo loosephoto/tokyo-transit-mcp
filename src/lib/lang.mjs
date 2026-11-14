@@ -194,10 +194,16 @@ export function translateWeather(text, userLang) {
   const entries = (WEATHER_TERM_MAP[userLang] || []).slice().sort((a, b) => b[0].length - a[0].length);
   const pattern = entries.map(e => e[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   // 最長一致を優先した一括置換（置換結果が再度翻訳される二重翻訳を防ぐ）
+  // 🔴 v2.58.14: 置換語をスペースで区切る。従来は "sunnyoccasionallycloudy" のように
+  //   単語が連結し、全角句読点（、。）も残って英文として読めなかった（実測）。
   let t = pattern ? text.replace(new RegExp(pattern, 'g'), matched => {
     const entry = entries.find(e => e[0] === matched);
-    return entry ? entry[1] : matched;
+    return entry ? ` ${entry[1]} ` : matched;
   }) : text;
+  // 全角句読点を英中で自然な形へ（読点→カンマ、句点→ピリオド）
+  t = t.replace(/、/g, ', ').replace(/。/g, '. ').replace(/・/g, ' / ');
+  // 余分な空白と句読点前の空白を詰める（例: 'thunder rain .' → 'thunder rain.'）
+  t = t.replace(/\s+([,.;:])/g, '$1').replace(/\s{2,}/g, ' ').replace(/\s*\$/,'').trim();
   // 全角スペースは英中では通常のスペースに（JMAテキスト由来の整形用スペース）
   t = t.split('\u3000').join(' ');
   t = t.trim();
@@ -217,6 +223,8 @@ export function translateWeather(text, userLang) {
         : '该地区天气预报目前仅提供日语（请参阅日本气象厅）。';
     }
   }
+  // 🔴 最終整形: 日本語を除去した後に残る ' .' などの余分な空白を詰める
+  t = t.replace(/\s+([,.;:])/g, '$1').replace(/\s{2,}/g, ' ').trim();
   return t;
 }
 

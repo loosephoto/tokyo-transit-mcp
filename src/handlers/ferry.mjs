@@ -177,7 +177,13 @@ export async function listFerryPorts(args) {
         name: canonicalName,
         name_en: trans.en || canonicalName,
         name_zh: trans.zh || canonicalName,
-        location: { lat: parseFloat(s.stop_lat), lon: parseFloat(s.stop_lon) }
+        // 🔴 v2.58.14: ハードコード港は座標を持たない（stop_lat/lon = '0'）ため、
+        //   (0,0) を有効な座標として返さない（実測: 竹芝が lat 0 / lon 0 で返っていた）。
+        ...(() => {
+          const lat = parseFloat(s.stop_lat), lon = parseFloat(s.stop_lon);
+          const has = Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0);
+          return has ? { location: { lat, lon } } : { coordinates_available: false };
+        })()
       };
     });
     return jsonResponse({
