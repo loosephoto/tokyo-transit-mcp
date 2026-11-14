@@ -78,9 +78,23 @@ console.log('\n=== 4. 駅数が極端な路線（要目視確認） ===');
 const extremes = lines.filter(l => l.stations.length <= 2 || l.stations.length >= 40);
 for (const l of extremes) console.log(`${l.stations.length}駅 | ${l.name} | ${l.stations.join(',')}`);
 
+// 🔴 v2.58.12: 不一致を集計し、あれば exit 1 で落とす。
+//   従来は process.exit が 1 箇所も無く、期待値と実データが食い違っても常に exit 0 だった
+//   （＝ゲートとして機能していない。実測: process.exit 出現 0 件）。
+const countMismatches = [];
 console.log('\n=== 5. 公式駅数の目視チェック対象（主要路線） ===');
 for (const [name, expected] of Object.entries(EXPECTED_RAILWAY_STATION_COUNTS)) {
   const actual = byName[name] ? byName[name].length : 0;
   const flag = actual === expected ? 'OK' : `⚠️ 期待${expected} vs 実際${actual}`;
+  if (actual !== expected) countMismatches.push(`${name}: 期待${expected} / 実際${actual}`);
   console.log(`${flag} | ${name}: ${actual}駅`);
 }
+
+console.log('');
+const totalIssues = issues.length + countMismatches.length;
+if (totalIssues > 0) {
+  console.error(`❌ 路線整合チェック: 不整合 ${totalIssues} 件（重複 ${issues.length} / 駅数不一致 ${countMismatches.length}）`);
+  for (const c of countMismatches) console.error(`   - ${c}`);
+  process.exit(1);
+}
+console.log('✅ 路線整合チェック: 不整合 0 件');

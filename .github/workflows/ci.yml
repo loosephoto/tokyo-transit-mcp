@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  offline:
+    name: build + offline tests + data gates
+    runs-on: ubuntu-latest
+    env:
+      # 外部 API は叩かない。キー未設定でもツールが劣化動作することを前提に回す。
+      ODPT_API_KEY: ''
+      GIT_TERMINAL_PROMPT: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: syntax check
+        run: npm run build
+
+      - name: offline regression tests
+        run: |
+          set -e
+          node tests/tools-list.test.mjs
+          node tests/language-detection.test.mjs
+          node tests/common-logic-regression.test.mjs
+          node tests/v2501-regression.test.mjs
+          node tests/v2589-regression.test.mjs
+          node tests/v25810-regression.test.mjs
+          node tests/v25811-regression.test.mjs
+          node tests/samename-transfer.test.mjs
+          node tests/resolve-suspended.test.mjs
+          node tests/line-geometry-regression.test.mjs
+          node tests/handlers-basic.test.mjs
+          node tests/running-status.test.mjs
+
+      - name: data gates
+        run: |
+          set -e
+          node scripts/check-railway-integrity.mjs
+          node scripts/check-line-geometry.mjs
+          node scripts/check-ghost-transfer.mjs
+          node scripts/audit-same-name-stations.mjs
+          node scripts/test-bus-routes-expansion.mjs

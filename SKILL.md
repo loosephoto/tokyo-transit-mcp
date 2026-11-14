@@ -212,6 +212,19 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.12（2026-11-14）— 監査バッチ3: 言語判定の誤判定・ゲートの骨格・CI・outputSchema
+
+**言語判定**
+- zh の語彙リストから日本語の常用語（時間・最近・問題・銀行・種類・多少・資料）を削除し、字形リストからも日本語と共通の `号`・`選`・`種` を除外。「新宿 時間」「池袋 問題」「浅草 種類」が zh 判定されていた（実測 16 ケース中 6 件 FAIL）。判定は簡体字専用字と中国語にしか無い語に限定し、全 1,468 駅名が ja 判定のままであることをテストで固定。
+
+**ゲート（CI の土台）**
+- `check-railway-integrity`: `process.exit` が 1 箇所も無く、期待駅数と実データが食い違っても常に exit 0 だった → 不整合があれば exit 1（負のテストで検証）。
+- `check-line-geometry`: 常時 exit 1 でゲートとして機能していなかった → `scripts/geometry-baseline.json` にカテゴリ別の既知件数（gap 19 / cv 18 / side 13 / mono 33 / cross 0 / coord 0）を持たせ、**増えた分だけ fail**。`--update-baseline` で更新、`GEOMETRY_STRICT=1` で従来の厳格動作。
+- `.github/workflows/ci.yml` を追加（build + オフライン回帰 12 本 + データゲート 5 本。外部 API 不要）。CI に載せられることを確かめるため、プロキシを死んだアドレスに向けて全テストを実行し、通信なしで通るものだけを採用。
+
+**MCP 仕様**
+- 13 ツールすべてに `outputSchema` を追加（`status` 必須・`additionalProperties: true`）。従来は 13/13 未定義で、クライアントが `structuredContent` を検証できなかった。SDK 1.30 は Zod（または生の shape）を要求するため `.passthrough()` を使う。MCP 経由の実呼び出しで SUCCESS / NO_DATA の両方が検証を通ることを確認。
+
 ### v2.58.11（2026-11-14）— 監査バッチ2: 座標衝突・時刻表の取得範囲・ferry 誘導・NO_DATA 統一
 
 **データ**

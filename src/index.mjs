@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.58.11 (Production Ready)
+ * Tokyo Transit MCP Server v2.58.12 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -38,7 +38,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 // 各ツールは registerTool で登録し、ListTools / CallTool の手動ハンドラと switch を廃止した。
 // SDK が zod スキーマから tools/list の JSON Schema を自動生成する（additionalProperties:false 等も自動付与）。
 const server = new McpServer(
-  { name: 'tokyo-transit-mcp', version: '2.58.11' },
+  { name: 'tokyo-transit-mcp', version: '2.58.12' },
   { capabilities: { tools: {}, logging: {} } }
 );
 
@@ -49,6 +49,18 @@ const server = new McpServer(
 // このサーバーの全ツールは検索・取得系（読み取り専用・副作用なし・外部データ参照）なので
 // readOnlyHint/destructiveHint/idempotentHint/openWorldHint = true/false/true/true で統一する。
 // ツール定義に annotations が明示されていればそれを尊重し、未設定のものだけデフォルトを注入する。
+// 🔴 v2.58.12: outputSchema（MCP 2025-06-18）。従来は 13/13 ツールで未定義で、クライアントが
+//   structuredContent を検証できなかった。レスポンス形状はツールごとに多様なため、
+//   共通キー（status 必須）だけを宣言し、残りは additionalProperties で許容する。
+//   エラー応答も status: 'ERROR' を持つので、この 1 スキーマで全ツールを覆える。
+// SDK 1.30 は outputSchema を Zod（または生の shape）で要求する。passthrough にして
+// JSON Schema 側を additionalProperties: true にし、ツールごとに異なる structuredContent を許容する。
+const TOOL_OUTPUT_SCHEMA = z.object({
+  status: z.string().describe('SUCCESS / NO_DATA / ERROR など'),
+  detected_language: z.string().optional().describe('ja / en / zh'),
+  message: z.string().optional()
+}).passthrough();
+
 // #102/#106: DEFAULT_TOOL_ANNOTATIONS を全ツールに適用（readOnly 系・副作用なし・外部データ参照）。
 const DEFAULT_TOOL_ANNOTATIONS = {
   readOnlyHint: true,
@@ -111,7 +123,8 @@ server.registerTool('search_route', {
       lon: z.number().min(-180).max(180)
     }).optional().describe('ユーザーの現在位置（緯度経度）。運転見合わせ時のシェアサイクル案内を現在地基準で表示する場合に指定。例: {"lat": 35.681, "lon": 139.767}')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('search_route', args, searchRoute));
 
 // get_station_info
@@ -126,7 +139,8 @@ server.registerTool('get_station_info', {
     operator: z.enum([...new Set([...Object.keys(OPERATOR_MAP), ...Object.keys(NON_RAIL_OPERATORS)])]).optional().describe('事業者キー（list_transit_operators が返す key）'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は駅名から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('get_station_info', args, getStationInfo));
 
 // get_weather
@@ -137,7 +151,8 @@ server.registerTool('get_weather', {
     area_name: z.string().describe('地域名（例: 東京, 横浜）'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は地域名から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('get_weather', args, getWeather));
 
 // list_ferry_ports
@@ -147,7 +162,8 @@ server.registerTool('list_ferry_ports', {
   inputSchema: {
     language: z.enum(['ja', 'en', 'zh']).optional()
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('list_ferry_ports', args, listFerryPorts));
 
 // search_ferry
@@ -159,7 +175,8 @@ server.registerTool('search_ferry', {
     to_port: z.string().describe('到着港'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は港名から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('search_ferry', args, searchFerry));
 
 // list_transit_operators
@@ -172,7 +189,8 @@ server.registerTool('list_transit_operators', {
     //   どのフィルタ値でも到達できなかった（実測: enum 5 値で拾えるのは 32 件）。
     type_filter: z.enum(['rail', 'agt', 'monorail', 'tram', 'bus', 'ferry', 'all']).optional()
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('list_transit_operators', args, listTransitOperators));
 
 // list_community_buses
@@ -182,7 +200,8 @@ server.registerTool('list_community_buses', {
   inputSchema: {
     language: z.enum(['ja', 'en', 'zh']).optional()
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('list_community_buses', args, listCommunityBuses));
 
 // get_operator_routes
@@ -193,7 +212,8 @@ server.registerTool('get_operator_routes', {
     operator_name: z.string().describe('事業者キー'),
     language: z.enum(['ja', 'en', 'zh']).optional()
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('get_operator_routes', args, getOperatorRoutes));
 
 // search_flight
@@ -209,7 +229,8 @@ server.registerTool('search_flight', {
     destination: z.string().optional().describe('到着時の連携先（例: 東京駅）。指定すると到着ターミナル→目的地のアクセス経路を提案。'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は空港名/便名から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('search_flight', args, searchFlight));
 
 // search_fare
@@ -221,7 +242,8 @@ server.registerTool('search_fare', {
     to: z.string().describe('到着駅'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は駅名から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('search_fare', args, searchFare));
 
 // get_timetable
@@ -235,7 +257,8 @@ server.registerTool('get_timetable', {
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('検索日 YYYY-MM-DD（省略時は当日。calendar 未指定時の曜日判定に使用）'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は駅名から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('get_timetable', args, getTimetable));
 
 // search_bus
@@ -249,7 +272,8 @@ server.registerTool('search_bus', {
     vehicle: z.enum(['bus', 'train', 'community_bus', 'ferry', 'any']).optional().describe('優先する乗り物（乗り継ぎ検索モードのみ）。bus=バス優先, train=電車優先, community_bus=コミュニティバス優先, ferry=水上バス優先, any=自動（最短）。指定乗り物が極端に遠回りになる場合は better_alternative でより良い経路を進言。'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時はバス停名から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('search_bus', args, searchBus));
 
 // get_running_status
@@ -260,7 +284,8 @@ server.registerTool('get_running_status', {
     operator: z.string().optional().describe('事業者キー（例: jreast, tokyometro, tobu。省略 or all で全事業者）'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は operator から自動判定）')
   },
-  annotations: DEFAULT_TOOL_ANNOTATIONS
+  annotations: DEFAULT_TOOL_ANNOTATIONS,
+  outputSchema: TOOL_OUTPUT_SCHEMA
 }, (args) => runTool('get_running_status', args, getRunningStatus));
 
 export { server, searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo, listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, detectLanguage, resolveLang, parseTestMode, computeRoutes, findShortestPath, resolveStation, searchFlight, translateTrainInfoDetail, translateWeather, detectFailureType, buildTestAdvice, STATION_TO_LINES, WALK_TRANSFERS, AMBIGUOUS_STATION_NAMES, calculateFlightDelayMinutes, parseCsvLine, validateFlightDate, normalizeAirportIata, gtfsFetchDates, getRunningStatus };

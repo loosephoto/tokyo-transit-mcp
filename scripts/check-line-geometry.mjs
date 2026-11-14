@@ -34,6 +34,52 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { RAILWAY_LINES, STATION_COORDS } from '../src/data/railway-lines.mjs';
+
+// 🔴 v2.58.12: ベースライン機構。快速・直通・ループ路線の正当な駅スキップ由来の検出は
+//   allowlist（scripts/geometry-baseline.json）として持ち、**カテゴリごとに増えた分だけ** fail させる。
+//   従来は process.exit(total > 0 ? 1 : 0) で常に赤く、ゲートとして機能していなかった。
+//   GEOMETRY_STRICT=1 で従来どおり厳格（0 件でないと fail）、--update-baseline で現状を保存。
+const BASELINE_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'geometry-baseline.json');
+
+function readBaseline() {
+  try {
+    return JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function finishWithBaseline(counts, total) {
+  if (process.argv.includes('--update-baseline')) {
+    const payload = { updated_at: new Date().toISOString().slice(0, 10), counts };
+    fs.writeFileSync(BASELINE_PATH, JSON.stringify(payload, null, 2) + '\n');
+    console.log(`📝 ベースラインを更新: ${BASELINE_PATH} (${JSON.stringify(counts)})`);
+    process.exit(0);
+  }
+  const baseline = readBaseline();
+  if (process.env.GEOMETRY_STRICT === '1' || !baseline) {
+    process.exit(total > 0 ? 1 : 0);
+  }
+  const base = baseline.counts || {};
+  const regressions = [];
+  const reductions = [];
+  for (const [k, expected] of Object.entries(base)) {
+    const actual = counts[k] ?? 0;
+    if (actual > expected) regressions.push(`${k}: ${expected} → ${actual}`);
+    else if (actual < expected) reductions.push(`${k}: ${expected} → ${actual}`);
+  }
+  for (const [k, actual] of Object.entries(counts)) {
+    if (!(k in base) && actual > 0) regressions.push(`${k}: 新規 ${actual}`);
+  }
+  if (regressions.length) {
+    console.error(`❌ ベースライン超過（新規の検出）: ${regressions.join(', ')}`);
+    console.error('   正当な駅スキップ由来だと確認できたら `node scripts/check-line-geometry.mjs --update-baseline` で更新する。');
+    process.exit(1);
+  }
+  if (reductions.length) console.log(`ℹ️ ベースラインより減少（更新可）: ${reductions.join(', ')}`);
+  console.log(`✅ ベースライン内（合計 ${total} 件 / 既知 ${JSON.stringify(base)}）`);
+  process.exit(0);
+}
 import { STATION_COORDS_EXTRA } from '../src/data/station-coords-extra.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1213,7 +1259,7 @@ async function main() {
     const total = Object.values(findings).reduce((s, a) => s + a.length, 0)
       - findings.cross.filter((f) => f.severity === 'info').length
       + (wiki ? wiki.results.filter((r) => r.status === 'missing').length : 0);
-    process.exit(total > 0 ? 1 : 0);
+    finishWithBaseline(counts, total);
   }
 
   // ---------------------------------------------------------------------
@@ -1417,7 +1463,15 @@ async function main() {
   }
   console.log('');
 
-  process.exit(total > 0 ? 1 : 0);
+  finishWithBaseline({
+    gap: gapSorted.length,
+    cv: cvSorted.length,
+    side: sideSorted.length,
+    mono: monoSorted.length,
+    cross: crossCritical.length,
+    coord: coordSorted.length,
+    wikiMissing: wiki ? wiki.results.filter((r) => r.status === 'missing').length : 0,
+  }, total);
 }
 
 main().catch((e) => {

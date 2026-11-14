@@ -23,6 +23,13 @@ for (const input of [
   '北海道', '富士山', '川崎', '大島', '栄町', '赤坂', '十日市場', '小机', '千城台北',
   '半蔵門', '御茶ノ水', '豊洲', '西大島', '光大島', '和田町', '日暮里',
 ]) {
+console.log('-- 日本語の常用漢字語（v2.58.12 回帰）--');
+for (const input of ['新宿 時間', '新宿 最近', '池袋 問題', '東京 銀行', '浅草 種類', '大阪 多少', '浅草 資料']) {
+  const got = detectLanguage(input);
+  if (got === 'ja') ok(`detectLanguage('${input}') = ja`);
+  else fail(`detectLanguage('${input}') = ${got}, expected ja`);
+}
+
   const got = detectLanguage(input);
   if (got === 'ja') ok(`detectLanguage('${input}') = ja`);
   else fail(`detectLanguage('${input}') = ${got}, expected ja`);
@@ -32,8 +39,10 @@ for (const input of [
 console.log('-- 中国語入力（簡体字・繁体字）--');
 for (const input of [
   '涩谷', '台场', '机场', '火车站', '地铁', '公交', '从浅草出发', '品川到新宿',
-  '上海', '北京', '深圳', '廣州', '廣州', '車站', '問題', '時間', '銀行', '機場',
-  '發現', '選擇', '種類', '電視', '檢查', '計劃', '營業', '經濟', '鐵路', '幾點',
+  // 🔴 v2.58.12: '問題' '時間' '銀行' '種類' は日本語でも常用するため中国語シグナルから外した
+  //   （「新宿 時間」が zh 判定されていた）。中国語にしか無い語・字形だけで判定する。
+  '上海', '北京', '深圳', '廣州', '廣州', '車站', '機場',
+  '發現', '選擇', '電視', '檢查', '計劃', '營業', '經濟', '鐵路', '幾點',
   '请帮我查一下', '多少钱', '怎么去', '台风', '暴雨',
 ]) {
   const got = detectLanguage(input);
