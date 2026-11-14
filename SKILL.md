@@ -212,6 +212,13 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.19（2026-11-14）— バス停の英語表記 295 → 366 件（73.5%）
+
+- 残っていた「読みの推定が要る 203 件」を、**Wikipedia の記事冒頭の振り仮名から読みだけ取り、ローマ字化は自前実装**で行う方式で 71 件補完（366/498 = 73.5%）。
+- `src/lib/kana-romaji.mjs` を新設（ヘボン式・促音・ん・長音簡略化）。駅読み 1,449 件 × 駅名英字表記で **94.1% 一致**することを自己検証に組み込み、テストで下限 93% を固定。
+- `scripts/fill-bus-en-wiki.mjs`（`npm run bus:en:wiki`、`--dry`）を追加。接尾辞は**かなの末尾で切り分ける**ので「隅田公園→Sumida Park」「浅草警察署前→Asakusa Police Station-mae」「府中競馬正門前駅→Fuchu Keiba Seimon-mae Station」のように出る。読みが取れない 132 件は日本語のまま（推測で埋めない）。
+- 実測の改善例: 三ノ輪二丁目→Minowa 2-chome（pykakasi は San no wa）、芝浦四丁目→Shibaura 4-chome、台東病院→Taito Hospital。
+
 ### v2.58.18（2026-11-14）— コミュニティバス停留所の英語表記 12 → 295 件
 
 - 41 社・停留所 498 件のうち en 表記は 12 件（2.4%）だけだった。停留所名の大半は「◯◯駅前」「◯◯駅北口」＝駅名＋接尾辞なので、駅名辞書 `STATION_DISPLAY_NAMES` から**決定論的に**生成する `scripts/fill-bus-en.mjs`（`npm run bus:en`、`--dry` あり、冪等）を追加し **283 件を補完**（295/498 = 59.2%）。
