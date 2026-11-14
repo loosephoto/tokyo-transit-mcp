@@ -23,14 +23,16 @@ const have = Object.keys(STATION_READINGS);
 const missing = uniq.filter((s) => !STATION_READINGS[s]);
 const coverage = 1 - missing.length / uniq.length;
 console.log(`  駅 ${uniq.length} / 読み ${have.length} / 欠落 ${missing.length}（${(coverage * 100).toFixed(1)}%）`);
-if (coverage >= 0.97) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（97% 以上を維持）`);
-else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（97% 未満）`);
-if (have.length >= 1440) ok(`読み ${have.length} 件（1,440 件以上）`);
-else fail(`読みが ${have.length} 件に減少（1,440 件未満）`);
+if (coverage >= 0.999) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（全駅を被覆）`);
+else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（欠落 ${missing.length} 駅）`);
+if (have.length >= 1476) ok(`読み ${have.length} 件（1,476 件以上）`);
+else fail(`読みが ${have.length} 件に減少（1,476 件未満）`);
 
 console.log('-- 読みの形式 --');
 {
-  const bad = Object.entries(STATION_READINGS).filter(([, v]) => !/^[ぁ-んァ-ヶー]+$/.test(v));
+  // 中黒（・）は「元町・中華街」「中央大学・明星大学」のような連結駅名で必要な区切り。
+  // かな判定から除外すると誤検知になるため許可する。
+  const bad = Object.entries(STATION_READINGS).filter(([, v]) => !/^[ぁ-んァ-ヶー・]+$/.test(v));
   eq(bad.length, 0, `値はかなのみ（違反 ${bad.length} 件）`);
   const badKey = Object.keys(STATION_READINGS).filter((k) => !uniq.includes(k));
   eq(badKey.length, 0, `RAILWAY_LINES に無い駅のキーが混入していない（${badKey.length} 件）`);
@@ -74,6 +76,8 @@ console.log('-- 生成スクリプトのガード --');
   else fail('build-station-readings.mjs に件数ガードが無い');
   if (fs.existsSync('scripts/fill-station-readings.mjs')) ok('fill-station-readings.mjs がある（欠落分の補完）');
   else fail('fill-station-readings.mjs が無い');
+  if (fs.existsSync('scripts/fill-station-readings-curated.mjs')) ok('fill-station-readings-curated.mjs がある（自動で取れない分の固定）');
+  else fail('fill-station-readings-curated.mjs が無い');
 }
 
 console.log('');
