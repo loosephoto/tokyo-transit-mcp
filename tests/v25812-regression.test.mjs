@@ -64,7 +64,7 @@ console.log('-- CI 定義 --');
   if (!fs.existsSync(p)) fail(`${p} が無い`);
   else {
     const y = fs.readFileSync(p, 'utf8');
-    for (const s of ['npm ci', 'npm run build', 'check-railway-integrity', 'check-line-geometry', 'tests/v25810-regression.test.mjs', 'tests/v25812-regression.test.mjs', 'tests/v25814-regression.test.mjs']) {
+    for (const s of ['npm ci', 'npm run build', 'check-railway-integrity', 'check-line-geometry', 'tests/v25810-regression.test.mjs', 'tests/v25812-regression.test.mjs', 'tests/v25814-regression.test.mjs', 'tests/v25815-regression.test.mjs']) {
       if (y.includes(s)) ok(`CI が ${s} を実行する`);
       else fail(`CI に ${s} がない`);
     }

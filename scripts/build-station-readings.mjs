@@ -51,6 +51,22 @@ for (let i = 0; i < uniq.length; i += BATCH) {
   await new Promise((r) => setTimeout(r, 150));
 }
 
+// 🔴 v2.58.15: 生成結果が既存より少ない場合は書き込まない（既定）。
+//   Wikipedia のレート制限や曖昧さ回避ページの増加で 1,249 件 → 1,109 件のように
+//   かな入力の解決が退行した実測がある。不足分は fill-station-readings.mjs で補う。
+const existingPath = OUT;
+let existingCount = 0;
+try {
+  const src = fs.readFileSync(existingPath, 'utf8');
+  existingCount = (src.match(/^\s*'[^']+':\s*'/gm) || []).length;
+} catch { /* 初回生成 */ }
+const newCount = Object.keys(readings).length;
+if (existingCount > newCount && !process.argv.includes('--force')) {
+  console.error(`❌ 生成結果 ${newCount} 件 < 既存 ${existingCount} 件。書き込みを中止しました。`);
+  console.error('   意図的に減らす場合のみ --force を付けて実行してください。');
+  process.exit(1);
+}
+
 const lines = [
   '/**',
   ' * 駅名の読み（ひらがな・カタカナ）— かな入力の解決に使う権威読み。',
