@@ -594,7 +594,8 @@ export async function searchFerry(args) {
                   userLang === 'zh' ? "未找到该港口间匹配的轮渡/水上巴士班次。" :
                   "該当航路なし";
       return jsonResponse({
-        status: "SUCCESS",
+        // 🔴 v2.58.11: 航路 0 件は SUCCESS ではなく NO_DATA（空結果の語彙統一）。
+        status: "NO_DATA",
         detected_language: userLang,
         from_port: displayFrom,
         to_port: displayTo,

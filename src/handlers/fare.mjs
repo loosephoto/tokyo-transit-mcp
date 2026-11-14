@@ -138,7 +138,10 @@ export async function searchFare(args) {
         : (odptCovered
           ? 'この区間の運賃データがODPTに見つかりませんでした。'
           : 'この路線はODPTの運賃計算対象外です（JR東日本・JR東海・私鉄・東京モノレール等。対応は東京メトロ・都営・横浜市営地下鉄・つくばエクスプレス・りんかい線・ゆりかもめ・多摩モノレールのみ）。Yahoo!路線情報をご利用ください。');
-      return jsonResponse({ status: "SUCCESS", detected_language: userLang, from: displayFrom, to: displayTo, fare: null, message: notFoundMsg, fare_coverage: { supported: FARE_OPERATORS, unsupported: NON_FARE_OPERATORS }, fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` });
+      // 🔴 v2.58.11: 「データ無し」を SUCCESS + fare:null で返すとクライアントから空応答と
+      //   区別できない（NO_DATA / NOT_FOUND / SUCCESS+null / SUCCESS+available:false の 4 語彙分裂）。
+      //   空結果は NO_DATA に統一する（isError は付けない＝失敗ではなく「該当なし」）。
+      return jsonResponse({ status: "NO_DATA", detected_language: userLang, from: displayFrom, to: displayTo, fare: null, message: notFoundMsg, fare_coverage: { supported: FARE_OPERATORS, unsupported: NON_FARE_OPERATORS }, fallback_url: `https://transit.yahoo.co.jp/search/result?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` });
     }
 
     const noteText = userLang === 'en' ? "ODPT RailwayFare (per-station, 24h Cache)" :

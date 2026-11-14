@@ -6,6 +6,9 @@
  */
 import { API_BASE_URL } from '../config.mjs';
 
+// 注: 港の座標は STATION_COORDS（src/data/railway-lines.mjs）にあるが、同名の鉄道駅と
+//   衝突する港は識別子付きキーで持つ（例: 伊豆大島港 = '大島（伊豆大島）'、駅の '大島' は
+//   都営新宿線）。v2.58.11 で '大島' の衝突（107.8km）を分離した。
 export const FERRY_PORT_MAP = {
   // 日本語
   // 注: '東京' は東海汽船の竹芝発（大島・伊豆諸島航路）を指す。水上バスに「東京」港は存在しないため、

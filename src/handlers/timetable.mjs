@@ -2,7 +2,7 @@
  * 時刻表ハンドラ（モノリス分割 Phase 4b-4）
  * 依存: config / data/misc / data/railway-lines / lib / advice
  */
-import { cache, odptBreaker, API_BASE_URL, API_KEY } from '../config.mjs';
+import { cache, odptBreaker, API_BASE_URL, API_KEY, retryOnRateLimit } from '../config.mjs';
 import { OPERATOR_MAP } from '../data/misc.mjs';
 import { RAILWAY_NAME_MAP, ODPT_RAILWAY_NAME_MAP } from '../data/station-names.mjs';
 import { RAILWAY_LINES } from '../data/railway-lines.mjs';
@@ -113,16 +113,55 @@ export async function getTimetable(args) {
     // 平日・土休日を跨いだ切り捨てが発生していた。calendar を指定すると
     // Weekday 658 + SaturdayHoliday 560 = 1,218件のように上限を回避して全件取得できる。
     // キャッシュはマージ結果で保持（キーに calendar 非依存の全件マージを入れる）。
-    const cached = cache.get(`${cache.trainTimetable.key}:merged`);
+    // 🔴 v2.58.11: railway フィルタを「取得」にも効かせる。従来は全 21 路線 × 2 calendar
+    //   = 42 本を無条件に取得しており（実測 45req / 57.8MB / 2.5s）、JR を指定しても
+    //   55MB を捨てて NO_DATA を返していた。ODPT 対象外の路線名なら取得せず即 NO_DATA。
+    let fetchRailways = null;
+    if (railwayFilter) {
+      const rfLower = String(railwayFilter).toLowerCase();
+      const railwayKey = RAILWAY_NAME_MAP[railwayFilter]
+        || RAILWAY_NAME_MAP[String(railwayFilter).replace(/線$/, '')]
+        || rfLower;
+      const matchRailwayId = (id) => {
+        const r = String(id).toLowerCase();
+        const rKey = r.split('.').pop() || r;
+        return r.includes(railwayKey) || rKey.includes(railwayKey) || railwayKey.includes(rKey);
+      };
+      const allRailways = await getTimetableRailways();
+      fetchRailways = allRailways.filter(matchRailwayId);
+      if (!fetchRailways.length) {
+        const coverage0 = userLang === 'en'
+          ? ' (ODPT train timetables cover Tokyo Metro, Toei, Yokohama City, TWR, MIR and Tama Monorail only; JR and most private railways are not covered.)'
+          : userLang === 'zh'
+            ? '（ODPT 时刻表仅覆盖东京地铁、都营、横滨市营、TWR、MIR 及多摩单轨电车；JR 及大部分私铁不在覆盖范围内。）'
+            : '（ODPTの時刻表は東京メトロ・都営・横浜市営・TWR・MIR・多摩モノレールのみ。JR及び大部分の私鉄は対象外です。）';
+        const msg0 = userLang === 'en'
+          ? `No timetable data for railway "${railwayFilter}" at ${getDisplayStationName(stationName, userLang)} (${targetCalendar}).${coverage0}`
+          : userLang === 'zh'
+            ? `在${getDisplayStationName(stationName, userLang)}未找到路线「${railwayFilter}」的时程表（${targetCalendar}）。${coverage0}`
+            : `${getDisplayStationName(stationName, userLang)}の「${railwayFilter}」の時刻表はODPTの対象外です（${targetCalendar}）。${coverage0}`;
+        return jsonResponse({ status: 'NO_DATA', detected_language: userLang, station: getDisplayStationName(stationName, userLang), railway: getDisplayLineName(railwayFilter, userLang), calendar: targetCalendar, total: 0, message: msg0, data_source: 'ODPT TrainTimetable (not covered)', fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      }
+    }
+    // 絞り込んだ取得結果は全量マージのキャッシュと混ぜない（不完全なスナップショットで
+    // 全量キャッシュを汚さないため、フィルタ別のキーにする）。
+    const mergedKey = fetchRailways
+      ? `${cache.trainTimetable.key}:merged:${railwayFilter}`
+      : `${cache.trainTimetable.key}:merged`;
+    const cached = cache.get(mergedKey);
     let allTimetables;
     let truncated = false;
+    let partial = false;
+    let missingSources = 0;
     if (cached && !cached.truncated) { allTimetables = cached.merged; truncated = false; }
     else {
-      const railways = await getTimetableRailways();
-      // 各路線 × 2 calendar を並列取得（1000件上限回避のため calendar を明示指定）
+      const railways = fetchRailways || await getTimetableRailways();
+      // 各路線 × 2 calendar を取得（1000件上限回避のため calendar を明示指定）。
+      // 🔴 v2.58.11: 従来は Promise.allSettled の無制限並列でセマフォもリトライも迂回していた。
+      //   retryOnRateLimit 配下（同時 3・最小間隔 120ms・総予算 20 秒）に置く。
       const responses = await Promise.allSettled(railways.flatMap(rw =>
         ['odpt.Calendar:Weekday', 'odpt.Calendar:SaturdayHoliday'].map(cal =>
-          axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(null, { 'odpt:railway': rw, 'odpt:calendar': cal }), timeout: 20000 })
+          retryOnRateLimit(() => axios.get(`${API_BASE_URL}/odpt:TrainTimetable`, { params: getParams(null, { 'odpt:railway': rw, 'odpt:calendar': cal }), timeout: 20000 }), { label: `odpt:TrainTimetable ${String(rw).split(/[.:]/).pop()}` })
         )
       ));
       const fulfilled = responses.filter(r => r.status === 'fulfilled' && Array.isArray(r.value.data));
@@ -135,9 +174,14 @@ export async function getTimetable(args) {
       // 🔴 #83: 1000件ちょうど（または超過）のレスポンスは切り捨ての可能性があるため
       // truncated フラグを立て、完全なデータとして SUCCESS を返さない。
       truncated = fulfilled.some(r => Array.isArray(r.value.data) && r.value.data.length >= 1000);
+      // 🔴 v2.58.11: 一部でも落ちた取得結果は「部分スナップショット」。従来は
+      //   fulfilled.length === 0 のときしか捨てていなかったため、25% 欠けたデータが
+      //   1 時間「正常」として返り続けた（実測: 8 件中 2 件 429 でも 2 回目は 0 req）。
+      missingSources = responses.length - fulfilled.length;
+      partial = missingSources > 0;
       allTimetables = fulfilled.flatMap(r => r.value.data);
       odptBreaker.onSuccess();
-      if (!truncated) cache.set(`${cache.trainTimetable.key}:merged`, { merged: allTimetables, truncated }, cache.trainTimetable.ttl);
+      if (!truncated && !partial) cache.set(mergedKey, { merged: allTimetables, truncated }, cache.trainTimetable.ttl);
     }
 
     // ローマ字駅ID → 日本語駅名 の逆引き（駅フィルタ用）
@@ -278,7 +322,7 @@ export async function getTimetable(args) {
         const rKey = r.split('.').pop() || r;
         return r.includes(railwayKey) || rKey.includes(railwayKey) || railwayKey.includes(rKey);
       });
-      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: getDisplayLineName(railwayFilter, userLang), calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), truncated: truncated || undefined, total: filtered.length, timetable: filtered.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable (路線×calendar別取得)", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+      if (filtered.length > 0) return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, railway: getDisplayLineName(railwayFilter, userLang), calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), truncated: truncated || undefined, partial: partial || undefined, missing_sources: partial ? missingSources : undefined, total: filtered.length, timetable: filtered.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable (路線×calendar別取得)", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
       // フィルタ結果が 0 件なら「該当路線のデータなし」を明確に返す（誤って全件を返さない）
       // 🔴 JR・大部分の私鉄は ODPT 時刻表の対象外であることを明示する
       const coverageNote = userLang === 'en'
@@ -320,7 +364,7 @@ export async function getTimetable(args) {
           : `${displayStation} の時刻表データはODPTにありません（JR東日本・大部分の私鉄は対象外）。`;
       return jsonResponse({ status: "NO_DATA", detected_language: userLang, station: displayStation, calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), total: 0, message: noDataMsg, data_source: "ODPT TrainTimetable", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
     }
-    return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), truncated: truncated || undefined, total: sortedMatched.length, timetable: sortedMatched.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable (路線×calendar別取得)", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
+    return jsonResponse({ status: "SUCCESS", detected_language: userLang, station: displayStation, calendar: targetCalendar, service_date: serviceDate || getJstDateStr(), truncated: truncated || undefined, partial: partial || undefined, missing_sources: partial ? missingSources : undefined, total: sortedMatched.length, timetable: sortedMatched.slice(0, 20).map(buildRow), data_source: "ODPT TrainTimetable (路線×calendar別取得)", fallback_url: `https://transit.yahoo.co.jp/station/list?q=${encodeURIComponent(stationName)}` });
   } catch (error) {
     // 🔴 #95: 内部エラー（実装バグ）はブレーカー失敗として数えない（#91 方針との整合）。
     // 外部 API 障害のみ onFailure でカウントする。ヘルパー（getTimetableRailways）側で

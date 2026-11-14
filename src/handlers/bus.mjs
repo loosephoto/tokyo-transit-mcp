@@ -970,6 +970,14 @@ export async function searchBusTransfer(fromInput, toInput, vehiclePref) {
   // 優先探索の結果を採用（ただし any の場合は anyResult をそのまま）
   const primaryResult = (prefResult && prefResult.found) ? prefResult : anyResult;
   const segments = primaryResult.segments;
+  // 🔴 v2.58.11: vehicle:'ferry'（水上バス優先）は乗り継ぎグラフに ferry 辺が 1 本も無く
+  //   絶対に達成できなかった。黙って鉄道経路へ差し替える（vehicleFallback:true）と
+  //   「選べるのに絶対無理」な嘘の選択肢になるため、明示的に search_ferry へ誘導する。
+  //   注: 港名と同名のバス停（例: 江東区の「大島」）が存在するため、名前空間を分けずに
+  //   ferry 辺を足すと別地点へ誤接続する（実測: 竹芝→大島 が江東区のバス停に解決された）。
+  if (validPref === 'ferry' && !segments.some(s => s.mode === 'ferry')) {
+    return { found: false, ferryRedirect: true, fromNode: fNode, toNode: tNode, allNodeNames: [...allNodes] };
+  }
   // better_alternative 進言: 指定優先経路が、通常最短路より明らかに劣る場合
   let betterAlternative = null;
   if (validPref !== 'any' && prefResult && prefResult.found && anyResult.found) {
@@ -1091,6 +1099,22 @@ export async function searchBus(args) {
         ambiguousResp.gov_facility_search_support = buildGovFacilitySearchSupport(null, userLang, getDisplayStationName(result.input || fromInput || toInput, userLang));
         return jsonResponse(ambiguousResp);
       }
+      if (!result.found && result.ferryRedirect) {
+        // 🔴 v2.58.11: 乗り継ぎグラフは水上バス・フェリーの便を持たない（港名がバス停名と
+        //   衝突するため辺を張らない設計）。ferry 指定時は search_ferry を案内する。
+        const ferryMsg = userLang === 'en'
+          ? 'Water bus / ferry routes are not part of the bus-transfer graph. Use the search_ferry tool (it returns routes and timetables between ports).'
+          : userLang === 'zh'
+            ? '水上巴士、渡轮航线不在公交换乘图内。请使用 search_ferry 工具（返回港间航路与时刻表）。'
+            : '水上バス・フェリーの航路は乗り継ぎグラフの対象外です。search_ferry（港間の航路と時刻表を返す）を使ってください。';
+        return jsonResponse({
+          status: 'NO_DATA', detected_language: userLang,
+          message: ferryMsg, redirect_tool: 'search_ferry',
+          vehicle_requested: 'ferry',
+          data_source: 'ferry routes are served by search_ferry',
+          ai_transit_advice: aiAdvice
+        });
+      }
       if (!result.found) {
         // 🔴 案内改善: 入力量の類似バス停を提示し、見つからない場合は徒歩・現実的アクセスを勧める
         const similarStops = [];
@@ -1119,7 +1143,8 @@ export async function searchBus(args) {
           : userLang === 'zh' ? '这段区间步行可能更近——建议步行，或改用上方相近的站点检索。'
           : 'この区間は徒歩の方が早い場合があります——徒歩での移動、または上記の近隣バス停での再検索をご検討ください。';
         return jsonResponse({
-          status: 'NOT_FOUND', detected_language: userLang,
+          // 🔴 v2.58.11: 「経路なし」は NOT_FOUND ではなく NO_DATA に統一（空結果の語彙統一）。
+          status: 'NO_DATA', detected_language: userLang,
           message: userLang === 'en' ? `No bus transfer route found from "${fromInput}" to "${toInput}".`
             : userLang === 'zh' ? `未找到从「${fromInput}」到「${toInput}」的公交换乘路线。`
             : `「${fromInput}」から「${toInput}」への乗り継ぎ経路が見つかりませんでした。`,
