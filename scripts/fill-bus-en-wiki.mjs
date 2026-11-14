@@ -21,6 +21,11 @@ import { COMMUNITY_BUS_ROUTES } from '../src/data/bus-routes.mjs';
 const API = 'https://ja.wikipedia.org/w/api.php';
 const UA = 'tokyo-transit-mcp-dev/1.0 (bus stop reading enrichment)';
 const dryRun = process.argv.includes('--dry');
+// 🔴 レート制限対策: --limit N で 1 回の処理件数を絞り、--slow で 1 タイトルずつ引く。
+//   Wikimedia は同一 IP のバーストに厳しく、20 タイトル/リクエストだと半分以上が 429 で落ちる（実測）。
+const limitArg = process.argv.find((a) => a.startsWith('--limit='));
+const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 0;
+const SLOW = process.argv.includes('--slow');
 const OUT = 'src/data/bus-station-display-names.mjs';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -131,8 +136,12 @@ function kanaOf(title, text) {
   return m ? m[1] : null;
 }
 
-const stops = collectStops().filter((s) => !BUS_STATION_DISPLAY_NAMES[s]?.en);
+let stops = collectStops().filter((s) => !BUS_STATION_DISPLAY_NAMES[s]?.en);
 console.log(`読みが要る停留所: ${stops.length} 件`);
+if (LIMIT > 0 && stops.length > LIMIT) {
+  console.log(`  → 今回の処理は先頭 ${LIMIT} 件（--limit=${LIMIT}）`);
+  stops = stops.slice(0, LIMIT);
+}
 
 const titles = [];
 for (const name of stops) {
@@ -145,8 +154,10 @@ const extracts = new Map();
 // 🔴 redirects=1 だとページのキーが転送先タイトルになるため、転送元→転送先の対応を保持する。
 //   これが無いと「清川 → 清川 (台東区)」のような記事を取りこぼす（実測 0 件の原因）。
 const alias = new Map();
-for (let i = 0; i < titles.length; i += 20) {
-  const chunk = titles.slice(i, i + 20);
+const BATCH = SLOW ? 1 : 20;
+const PAUSE = SLOW ? 1400 : 1200;
+for (let i = 0; i < titles.length; i += BATCH) {
+  const chunk = titles.slice(i, i + BATCH);
   const json = await fetchJson({ action: 'query', prop: 'extracts', exintro: '1', explaintext: '1', exlimit: 'max', redirects: '1', titles: chunk.join('|') });
   for (const r of json?.query?.redirects || []) alias.set(r.from, r.to);
   for (const n of json?.query?.normalized || []) alias.set(n.from, n.to);
@@ -154,7 +165,7 @@ for (let i = 0; i < titles.length; i += 20) {
     if (p.missing || !p.extract) continue;
     extracts.set(p.title, p.extract);
   }
-  await sleep(1200);
+  await sleep(PAUSE);
 }
 /** 転送を辿って記事冒頭を引く */
 const lookup = (title) => {

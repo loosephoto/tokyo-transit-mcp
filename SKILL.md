@@ -212,6 +212,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.25（2026-11-14）— バス停の自治体名＋役所を辞書から生成（366 → 376 件）
+
+- 「港区役所前」「立川市役所」のような停留所は `MUNICIPALITY_DISPLAY_NAMES`（港区→Minato City 等）から決定論的に作れるため、`fill-bus-en.mjs` に自治体ルールを追加（+10 件、75.5%）。
+- **残り 122 件は自動化できないと結論**。実測で内訳は (a) 記事が存在しない（港区役所・二天門・吉原大門・立川市役所） (b) 同名の別記事に飛ぶ（清川→姓の記事、堀ノ内→堀之内=中世武士の館）で、**読みを拾うと誤りになる**。人手のキュレーションか ODPT の英語データが必要。
+- `fill-bus-en-wiki.mjs` に `--limit=N` / `--slow` を追加（Wikimedia のバースト制限対策）。
+
 ### v2.58.24（2026-11-14）— search_route の CANCELLED 統一・シェアサイクルの signal 対応
 
 - `searchRoute` の本体を `searchRouteInner` に分離し、外側で**キャンセルを統一**。内部の取得は `Promise.allSettled` のため中断が例外にならず「縮退した SUCCESS」を返していた（bus / running-status と挙動が不揃い）。signal 中断時は必ず `CANCELLED`。

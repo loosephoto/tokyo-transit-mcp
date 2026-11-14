@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import { BUS_STATION_DISPLAY_NAMES } from '../src/data/bus-station-display-names.mjs';
 import { STATION_DISPLAY_NAMES } from '../src/data/station-names.mjs';
 import { COMMUNITY_BUS_ROUTES } from '../src/data/bus-routes.mjs';
+import { MUNICIPALITY_DISPLAY_NAMES } from '../src/data/municipality-names.mjs';
 
 const OUT = 'src/data/bus-station-display-names.mjs';
 const dryRun = process.argv.includes('--dry');
@@ -52,8 +53,35 @@ function collectStops() {
   return [...names].filter(Boolean);
 }
 
+// 自治体名＋役所（港区役所前 / 立川市役所 など）は自治体辞書から決定論的に作れる。
+//   MUNICIPALITY_DISPLAY_NAMES は「港区→Minato City」「立川市→Tachikawa City」を持つ。
+const MUNI_RULES = [
+  [/^(.+区)役所前$/, 'ward', true],
+  [/^(.+区)役所$/, 'ward', false],
+  [/^(.+市)役所前$/, 'city', true],
+  [/^(.+市)役所$/, 'city', false],
+];
+
+function deriveMunicipality(name) {
+  for (const [re, kind, mae] of MUNI_RULES) {
+    const m = name.match(re);
+    if (!m) continue;
+    const mun = MUNICIPALITY_DISPLAY_NAMES[m[1]];
+    if (!mun?.en) continue;
+    // 「Minato City」→「Minato」+「Ward Office」、「Tachikawa City」→「Tachikawa City Hall」
+    const stem = mun.en.replace(/ City$/, '');
+    const label = kind === 'ward' ? 'Ward Office' : 'City Hall';
+    const en = kind === 'ward' ? `${stem} ${label}${mae ? '-mae' : ''}` : `${stem} ${label}${mae ? '-mae' : ''}`;
+    const zh = kind === 'ward' ? `${m[1]}役所${mae ? '前' : ''}` : `${m[1]}政府${mae ? '前' : ''}`;
+    return { en, zh };
+  }
+  return null;
+}
+
 function derive(name) {
   if (BUS_STATION_DISPLAY_NAMES[name]?.en) return null;
+  const muni = deriveMunicipality(name);
+  if (muni) return muni;
   const bare = name.replace(/^JR/, '');
   // 「田町」「三田」のように停留所名がそのまま駅名のこともある
   if (STATION_DISPLAY_NAMES[bare]?.en) {

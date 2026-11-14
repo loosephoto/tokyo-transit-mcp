@@ -3,14 +3,14 @@
  * 標柱時刻表（odpt:BusstopPoleTimetable）およびバス路線案内で出現する
  * バス停留所・行先名の en/zh 表記。
  *
- * ⚠️ 生成と手修正が混在している。機械生成分は
- *    node scripts/fill-bus-en.mjs（駅名＋接尾辞）と
- *    node scripts/fill-bus-en-wiki.mjs（Wikipedia の振り仮名＋かな→ローマ字）で再生成できる。
+ * ⚠️ 生成と手修正が混在している。駅名由来の機械生成分は
+ *    node scripts/fill-bus-en.mjs で再生成できる（既存は保持）。
  */
 export const BUS_STATION_DISPLAY_NAMES = {
   "EXシアター六本木前": { en: "EX Theater Roppongi-mae", zh: "EX剧场六本木前" },
   "ＩＨＩ前": { en: "IHI-mae", zh: "IHI前" },
   "JR片倉駅": { en: "Katakura Station", zh: "片仓站" },
+  "あきる野市役所": { en: "Akiruno City Hall", zh: "あきる野市政府" },
   "かえつ学園西": { en: "Kaetsu Gakuen Nishi", zh: "嘉悦学园西" },
   "がん研有明病院前": { en: "Cancer Institute Hospital-mae", zh: "癌症研究会有明医院前" },
   "とうきょうスカイツリー": { en: "Tokyo Skytree", zh: "东京天空树" },
@@ -35,12 +35,14 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "一橋学園駅": { en: "Hitotsubashi-Gakuen Station", zh: "一桥学园站" },
   "稲城": { en: "Inagi", zh: "稻城" },
   "稲城駅": { en: "Inagi Station", zh: "稻城站" },
+  "稲城市役所": { en: "Inagi City Hall", zh: "稲城市政府" },
   "稲城長沼": { en: "Inagi-Naganuma", zh: "稻城长沼" },
   "稲城長沼駅": { en: "Inagi-Naganuma Station", zh: "稻城长沼站" },
   "宇喜田": { en: "Ukita", zh: "宇喜田" },
   "羽村": { en: "Hamura", zh: "羽村" },
   "羽村駅西口": { en: "Hamura Station West Exit", zh: "羽村站西口" },
   "羽村駅東口": { en: "Hamura Station East Exit", zh: "羽村站东口" },
+  "羽村市役所": { en: "Hamura City Hall", zh: "羽村市政府" },
   "雨間": { en: "Amema", zh: "Amema" },
   "栄町": { en: "Sakaecho", zh: "荣町" },
   "永山": { en: "Nagayama", zh: "Nagayama" },
@@ -129,6 +131,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "江東橋": { en: "Kotobashi", zh: "江东桥" },
   "江東橋一丁目": { en: "Kotobashi 1-chome", zh: "江东桥一丁目" },
   "江東橋五丁目": { en: "Kotobashi 5-chome", zh: "江东桥五丁目" },
+  "港区役所前": { en: "Minato Ward Office-mae", zh: "港区役所前" },
   "港南一丁目": { en: "Konan 1-chome", zh: "港南一丁目" },
   "港南四丁目": { en: "Konan 4-chome", zh: "港南四丁目" },
   "港南中学校前": { en: "Konan Junior High School-mae", zh: "港南中学前" },
@@ -152,6 +155,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "国立": { en: "Kunitachi", zh: "国立" },
   "国立駅南口": { en: "Kunitachi Station South Exit", zh: "国立站南口" },
   "国立駅北口": { en: "Kunitachi Station North Exit", zh: "国立站北口" },
+  "国立市役所": { en: "Kunitachi City Hall", zh: "国立市政府" },
   "狛江": { en: "Komae", zh: "狛江" },
   "狛江駅北口": { en: "Komae Station North Exit", zh: "狛江站北口" },
   "今戸一丁目": { en: "Imado 1-chome", zh: "Imado 1丁目" },
@@ -169,6 +173,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "三鷹の森ジブリ美術館": { en: "Mitaka no Mori Ghibli Museum", zh: "三鹰之森吉卜力美术馆" },
   "三鷹駅南口": { en: "Mitaka Station South Exit", zh: "三鹰站南口" },
   "三鷹駅北口": { en: "Mitaka Station North Exit", zh: "三鹰站北口" },
+  "三鷹市役所前": { en: "Mitaka City Hall-mae", zh: "三鷹市政府前" },
   "三鷹台": { en: "Mitakadai", zh: "三鹰台" },
   "三鷹台駅": { en: "Mitakadai Station", zh: "三鹰台站" },
   "三田": { en: "Mita", zh: "三田" },
@@ -208,6 +213,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "小平": { en: "Kodaira", zh: "小平" },
   "小平駅前": { en: "Kodaira Station", zh: "小平站前" },
   "小平駅南口": { en: "Kodaira Station South Exit", zh: "小平站南口" },
+  "小平市役所": { en: "Kodaira City Hall", zh: "小平市政府" },
   "昭島": { en: "Akishima", zh: "昭岛" },
   "昭島駅南口": { en: "Akishima Station South Exit", zh: "昭岛站南口" },
   "昭和大学江東豊洲病院前": { en: "Showa Univ Koto Toyosu Hospital-mae", zh: "昭和大学江东丰洲医院前" },
@@ -435,6 +441,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "東村山駅東口": { en: "Higashi-Murayama Station East Exit", zh: "东村山站东口" },
   "東大和市": { en: "Higashi-Yamatoshi", zh: "东大和市" },
   "東大和市駅": { en: "Higashi-Yamatoshi Station", zh: "东大和市站" },
+  "東大和市役所": { en: "Higashiyamato City Hall", zh: "東大和市政府" },
   "東武練馬": { en: "Tobu-Nerima", zh: "东武练马" },
   "東武練馬駅入口": { en: "Tobu-Nerima Station Entrance", zh: "东武练马站入口" },
   "東伏見": { en: "Higashi-Fushimi", zh: "东伏见" },
@@ -507,6 +514,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "武蔵増戸": { en: "Musashi-Masuko", zh: "武藏增户" },
   "武蔵増戸駅": { en: "Musashi-Masuko Station", zh: "武藏增户站" },
   "武蔵村山市役所": { en: "Musashimurayama City Hall", zh: "Musashimurayama市政府" },
+  "武蔵村山市役所前": { en: "Musashimurayama City Hall-mae", zh: "武蔵村山市政府前" },
   "武蔵野市役所": { en: "Musashino City Hall", zh: "Musashino市政府" },
   "武蔵野大学前": { en: "Musashino University-mae", zh: "武藏野大学前" },
   "平井駅前": { en: "Hirai Station", zh: "平井站前" },
@@ -569,6 +577,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "立川": { en: "Tachikawa", zh: "立川" },
   "立川駅南口": { en: "Tachikawa Station South Exit", zh: "立川站南口" },
   "立川駅北口": { en: "Tachikawa Station North Exit", zh: "立川站北口" },
+  "立川市役所": { en: "Tachikawa City Hall", zh: "立川市政府" },
   "緑三丁目": { en: "Midori 3-chome", zh: "绿三丁目" },
   "臨海車庫": { en: "Rinkai Shako", zh: "临海车库" },
   "鈴木町": { en: "Suzukicho", zh: "铃木町" },
