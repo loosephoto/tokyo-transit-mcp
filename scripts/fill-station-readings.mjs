@@ -62,12 +62,12 @@ function extractReading(extract, title) {
     for (const cand of new Set([t, tBase])) {
       if (!cand || !head.startsWith(cand)) continue;
       const rest = head.slice(cand.length).trimStart();
-      const m = rest.match(/^[（(]([ぁ-んァ-ヶー]{2,})(?:えき)?[）)]/);
-      if (m) return m[1].replace(/えき$/, '');
+      const m = rest.match(/^[（(]([ぁ-んァ-ヶー]{2,}?)(?:えき|ていりゅうじょう)?[）)]/);
+      if (m) return m[1].replace(/(ていりゅうじょう|えき)$/, '');
     }
   }
-  const uniq = [...new Set([...head.matchAll(/[（(]([ぁ-んァ-ヶー]{2,})(?:えき)?[）)]/g)].map((x) => x[1]))];
-  return uniq.length === 1 ? uniq[0].replace(/えき$/, '') : null;
+  const uniq = [...new Set([...head.matchAll(/[（(]([ぁ-んァ-ヶー]{2,}?)(?:えき|ていりゅうじょう)?[）)]/g)].map((x) => x[1]))];
+  return uniq.length === 1 ? uniq[0].replace(/(ていりゅうじょう|えき)$/, '') : null;
 }
 
 async function fetchJson(params, { tries = 4 } = {}) {
@@ -136,71 +136,120 @@ for (const st of missing) {
 console.log(`  記事冒頭から判明 ${Object.keys(found).length} 件 / 未解決 ${unresolved.length} 件`);
 
 // --- 2b: 曖昧さ回避ページ対応（--disambig） ---
-//   「大塚駅」「三田駅」のように同名駅が複数ある記事は読みが 2 つ以上あり、そのままでは採用できない。
-//   Wikipedia の曖昧さ回避ページから「◯◯駅 (東京都)」形式の候補を集め、記事本文に
-//   その駅が属する路線名（RAILWAY_LINES）が現れる候補を選ぶ。
+//   同名駅（三田・大塚・日本橋・大島…）は「◯◯駅」が曖昧さ回避ページで、本文冒頭からは
+//   読みを決められない。手順は 3 段:
+//     (1) 曖昧さ回避ページの wikitext を prop=revisions でまとめて取得（1 リクエスト 40 件）
+//     (2) 各行「[[◯◯駅 (都道府県)|◯◯駅]] … 路線名」から、その駅の路線名（RAILWAY_LINES 由来）が
+//         同じ行に現れる候補を選ぶ。曖昧さ回避の行には読みが書かれていないことが多い
+//         （例: 「[[大塚駅 (東京都)]] - 東京都豊島区にある…山手線の駅。」）ため、
+//     (3) 選んだ候補の記事冒頭だけ extracts でまとめて取り、読みを抽出する。
+//   ⚠️ 駅ごとに extracts を叩く方式は 429 で大半が失敗し、prop=links のバッチは
+//   pllimit の上限で後方ページがリンク 0 件になった（いずれも実測）。
 if (args.includes('--disambig') && unresolved.length) {
-  const lineSetByStation = new Map();
+  const OPERATORS = /(都営|東京メトロ|京王|小田急|東急|西武|東武|京成|相鉄|名鉄|近鉄|阪急|阪神|京急|東葉|ゆりかもめ|多摩モノレール|みなとみらい|日暮里・舎人)/;
+  const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokensByStation = new Map();
   for (const [line, stations] of Object.entries(RAILWAY_LINES)) {
+    const core = String(line).replace(/^JR/, '').replace(/（.*?）/g, '').trim();
+    const toks = new Set([core]);
+    const op = core.match(OPERATORS);
+    if (op) toks.add(core.slice(op[0].length));
+    if (core.length > 3) toks.add(core.slice(-3));
     for (const st of stations) {
-      if (!lineSetByStation.has(st)) lineSetByStation.set(st, new Set());
-      lineSetByStation.get(st).add(line);
+      if (!tokensByStation.has(st)) tokensByStation.set(st, new Set());
+      for (const t of toks) if (t && t.length >= 3) tokensByStation.get(st).add(t);
     }
   }
+
   const targets = unresolved.slice();
-  console.log(`曖昧さ回避の解決: ${targets.length} 件`);
-
-  // (a) 曖昧さ回避ページのリンクをまとめて取得
-  const linksByTitle = {};
-  const disambigTitles = targets.map((st) => `${baseName(st)}駅`);
-  for (let i = 0; i < disambigTitles.length; i += 20) {
-    const chunk = disambigTitles.slice(i, i + 20);
-    const json = await fetchJson({ action: 'query', prop: 'links', plnamespace: '0', pllimit: 'max', redirects: '1', titles: chunk.join('|') });
-    for (const p of json?.query?.pages || []) {
-      linksByTitle[p.title] = (p.links || []).map((l) => l.title);
-    }
-    await sleep(2000);
-  }
-
-  // (b) 「◯◯駅 (...)」候補の本文をまとめて取得
-  const candidates = new Map(); // station -> [titles]
-  const allCand = new Set();
+  const titles = [];
   for (const st of targets) {
     const base = baseName(st);
-    const links = linksByTitle[`${base}駅`] || [];
-    const cands = links.filter((t) => t.startsWith(`${base}駅 (`) || t.startsWith(`${base}駅（`));
-    if (cands.length) { candidates.set(st, cands); cands.forEach((c) => allCand.add(c)); }
-  }
-  const candArr = [...allCand];
-  const candExtracts = {};
-  for (let i = 0; i < candArr.length; i += 20) {
-    const chunk = candArr.slice(i, i + 20);
-    Object.assign(candExtracts, await extractsFor(chunk));
-    await sleep(2000);
+    const cands = [
+      `${base}駅`,
+      `${base}停留場`,
+      `${base.replace(/ヶ/g, 'ケ')}駅`,
+      `${base.replace(/ケ/g, 'ヶ')}駅`,
+      `${base.replace(/^モノレール/, '')}駅`,
+    ];
+    for (const t of cands) if (t && !titles.includes(t)) titles.push(t);
   }
 
-  // (c) 路線名の一致で候補を選ぶ
-  for (const st of targets) {
-    const lines = lineSetByStation.get(st) || new Set();
-    let best = null, bestScore = 0;
-    for (const t of candidates.get(st) || []) {
-      const ex = candExtracts[t] || '';
-      const r = extractReading(ex, t);
-      if (!r) continue;
-      let score = 0;
-      for (const l of lines) {
-        const core = l.replace(/^JR/, '').replace(/（.*?）/g, '').trim();
-        if (core && ex.includes(core)) score++;
-      }
-      if (score > bestScore) { bestScore = score; best = r; }
+  const pageText = new Map();
+  for (let k = 0; k < titles.length; k += 40) {
+    const chunk = titles.slice(k, k + 40);
+    const json = await fetchJson({ action: 'query', prop: 'revisions', rvprop: 'content', rvslots: 'main', redirects: '1', titles: chunk.join('|') });
+    for (const pg of json?.query?.pages || []) {
+      if (pg.missing) continue;
+      const slot = pg.revisions?.[0]?.slots?.main;
+      const text = typeof slot === 'string' ? slot : slot?.content || slot?.['*'] || '';
+      if (text) pageText.set(pg.title, text);
     }
-    if (best) {
-      found[st] = best;
-      const idx = unresolved.indexOf(st);
-      if (idx >= 0) unresolved.splice(idx, 1);
+    await sleep(1200);
+  }
+
+  // (2) 曖昧さ回避ページの行から候補（読みが無くても拾う）
+  const entries = [];
+  for (const [, text] of pageText) {
+    for (const line of text.split('\n')) {
+      if (!line.includes('駅 (') && !line.includes('駅（')) continue;
+      const tm = line.match(/\[\[([^\]|#]+)/);
+      if (!tm) continue;
+      const rm = line.match(/[（(]([ぁ-んァ-ヶー]{2,}?)(?:えき|ていりゅうじょう)[）)]/);
+      entries.push({ title: tm[1].trim(), reading: rm ? rm[1] : null, line });
     }
   }
-  console.log(`  曖昧さ回避から判明 ${Object.keys(found).length} 件 / 残り ${unresolved.length} 件`);
+
+  // 記事そのものが駅記事（曖昧さ回避でない）場合の冒頭読み
+  const introOf = (text, title) => {
+    const head = text.slice(0, 1500);
+    const base = title.replace(/[（(].*?[）)]\s*$/, '');
+    const m = head.match(new RegExp("'''\\s*" + escapeRe(base) + "\\s*'''\\s*[（(]([ぁ-んァ-ヶー]{2,}?)(?:えき|ていりゅうじょう)[）)]"));
+    return m ? m[1] : null;
+  };
+
+  const pending = new Map(); // station -> candidate title
+  let got = 0;
+  for (const st of targets) {
+    const base = baseName(st);
+    // (a) 記事がそのまま駅記事なら冒頭から
+    let done = false;
+    for (const t of [`${base}駅`, `${base.replace(/ヶ/g, 'ケ')}駅`, `${base}停留場`]) {
+      const text = pageText.get(t) || pageText.get(t.replace(/^モノレール/, ''));
+      if (!text) continue;
+      const r = introOf(text, t);
+      if (r) { found[st] = r; got++; done = true; break; }
+    }
+    if (done) continue;
+    // (b) 曖昧さ回避の候補から路線名一致で選ぶ
+    const toks = [...(tokensByStation.get(st) || [])];
+    let best = null;
+    let bestScore = 0;
+    for (const e of entries) {
+      if (!e.title.startsWith(base)) continue;
+      let score = 0;
+      for (const t of toks) if (e.line.includes(t)) score += 2;
+      if (score > bestScore) { bestScore = score; best = e; }
+    }
+    if (!best) continue;
+    if (best.reading) { found[st] = best.reading; got++; }
+    else pending.set(st, best.title);
+  }
+
+  // (3) 候補記事の冒頭だけまとめて取得して読みを確定
+  const pendTitles = [...new Set(pending.values())];
+  if (pendTitles.length) {
+    const exMap = {};
+    for (let k = 0; k < pendTitles.length; k += 20) {
+      Object.assign(exMap, await extractsFor(pendTitles.slice(k, k + 20)));
+      await sleep(1200);
+    }
+    for (const [st, title] of pending) {
+      const r = extractReading(exMap[title] || '', title);
+      if (r) { found[st] = r; got++; }
+    }
+  }
+  console.log(`  曖昧さ回避から判明 ${got} 件 / 残り ${unresolved.length - got} 件`);
 }
 
 // --- 3: 検索で駅記事を探す ---

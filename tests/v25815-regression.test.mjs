@@ -23,10 +23,10 @@ const have = Object.keys(STATION_READINGS);
 const missing = uniq.filter((s) => !STATION_READINGS[s]);
 const coverage = 1 - missing.length / uniq.length;
 console.log(`  駅 ${uniq.length} / 読み ${have.length} / 欠落 ${missing.length}（${(coverage * 100).toFixed(1)}%）`);
-if (coverage >= 0.94) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（94% 以上を維持）`);
-else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（94% 未満）`);
-if (have.length >= 1400) ok(`読み ${have.length} 件（1,400 件以上）`);
-else fail(`読みが ${have.length} 件に減少（1,400 件未満）`);
+if (coverage >= 0.97) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（97% 以上を維持）`);
+else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（97% 未満）`);
+if (have.length >= 1440) ok(`読み ${have.length} 件（1,440 件以上）`);
+else fail(`読みが ${have.length} 件に減少（1,440 件未満）`);
 
 console.log('-- 読みの形式 --');
 {
@@ -42,7 +42,7 @@ console.log('-- 代表的な読みの正しさ --');
     '新宿': 'しんじゅく', '渋谷': 'しぶや', '東京': 'とうきょう', '上野': 'うえの',
     '京王八王子': 'けいおうはちおうじ', '西大島': 'にしおおじま', '横浜': 'よこはま',
     '川崎': 'かわさき', '大宮': 'おおみや', '船橋': 'ふなばし',
-    '仙川': 'せんがわ', '千川': 'せんかわ',
+    '仙川': 'せんがわ', '千川': 'せんかわ', '三田': 'みた', '大島': 'おおじま', '荒川一中前': 'あらかわいっちゅうまえ',
   };
   for (const [st, reading] of Object.entries(expected)) {
     eq(STATION_READINGS[st], reading, `${st} = ${reading}`);
