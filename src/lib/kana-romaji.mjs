@@ -62,12 +62,12 @@ export function kanaToRomaji(input) {
 
 // 長音の簡略化（おう→o / おお→o / うう→u / ああ→a）。
 //   駅名辞書の英字表記（Tokyo, Otsuka, Osaka）に合わせるための後処理。
-export function simplify(s) {
-  return String(s)
-    .replace(/ou/g, 'o')
-    .replace(/oo/g, 'o')
-    .replace(/uu/g, 'u')
-    .replace(/aa/g, 'a');
+export function simplify(s, { ouAtEndOnly = false } = {}) {
+  let out = String(s);
+  // 語中の ou は形態素境界（ほり+の+うち = horinouchi）を壊すことがあるため、
+  // 地名の連結語では語末だけ縮約する（toukyou → tokyo、horinouchi はそのまま）。
+  out = ouAtEndOnly ? out.replace(/ou$/, 'o') : out.replace(/ou/g, 'o');
+  return out.replace(/oo/g, 'o').replace(/uu/g, 'u').replace(/aa/g, 'a');
 }
 
 export function titleCase(s) {

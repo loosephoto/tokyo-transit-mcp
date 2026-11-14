@@ -50,8 +50,8 @@ const withEn = all.filter((s) => BUS_STATION_DISPLAY_NAMES[s]?.en);
 {
   const coverage = withEn.length / all.length;
   console.log(`  停留所 ${all.length} / en あり ${withEn.length}（${(coverage * 100).toFixed(1)}%）`);
-  if (coverage >= 0.75) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（75% 以上を維持）`);
-  else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（75% 未満）`);
+  if (coverage >= 0.77) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（77% 以上を維持）`);
+  else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（77% 未満）`);
   const nonAscii = Object.values(BUS_STATION_DISPLAY_NAMES).filter((v) => !/^[\x20-\x7E]+$/.test(v.en || ''));
   eq(nonAscii.length, 0, `en は ASCII のみ（違反 ${nonAscii.length} 件）`);
 }
@@ -85,8 +85,8 @@ console.log('-- 生成スクリプト --');
   if (wiki.includes('--dry')) ok('--dry（差分確認）がある');
   else fail('--dry が無い');
   const entries = Object.keys(BUS_STATION_DISPLAY_NAMES).length;
-  if (entries >= 580) ok(`辞書 ${entries} 件`);
-  else fail(`辞書が ${entries} 件しかない（580 件以上を期待）`);
+  if (entries >= 590) ok(`辞書 ${entries} 件`);
+  else fail(`辞書が ${entries} 件しかない（590 件以上を期待）`);
 }
 
 console.log('');

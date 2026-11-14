@@ -21,6 +21,8 @@ const API = 'https://ja.wikipedia.org/w/api.php';
 const UA = 'tokyo-transit-mcp-dev/1.0 (bus stop names)';
 const OUT = 'src/data/bus-station-display-names.mjs';
 const dryRun = process.argv.includes('--dry');
+// 🔴 検索 API は 429 を食いやすく遅い。--no-search で「地名 (自治体)」「地名」の 2 候補だけ試す。
+const NO_SEARCH = process.argv.includes('--no-search');
 const limitArg = process.argv.find((a) => a.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1], 10) : 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -37,6 +39,7 @@ const SUFFIX = [
   ['区役所', ' Ward Office', '区政府'],
   ['市役所', ' City Hall', '市政府'],
   ['出張所', ' Branch Office', '办事处'],
+  ['記念館入口', ' Memorial Hall Entrance', '纪念馆入口'],
   ['記念館', ' Memorial Hall', '纪念馆'],
   ['美術館', ' Museum', '美术馆'],
   ['福祉会館', ' Welfare Hall', '福利会馆'],
@@ -48,6 +51,7 @@ const SUFFIX = [
   ['中学校', ' Junior High School', '初中'],
   ['高校', ' High School', '高中'],
   ['学園', ' Gakuen', '学园'],
+  ['神社前', ' Shrine-mae', '神社前'],
   ['神社', ' Shrine', '神社'],
   ['公園', ' Park', '公园'],
   ['商店街', ' Shopping Street', '商店街'],
@@ -65,6 +69,13 @@ const SUFFIX = [
 ];
 
 const NUMS = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+
+// 機械生成だと語間が崩れるものだけ手で直す（根拠は各停留所の公式表記・読み）
+const OVERRIDE = {
+  '一葉記念館入口': { en: 'Ichiyo Kinenkan Entrance', zh: '一叶纪念馆入口' },
+  '鳥越神社前': { en: 'Torikoe Shrine-mae', zh: '鸟越神社前' },
+  '上野学園': { en: 'Ueno Gakuen', zh: '上野学园' },
+};
 
 async function fetchJson(params, tries = 3) {
   const url = `${API}?${new URLSearchParams({ format: 'json', formatversion: '2', ...params })}`;
@@ -95,9 +106,13 @@ function readingFor(title, text, base) {
   if (!text) return null;
   const head = text.slice(0, 4000);
   const bare = title.replace(/\s*[（(].*?[）)]\s*$/, '');
-  if (!(bare.startsWith(base) || base.startsWith(bare))) return null;
+  // 🔴 前方一致は「記事タイトルが地名で始まる」方向のみ許可する。
+  //   逆方向（base が記事名で始まる）を許すと「橋場老人福祉館西」に「橋場」の読みを
+  //   当てて西の字が落ちる（実測）。
+  if (!bare.startsWith(base)) return null;
   const esc = bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = head.match(new RegExp("'''\\s*" + esc + "\\s*'''\\s*[（(]([ぁ-んァ-ヶー・]{2,}?)(?:ていりゅうじょう|えき)[）)]"));
+  // extracts（explaintext）は太字マークアップが落ちるため ''' は任意扱いにする
+  const m = head.match(new RegExp("(?:'''\\s*)?" + esc + "\\s*(?:'''\\s*)?[（(]([ぁ-んァ-ヶー・]{2,}?)(?:ていりゅうじょう|えき)?[）)]"));
   return m ? m[1] : null;
 }
 
@@ -108,15 +123,27 @@ async function searchTitles(query) {
 
 function collectStops() {
   const names = new Set();
+  const muniOf = new Map();
   for (const bus of COMMUNITY_BUS_ROUTES) {
-    for (const route of bus.routes || []) for (const s of route.stops || []) if (typeof s === 'string') names.add(s);
+    for (const route of bus.routes || []) {
+      for (const s of route.stops || []) {
+        if (typeof s !== 'string') continue;
+        names.add(s);
+        if (bus.municipality && !muniOf.has(s)) muniOf.set(s, bus.municipality);
+      }
+    }
     const st = Array.isArray(bus.stations) ? bus.stations : Object.keys(bus.stations || {});
-    for (const s of st) if (typeof s === 'string') names.add(s);
+    for (const s of st) {
+      if (typeof s !== 'string') continue;
+      names.add(s);
+      if (bus.municipality && !muniOf.has(s)) muniOf.set(s, bus.municipality);
+    }
   }
-  return [...names].filter(Boolean);
+  return { names: [...names].filter(Boolean), muniOf };
 }
 
-let stops = collectStops().filter((s) => !BUS_STATION_DISPLAY_NAMES[s]?.en);
+const { names: allStops, muniOf } = collectStops();
+let stops = allStops.filter((s) => !BUS_STATION_DISPLAY_NAMES[s]?.en);
 if (LIMIT > 0) stops = stops.slice(0, LIMIT);
 console.log(`対象: ${stops.length} 件`);
 
@@ -124,12 +151,21 @@ const added = {};
 const unresolved = [];
 for (const name of stops) {
   const sp = splitName(name);
-  const query = sp.base.length >= 2 ? sp.base : name;
-  const titles = await searchTitles(query);
-  await sleep(1200);
+  // 🔴 町名記事は「清川 (台東区)」のように自治体名で曖昧さ回避されていることが多い。
+  //   停留所が属する自治体（コミュニティバスの municipality）で修飾したタイトルを最優先する。
+  if (OVERRIDE[name]) { added[name] = OVERRIDE[name]; console.log(`○ ${name} → ${OVERRIDE[name].en}（手修正）`); continue; }
+  const muni = muniOf.get(name);
+  const candidates = [];
+  if (muni && sp.base.length >= 2) candidates.push(`${sp.base} (${muni})`);
+  candidates.push(sp.base);
+  if (!NO_SEARCH && sp.base.length >= 2) {
+    const searched = await searchTitles(`${sp.base} ${muni || ''}`.trim());
+    await sleep(1000);
+    for (const t of searched.slice(0, 2)) if (!candidates.includes(t)) candidates.push(t);
+  }
   let reading = null;
   let srcTitle = null;
-  for (const t of titles.slice(0, 3)) {
+  for (const t of candidates.slice(0, 4)) {
     const j = await fetchJson({ action: 'query', prop: 'extracts', exintro: '1', explaintext: '1', exlimit: '1', redirects: '1', titles: t });
     await sleep(1000);
     const p = j?.query?.pages?.[0];
@@ -138,7 +174,7 @@ for (const name of stops) {
     if (r) { reading = r; srcTitle = p.title; break; }
   }
   if (!reading) { unresolved.push(name); console.log(`× ${name}`); continue; }
-  const romaji = titleCase(simplify(kanaToRomaji(reading)));
+  const romaji = titleCase(simplify(kanaToRomaji(reading), { ouAtEndOnly: true }));
   let en; let zh;
   if (sp.kind === 'chome') { en = `${romaji} ${sp.num}-chome`; zh = `${romaji} ${sp.num}丁目`; }
   else if (sp.kind === 'suffix') { en = `${romaji}${sp.en}`; zh = `${romaji}${sp.zh}`; }

@@ -1,10 +1,10 @@
 /**
  * バス停・標柱および主要行先表示名辞書（多言語対応）
- * 標柱時刻表（odpt:BusstopPoleTimetable）およびバス路線案内で出現する
- * バス停留所・行先名の en/zh 表記。
  *
- * ⚠️ 生成と手修正が混在している。駅名由来の機械生成分は
- *    node scripts/fill-bus-en.mjs で再生成できる（既存は保持）。
+ * ⚠️ 生成と手修正が混在。機械生成分は次の 3 本で再生成できる。
+ *   node scripts/fill-bus-en.mjs        （駅名・自治体名＋接尾辞）
+ *   node scripts/fill-bus-en-wiki.mjs   （記事タイトル推定＋振り仮名）
+ *   node scripts/fill-bus-en-search.mjs （Wikipedia 検索＋振り仮名）
  */
 export const BUS_STATION_DISPLAY_NAMES = {
   "EXシアター六本木前": { en: "EX Theater Roppongi-mae", zh: "EX剧场六本木前" },
@@ -33,6 +33,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "井の頭公園": { en: "Inokashira-Koen", zh: "井の头公园" },
   "一橋学園": { en: "Hitotsubashi-Gakuen", zh: "一桥学园" },
   "一橋学園駅": { en: "Hitotsubashi-Gakuen Station", zh: "一桥学园站" },
+  "一葉記念館入口": { en: "Ichiyo Kinenkan Entrance", zh: "一叶纪念馆入口" },
   "稲城": { en: "Inagi", zh: "稻城" },
   "稲城駅": { en: "Inagi Station", zh: "稻城站" },
   "稲城市役所": { en: "Inagi City Hall", zh: "稲城市政府" },
@@ -116,6 +117,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "言問橋": { en: "Kototoibashi", zh: "言问桥" },
   "五ノ橋": { en: "Gonohashi", zh: "五之桥" },
   "五日市": { en: "Itsukaichi", zh: "Itsukaichi" },
+  "五日市出張所": { en: "Itsukaichi Branch Office", zh: "Itsukaichi办事处" },
   "後楽園": { en: "Korakuen", zh: "后乐园" },
   "後楽園駅前": { en: "Korakuen Station", zh: "后乐园站前" },
   "御成門": { en: "Onarimon", zh: "御成门" },
@@ -193,6 +195,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "若葉台": { en: "Wakabadai", zh: "若叶台" },
   "若葉台駅": { en: "Wakabadai Station", zh: "若叶台站" },
   "秋川": { en: "Akigawa", zh: "秋川" },
+  "秋川ふれあいセンター": { en: "Akigawa Fureai Center", zh: "Akigawa交流中心" },
   "秋川駅": { en: "Akigawa Station", zh: "秋川站" },
   "秋津": { en: "Akitsu", zh: "秋津" },
   "秋津駅": { en: "Akitsu Station", zh: "秋津站" },
@@ -227,6 +230,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "上北台駅": { en: "Kami-Kitadai Station", zh: "上北台站" },
   "上野": { en: "Ueno", zh: "上野" },
   "上野駅": { en: "Ueno Station", zh: "上野站" },
+  "上野学園": { en: "Ueno Gakuen", zh: "Ueno学园" },
   "上野松坂屋前": { en: "Ueno Matsuzakaya-mae", zh: "上野松坂屋前" },
   "新橋駅前": { en: "Shimbashi Station", zh: "新桥站前" },
   "新橋駅北口": { en: "Shimbashi Station North Exit", zh: "新桥站北口" },
@@ -285,6 +289,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "清瀬駅南口": { en: "Kiyose Station South Exit", zh: "清濑站南口" },
   "清瀬駅北口": { en: "Kiyose Station North Exit", zh: "清濑站北口" },
   "清瀬郵便局": { en: "Kiyose Post Office", zh: "Kiyose邮局" },
+  "清川一丁目": { en: "Kiyokawa 1-chome", zh: "Kiyokawa 1丁目" },
   "聖路加病院前": { en: "St. Luke's Hospital-mae", zh: "圣路加医院前" },
   "西荻窪": { en: "Nishi-Ogikubo", zh: "西荻洼" },
   "西荻窪駅南口": { en: "Nishi-Ogikubo Station South Exit", zh: "西荻洼站南口" },
@@ -352,6 +357,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "代官山駅前": { en: "Daikanyama Station", zh: "代官山站前" },
   "台東区役所": { en: "Taito Ward Office", zh: "Taito区政府" },
   "台東三丁目": { en: "Taito 3-chome", zh: "Taito 3丁目" },
+  "台東地区センター": { en: "Taito District Center", zh: "Taito地区中心" },
   "台東病院": { en: "Taito Hospital", zh: "Taito医院" },
   "台東保健所": { en: "Taito Health Center", zh: "Taito保健所" },
   "大井水産物埠頭前": { en: "Oi Marine Products Pier-mae", zh: "大井水产码头前" },
@@ -396,6 +402,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "調布": { en: "Chofu", zh: "调布" },
   "調布駅南口": { en: "Chofu Station South Exit", zh: "调布站南口" },
   "調布駅北口": { en: "Chofu Station North Exit", zh: "调布站北口" },
+  "鳥越神社前": { en: "Torikoe Shrine-mae", zh: "鸟越神社前" },
   "通り三丁目": { en: "Tori 3-chome", zh: "通三丁目" },
   "佃二丁目": { en: "Tsukuda 2-chome", zh: "佃二丁目" },
   "鉄砲洲": { en: "Teppozu", zh: "铁炮洲" },
@@ -470,6 +477,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "日野市役所": { en: "Hino City Hall", zh: "Hino市政府" },
   "入谷": { en: "Iriya", zh: "入谷" },
   "入谷駅入口": { en: "Iriya Station Entrance", zh: "入谷站入口" },
+  "入谷地区センター": { en: "Iriya District Center", zh: "Iriya地区中心" },
   "入谷南公園": { en: "Iriyaminami Park", zh: "Iriyaminami公园" },
   "白河": { en: "Shirakawa", zh: "白河" },
   "白金高輪": { en: "Shirokane-takanawa", zh: "白金高轮" },
@@ -545,6 +553,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "北野": { en: "Kitano", zh: "北野" },
   "北野三丁目": { en: "Kitano 3-chome", zh: "Kitano 3丁目" },
   "睦橋": { en: "Mutsumi Bridge", zh: "Mutsumi桥" },
+  "堀ノ内三丁目": { en: "Horinouchi 3-chome", zh: "Horinouchi 3丁目" },
   "本郷三丁目": { en: "Hongo-sanchome", zh: "本乡三丁目" },
   "本郷三丁目駅前": { en: "Hongo-sanchome Station", zh: "本乡三丁目站前" },
   "本所四丁目": { en: "Honjo 4-chome", zh: "本所四丁目" },
@@ -565,6 +574,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "木場二丁目": { en: "Kiba 2-chome", zh: "木场二丁目" },
   "木場六丁目ギャザリア前": { en: "Kiba 6-chome Gatharia-mae", zh: "木场六丁目吉萨莉亚前" },
   "目黒駅前": { en: "Meguro Station", zh: "目黑站前" },
+  "野辺郵便局": { en: "Nobe Post Office", zh: "Nobe邮局" },
   "矢口中学校": { en: "Yaguchi Junior High School", zh: "Yaguchi初中" },
   "有楽町駅前": { en: "Yurakucho Station", zh: "有乐町站前" },
   "有明ガーデン": { en: "Ariake Garden", zh: "有明花园" },
@@ -578,6 +588,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "立川駅南口": { en: "Tachikawa Station South Exit", zh: "立川站南口" },
   "立川駅北口": { en: "Tachikawa Station North Exit", zh: "立川站北口" },
   "立川市役所": { en: "Tachikawa City Hall", zh: "立川市政府" },
+  "竜泉三丁目": { en: "Ryusen 3-chome", zh: "Ryusen 3丁目" },
   "緑三丁目": { en: "Midori 3-chome", zh: "绿三丁目" },
   "臨海車庫": { en: "Rinkai Shako", zh: "临海车库" },
   "鈴木町": { en: "Suzukicho", zh: "铃木町" },
@@ -590,6 +601,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "六本木四丁目": { en: "Roppongi 4-chome", zh: "六本木四丁目" },
   "和泉多摩川": { en: "Izumi-Tamagawa", zh: "和泉多摩川" },
   "和泉多摩川駅": { en: "Izumi-Tamagawa Station", zh: "和泉多摩川站" },
+  "渕上": { en: "Fuchigami", zh: "Fuchigami" },
   "鶯谷": { en: "Uguisudani", zh: "莺谷" },
   "鶯谷駅南": { en: "Uguisudani Station South", zh: "莺谷站南" },
 };
