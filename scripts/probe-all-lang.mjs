@@ -17,6 +17,8 @@ const loadEnv = () => {
 };
 loadEnv();
 
+import { withRateLimitRetry } from '../src/lib/probe-retry.mjs';
+
 const { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo,
   listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, searchFlight, getRunningStatus } =
   await import('../src/index.mjs');
@@ -58,12 +60,18 @@ const results = [];
 const run = async (name, lang, args, fn) => {
   const t0 = Date.now();
   try {
-    const res = await fn(args);
-    const data = res.structuredContent || (() => {
+    // 🔴 v2.58.20: ODPT のレート制限（429 → API_TIMEOUT）やサーキットブレーカー OPEN は
+    //   待って再試行する。コードの退行とインフラの揺らぎを混同しないため。
+    const extract = (res) => res.structuredContent || (() => {
       const texts = (res.content || []).filter(c => c.type === 'text').map(c => c.text);
       const jsonText = texts.find(t => t.trim().startsWith('{')) || texts[0];
       return JSON.parse(jsonText);
     })();
+    const { data, attempts: tries } = await withRateLimitRetry(
+      async () => extract(await fn(args)),
+      { retries: 2, waits: [5000, 15000], log: (m) => console.log(`   ↻ [${lang}] ${name}: ${m}`) }
+    );
+    if (tries > 1) console.log(`   ↻ [${lang}] ${name}: ${tries} 回目で成功`);
     const expectedStatuses = args.__expectedStatuses || ['SUCCESS', 'NO_DATA'];
     if (!expectedStatuses.includes(data.status)) {
       throw new Error(`unexpected status: ${data.status || 'missing'}`);

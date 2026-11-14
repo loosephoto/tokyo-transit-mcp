@@ -212,6 +212,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.20（2026-11-14）— プローブのレート制限リトライ（テストの flake 解消）
+
+- `npm test` の live probe が ODPT のレート制限で `search_fare` / `get_timetable` の en/zh を 4 件 FAIL にすることがあった（同じコードで 3 分後に 29/29）。**コードの退行とインフラの揺らぎを混同しない**ため、`src/lib/probe-retry.mjs` を追加。
+- リトライ対象は `API_TIMEOUT`（429/timeout）/ `NETWORK_ERROR` / `API_SERVER_ERROR` / `CIRCUIT_BREAKER_OPEN` と、メッセージに 429・timeout・breaker を含むものだけ。`INVALID_INPUT` や `NO_ROUTE` は再試行しない（隠蔽を防ぐ）。
+- 待機は 5s → 15s、初回 + 2 回まで。probe は `↻` 行でリトライを可視化する。
+
 ### v2.58.19（2026-11-14）— バス停の英語表記 295 → 366 件（73.5%）
 
 - 残っていた「読みの推定が要る 203 件」を、**Wikipedia の記事冒頭の振り仮名から読みだけ取り、ローマ字化は自前実装**で行う方式で 71 件補完（366/498 = 73.5%）。
