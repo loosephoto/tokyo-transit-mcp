@@ -1,6 +1,6 @@
 {
   "name": "tokyo-transit-mcp",
-  "version": "2.58.28",
+  "version": "2.58.29",
   "description": "Tokyo public transportation API MCP server - ODPT, Tokyo Metro, Toei, JR East",
   "type": "module",
   "main": "src/index.mjs",
@@ -39,7 +39,9 @@
     "readings:curated": "node scripts/fill-station-readings-curated.mjs",
     "test:v25824": "node tests/v25824-regression.test.mjs",
     "bus:en:search": "node scripts/fill-bus-en-search.mjs",
-    "bus:en:odpt": "node scripts/fill-bus-en-odpt.mjs"
+    "bus:en:odpt": "node scripts/fill-bus-en-odpt.mjs",
+    "bus:en:todo": "node scripts/bus-en-todo.mjs export",
+    "bus:en:import": "node scripts/bus-en-todo.mjs import"
   },
   "keywords": [
     "mcp",

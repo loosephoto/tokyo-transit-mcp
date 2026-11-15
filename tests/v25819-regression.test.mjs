@@ -50,8 +50,8 @@ const withEn = all.filter((s) => BUS_STATION_DISPLAY_NAMES[s]?.en);
 {
   const coverage = withEn.length / all.length;
   console.log(`  停留所 ${all.length} / en あり ${withEn.length}（${(coverage * 100).toFixed(1)}%）`);
-  if (coverage >= 0.80) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（80% 以上を維持）`);
-  else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（80% 未満）`);
+  if (coverage >= 0.81) ok(`カバレッジ ${(coverage * 100).toFixed(1)}%（81% 以上を維持）`);
+  else fail(`カバレッジが ${(coverage * 100).toFixed(1)}% に低下（81% 未満）`);
   const nonAscii = Object.values(BUS_STATION_DISPLAY_NAMES).filter((v) => !/^[\x20-\x7E]+$/.test(v.en || ''));
   eq(nonAscii.length, 0, `en は ASCII のみ（違反 ${nonAscii.length} 件）`);
 }
@@ -73,8 +73,25 @@ console.log('-- Wikipedia の振り仮名から作った代表例 --');
     '立川市役所': 'Tachikawa City Hall',
     '二天門': 'Nitemmon (Nitemmon Gate)',
     '吉原大門': 'Yoshiwara-Omon',
+    '上野駅入谷口': 'Ueno Station Iriya Exit',
+    '大江戸線蔵前駅': 'Kuramae Station',
   };
   for (const [ja, en] of Object.entries(expected)) eq(BUS_STATION_DISPLAY_NAMES[ja]?.en, en, `${ja} = ${en}`);
+}
+
+console.log('-- 人手キュレーション用 CSV --');
+{
+  const csvPath = 'docs/bus-en-todo.csv';
+  if (!fs.existsSync(csvPath)) fail(`${csvPath} が無い（npm run bus:en:todo で生成）`);
+  else {
+    const lines = fs.readFileSync(csvPath, 'utf8').split(String.fromCharCode(10)).map((x) => x.trim()).filter(Boolean);
+    const header = lines[0];
+    if (header.startsWith('ja,en,zh')) ok(`${csvPath}: ${lines.length - 1} 行（ヘッダ ja,en,zh）`);
+    else fail(`${csvPath} のヘッダが想定外: ${header.slice(0, 40)}`);
+    const missingCount = all.length - withEn.length;
+    if (lines.length - 1 === missingCount) ok(`CSV の行数が未翻訳件数と一致（${missingCount}）`);
+    else fail(`CSV 行数 ${lines.length - 1} が未翻訳 ${missingCount} 件と不一致`);
+  }
 }
 
 console.log('-- 生成スクリプト --');
@@ -87,8 +104,8 @@ console.log('-- 生成スクリプト --');
   if (wiki.includes('--dry')) ok('--dry（差分確認）がある');
   else fail('--dry が無い');
   const entries = Object.keys(BUS_STATION_DISPLAY_NAMES).length;
-  if (entries >= 610) ok(`辞書 ${entries} 件`);
-  else fail(`辞書が ${entries} 件しかない（610 件以上を期待）`);
+  if (entries >= 615) ok(`辞書 ${entries} 件`);
+  else fail(`辞書が ${entries} 件しかない（615 件以上を期待）`);
 }
 
 console.log('');

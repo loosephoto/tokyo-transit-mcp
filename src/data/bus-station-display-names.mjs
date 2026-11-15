@@ -1,11 +1,10 @@
 /**
  * バス停・標柱および主要行先表示名辞書（多言語対応）
+ * 標柱時刻表（odpt:BusstopPoleTimetable）およびバス路線案内で出現する
+ * バス停留所・行先名の en/zh 表記。
  *
- * ⚠️ 生成と手修正が混在。機械生成分は次の 4 本で再生成できる。
- *   node scripts/fill-bus-en.mjs        （駅名・自治体名＋接尾辞）
- *   node scripts/fill-bus-en-odpt.mjs   （ODPT BusstopPole の title.en / odpt:kana）
- *   node scripts/fill-bus-en-wiki.mjs   （記事タイトル推定＋振り仮名）
- *   node scripts/fill-bus-en-search.mjs （Wikipedia 検索＋振り仮名）
+ * ⚠️ 生成と手修正が混在している。駅名由来の機械生成分は
+ *    node scripts/fill-bus-en.mjs で再生成できる（既存は保持）。
  */
 export const BUS_STATION_DISPLAY_NAMES = {
   "EXシアター六本木前": { en: "EX Theater Roppongi-mae", zh: "EX剧场六本木前" },
@@ -93,6 +92,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "京王よみうりランド駅入口": { en: "Keio-Yomiuriland Station Entrance", zh: "京王读卖乐园站入口" },
   "京成曳舟": { en: "Keisei-Hikifune", zh: "京成曳舟" },
   "京成曳舟駅": { en: "Keisei-Hikifune Station", zh: "京成曳舟站" },
+  "京成町屋駅": { en: "Machiya Station", zh: "町屋站" },
   "橋場一丁目": { en: "Hashiba 1-chome", zh: "Hashiba 1丁目" },
   "玉川上水": { en: "Tamagawa-Josui", zh: "玉川上水" },
   "玉川上水駅": { en: "Tamagawa-Josui Station", zh: "玉川上水站" },
@@ -238,6 +238,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "上北台駅": { en: "Kami-Kitadai Station", zh: "上北台站" },
   "上野": { en: "Ueno", zh: "上野" },
   "上野駅": { en: "Ueno Station", zh: "上野站" },
+  "上野駅入谷口": { en: "Ueno Station Iriya Exit", zh: "上野站入谷口" },
   "上野学園": { en: "Ueno Gakuen", zh: "Ueno学园" },
   "上野松坂屋前": { en: "Ueno Matsuzakaya-mae", zh: "上野松坂屋前" },
   "新橋駅前": { en: "Shimbashi Station", zh: "新桥站前" },
@@ -371,6 +372,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "台東保健所": { en: "Taito Health Center", zh: "Taito保健所" },
   "大井水産物埠頭前": { en: "Oi Marine Products Pier-mae", zh: "大井水产码头前" },
   "大井町駅東口": { en: "Oimachi Station East Exit", zh: "大井町站东口" },
+  "大江戸線蔵前駅": { en: "Kuramae Station", zh: "藏前站" },
   "大正小学校前": { en: "Taisho Elementary School-mae", zh: "Taisho小学前" },
   "大泉学園": { en: "Oizumi-Gakuen", zh: "大泉学园" },
   "大泉学園駅北口": { en: "Oizumi-Gakuen Station North Exit", zh: "大泉学园站北口" },
@@ -566,6 +568,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "北上野二丁目": { en: "Kitaueno 2-chome", zh: "Kitaueno 2丁目" },
   "北青山一丁目アパート前": { en: "Kita-Aoyama 1-chome Apartment-mae", zh: "北青山一丁目公寓前" },
   "北赤羽": { en: "Kita-Akabane", zh: "北赤羽" },
+  "北赤羽駅浮間口": { en: "Kita-Akabane Station Ukima Exit", zh: "北赤羽站浮間口" },
   "北野": { en: "Kitano", zh: "北野" },
   "北野三丁目": { en: "Kitano 3-chome", zh: "Kitano 3丁目" },
   "睦橋": { en: "Mutsumi Bridge", zh: "Mutsumi桥" },

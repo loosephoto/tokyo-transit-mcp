@@ -212,6 +212,12 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.29（2026-11-14）— 残りを人手キュレーション用 CSV に切り出し（404 → 408 件 / 81.9%）
+
+- 路線名つき駅名の停留所（大江戸線蔵前駅→Kuramae Station、京成町屋駅→Machiya Station、上野駅入谷口→Ueno Station Iriya Exit、北赤羽駅浮間口→Kita-Akabane Station Ukima Exit）を駅辞書から生成（+4 件）。
+- 残り 90 件は **`docs/bus-en-todo.csv`（ja,en,zh,municipality,bus,official_url）** に書き出し、`npm run bus:en:import` で取り込む方式にした。自治体の公式サイトを見て en/zh を記入するだけで反映される（空欄行は無視、ASCII 以外は拒否）。
+- 自治体サイトは日本語のみ（台東区めぐりんのページを実測確認）、ODPT・Wikipedia にも当該停留所が無いため、機械で埋めると誤りになる。
+
 ### v2.58.28（2026-11-14）— ODPT の公式英語名でバス停を補完（388 → 404 件 / 81.1%）
 
 - **ODPT `odpt:BusstopPole` に公式の英語名と読みがある**ことを発見（`title.en`＝"Nitemmon (Nitemmon Gate)"、`odpt:kana`＝にてんもん）。Wikipedia に記事が無い停留所の正解はここにあった。`scripts/fill-bus-en-odpt.mjs`（`npm run bus:en:odpt`）を追加し +16 件。

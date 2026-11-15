@@ -78,10 +78,34 @@ function deriveMunicipality(name) {
   return null;
 }
 
+// 路線名の接頭辞つき駅（大江戸線蔵前駅 / 京成町屋駅）と、駅＋出入口（上野駅入谷口）
+const LINE_PREFIX = /^(大江戸線|都営|京成|JR|東武|西武|京王|小田急|東急|京急|相鉄|新宿線|浅草線|三田線|大江戸)/;
+const GATES = [['入谷口', 'Iriya Exit'], ['浮間口', 'Ukima Exit'], ['北口', 'North Exit'], ['南口', 'South Exit'], ['東口', 'East Exit'], ['西口', 'West Exit']];
+
+function deriveStationWithPrefix(name) {
+  for (const [gate, gateEn] of GATES) {
+    if (!name.endsWith(gate)) continue;
+    const stem = name.slice(0, -gate.length).replace(/駅$/, '');
+    const st = STATION_DISPLAY_NAMES[stem];
+    if (st?.en) {
+      const zh = st.zh ? `${st.zh}站${gate.replace('口', '口')}` : undefined;
+      return zh ? { en: `${st.en} Station ${gateEn}`, zh } : { en: `${st.en} Station ${gateEn}` };
+    }
+  }
+  if (name.endsWith('駅')) {
+    const stem = name.slice(0, -1).replace(LINE_PREFIX, '');
+    const st = STATION_DISPLAY_NAMES[stem];
+    if (st?.en) return st.zh ? { en: `${st.en} Station`, zh: `${st.zh}站` } : { en: `${st.en} Station` };
+  }
+  return null;
+}
+
 function derive(name) {
   if (BUS_STATION_DISPLAY_NAMES[name]?.en) return null;
   const muni = deriveMunicipality(name);
   if (muni) return muni;
+  const lineStation = deriveStationWithPrefix(name);
+  if (lineStation) return lineStation;
   const bare = name.replace(/^JR/, '');
   // 「田町」「三田」のように停留所名がそのまま駅名のこともある
   if (STATION_DISPLAY_NAMES[bare]?.en) {
