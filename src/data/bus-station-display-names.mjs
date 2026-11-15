@@ -1,8 +1,9 @@
 /**
  * バス停・標柱および主要行先表示名辞書（多言語対応）
  *
- * ⚠️ 生成と手修正が混在。機械生成分は次の 3 本で再生成できる。
+ * ⚠️ 生成と手修正が混在。機械生成分は次の 4 本で再生成できる。
  *   node scripts/fill-bus-en.mjs        （駅名・自治体名＋接尾辞）
+ *   node scripts/fill-bus-en-odpt.mjs   （ODPT BusstopPole の title.en / odpt:kana）
  *   node scripts/fill-bus-en-wiki.mjs   （記事タイトル推定＋振り仮名）
  *   node scripts/fill-bus-en-search.mjs （Wikipedia 検索＋振り仮名）
  */
@@ -13,8 +14,10 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "あきる野市役所": { en: "Akiruno City Hall", zh: "あきる野市政府" },
   "かえつ学園西": { en: "Kaetsu Gakuen Nishi", zh: "嘉悦学园西" },
   "がん研有明病院前": { en: "Cancer Institute Hospital-mae", zh: "癌症研究会有明医院前" },
+  "キヤノン本社通用門前": { en: "Canon HQ Main Gate" },
   "とうきょうスカイツリー": { en: "Tokyo Skytree", zh: "东京天空树" },
   "とうきょうスカイツリー駅前": { en: "Tokyo Skytree Station", zh: "东京晴空塔站前" },
+  "なかまちテラス": { en: "Nakamachi Terrace" },
   "はるひ野": { en: "Haruhino", zh: "春日野" },
   "はるひ野駅": { en: "Haruhino Station", zh: "春日野站" },
   "はるみらい前": { en: "Harumirai-mae", zh: "晴未来前" },
@@ -22,6 +25,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "ひばりヶ丘駅": { en: "Hibarigaoka Station", zh: "ひばりヶ丘站" },
   "フェリー埠頭入口": { en: "Ferry Futo Iriguchi", zh: "轮渡码头入口" },
   "ホテルマリナーズコート東京前": { en: "Hotel Mariners Court Tokyo-mae", zh: "东京水手苑酒店前" },
+  "リバーサイドスポーツセンター前": { en: "Riverside Sports Center" },
   "リバーシティ２１": { en: "River City 21", zh: "河畔之城21" },
   "阿佐ヶ谷": { en: "Asagaya", zh: "阿佐ヶ谷" },
   "阿佐ヶ谷駅南口": { en: "Asagaya Station South Exit", zh: "阿佐ヶ谷站南口" },
@@ -77,7 +81,9 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "亀戸天神前": { en: "Kameido Tenjin-mae", zh: "龟户天神前" },
   "亀沢四丁目": { en: "Kamezawa 4-chome", zh: "龟泽四丁目" },
   "亀島橋": { en: "Kamejimabashi", zh: "龟岛桥" },
+  "菊屋橋": { en: "Kikuyabashi" },
   "菊川駅前": { en: "Kikukawa Station", zh: "菊川站前" },
+  "吉原大門": { en: "Yoshiwara-Omon" },
   "吉祥寺": { en: "Kichijoji", zh: "吉祥寺" },
   "吉祥寺駅北口": { en: "Kichijoji Station North Exit", zh: "吉祥寺站北口" },
   "久道": { en: "Kyudo", zh: "久道" },
@@ -181,6 +187,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "三田": { en: "Mita", zh: "三田" },
   "三田駅前": { en: "Mita Station", zh: "三田站前" },
   "山田": { en: "Yamada", zh: "山田" },
+  "市立病院入口": { en: "Shiritsu Hospital Entrance" },
   "枝川": { en: "Edagawa", zh: "枝川" },
   "枝川三丁目": { en: "Edagawa 3-chome", zh: "枝川三丁目" },
   "枝川二丁目": { en: "Edagawa 2-chome", zh: "枝川二丁目" },
@@ -219,6 +226,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "小平市役所": { en: "Kodaira City Hall", zh: "小平市政府" },
   "昭島": { en: "Akishima", zh: "昭岛" },
   "昭島駅南口": { en: "Akishima Station South Exit", zh: "昭岛站南口" },
+  "昭島団地": { en: "Akishimadanchi" },
   "昭和大学江東豊洲病院前": { en: "Showa Univ Koto Toyosu Hospital-mae", zh: "昭和大学江东丰洲医院前" },
   "昭和町": { en: "Showacho", zh: "Showacho" },
   "松が谷": { en: "Matsugaya", zh: "松が谷" },
@@ -298,6 +306,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "西新井駅東口": { en: "Nishi-Arai Station East Exit", zh: "西新井站东口" },
   "西浅草": { en: "Nishiasakusa", zh: "Nishiasakusa" },
   "西大島駅前": { en: "Nishi-Ojima Station", zh: "西大岛站前" },
+  "西町": { en: "Nishimachi" },
   "西八王子": { en: "Nishi-Hachioji", zh: "西八王子" },
   "西八王子駅": { en: "Nishi-Hachioji Station", zh: "西八王子站" },
   "西武立川": { en: "Seibu-Tachikawa", zh: "西武立川" },
@@ -369,6 +378,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "大島一丁目": { en: "Ojima 1-chome", zh: "大岛一丁目" },
   "大門": { en: "Daimon", zh: "大门" },
   "大門駅前": { en: "Daimon Station", zh: "大门站前" },
+  "第四小学校前": { en: "Daiyon Elementary School-mae" },
   "第二辰巳小学校前": { en: "Daini Tatsumi Elementary School-mae", zh: "第二辰巳小学前" },
   "辰巳": { en: "Tatsumi", zh: "辰巳" },
   "辰巳一丁目": { en: "Tatsumi 1-chome", zh: "辰巳一丁目" },
@@ -402,6 +412,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "調布": { en: "Chofu", zh: "调布" },
   "調布駅南口": { en: "Chofu Station South Exit", zh: "调布站南口" },
   "調布駅北口": { en: "Chofu Station North Exit", zh: "调布站北口" },
+  "長久保": { en: "Nagakubo" },
   "鳥越神社前": { en: "Torikoe Shrine-mae", zh: "鸟越神社前" },
   "通り三丁目": { en: "Tori 3-chome", zh: "通三丁目" },
   "佃二丁目": { en: "Tsukuda 2-chome", zh: "佃二丁目" },
@@ -416,6 +427,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "田無駅": { en: "Tanashi Station", zh: "田无站" },
   "都橋住宅前": { en: "Miyakobashi Jutaku-mae", zh: "都桥住宅前" },
   "都立三商前": { en: "Toritsu Sansho-mae", zh: "都立三商前" },
+  "都立足立高校前": { en: "Toritsu-Adachi-Koko" },
   "唐木田": { en: "Karakida", zh: "唐木田" },
   "唐木田駅": { en: "Karakida Station", zh: "唐木田站" },
   "東あずま": { en: "Higashi-Azuma", zh: "东吾妻" },
@@ -471,6 +483,9 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "南多摩駅": { en: "Minami-Tama Station", zh: "南多摩站" },
   "南田中一丁目": { en: "Minamitanaka 1-chome", zh: "Minamitanaka 1丁目" },
   "二宮神社": { en: "Ninomiya Shrine", zh: "Ninomiya神社" },
+  "二天門": { en: "Nitemmon (Nitemmon Gate)" },
+  "日吉町": { en: "Hiyoshicho" },
+  "日生団地": { en: "Nisseidanchi" },
   "日赤医療センター前": { en: "Japanese Red Cross Medical Center-mae", zh: "日赤医疗中心前" },
   "日本橋": { en: "Nihombashi", zh: "日本桥" },
   "日本橋駅前": { en: "Nihombashi Station", zh: "日本桥站前" },
@@ -479,6 +494,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "入谷駅入口": { en: "Iriya Station Entrance", zh: "入谷站入口" },
   "入谷地区センター": { en: "Iriya District Center", zh: "Iriya地区中心" },
   "入谷南公園": { en: "Iriyaminami Park", zh: "Iriyaminami公园" },
+  "梅島二丁目": { en: "Umejima-Nichome (Umejima 2)" },
   "白河": { en: "Shirakawa", zh: "白河" },
   "白金高輪": { en: "Shirokane-takanawa", zh: "白金高轮" },
   "白金高輪駅前": { en: "Shirokane-takanawa Station", zh: "白金高轮站前" },
@@ -556,6 +572,7 @@ export const BUS_STATION_DISPLAY_NAMES = {
   "堀ノ内三丁目": { en: "Horinouchi 3-chome", zh: "Horinouchi 3丁目" },
   "本郷三丁目": { en: "Hongo-sanchome", zh: "本乡三丁目" },
   "本郷三丁目駅前": { en: "Hongo-sanchome Station", zh: "本乡三丁目站前" },
+  "本宿": { en: "Motojuku" },
   "本所四丁目": { en: "Honjo 4-chome", zh: "本所四丁目" },
   "本多一丁目": { en: "Honda 1-chome", zh: "Honda 1丁目" },
   "麻布十番": { en: "Azabu-juban", zh: "麻布十番" },

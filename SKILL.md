@@ -212,6 +212,14 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.28（2026-11-14）— ODPT の公式英語名でバス停を補完（388 → 404 件 / 81.1%）
+
+- **ODPT `odpt:BusstopPole` に公式の英語名と読みがある**ことを発見（`title.en`＝"Nitemmon (Nitemmon Gate)"、`odpt:kana`＝にてんもん）。Wikipedia に記事が無い停留所の正解はここにあった。`scripts/fill-bus-en-odpt.mjs`（`npm run bus:en:odpt`）を追加し +16 件。
+- 事業者は BUS_OPERATORS + KeioBus / NishiTokyoBus / OdakyuBus / TokyuBus / SotetsuBus の計 6,696 停留所を索引化。
+- ODPT の英語名は長音記号付き（Ōmon / Kōkō）なので **NFD で ASCII に正規化**。
+- `odpt:kana` からのローマ字は語間が崩れるため、第四小学校前→Daiyon Elementary School-mae、市立病院入口→Shiritsu Hospital Entrance、キヤノン本社通用門前→Canon HQ Main Gate は手修正。
+- 残り 94 件はコミュニティバス独自の停留所（台東区めぐりん・荒川区・あきる野・国立・小金井など）で ODPT にも Wikipedia にも存在しない。
+
 ### v2.58.27（2026-11-14）— バス停の英語表記 376 → 388 件（77.9%）
 
 - 「地名 (自治体)」の形で町名記事を引く方式（`fill-bus-en-search.mjs`、`--no-search` で検索 API を回避）を実装し +12 件。清川一丁目→Kiyokawa 1-chome、竜泉三丁目→Ryusen 3-chome、堀ノ内三丁目→Horinouchi 3-chome など。
