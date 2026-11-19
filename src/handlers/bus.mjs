@@ -458,6 +458,10 @@ export async function fetchBusStopGeo(signal) {
   if (cached) return cached;
   if (!odptBreaker.canExecute()) return {};
   const map = {};
+  // 🔴 v2.58.30 (#121): find_nearby_stops 用に停留所名ごとの系統数を集計する。
+  //   poles（同名ポール数）・titleEn（公式英語名）と併せ、既存消費者は
+  //   lat/lon/operator しか読まないため追加フィールドは後方互換。
+  const patternsByStop = new Map();
   const results = await Promise.allSettled(
     BUS_OPERATORS.map(op =>
       axios.get(`${API_BASE_URL}/odpt:BusstopPole`, { params: getParams(op.id), timeout: 8000, signal })
@@ -471,6 +475,24 @@ export async function fetchBusStopGeo(signal) {
         if (name && typeof lat === 'number' && typeof lon === 'number') {
           // 重複時は最初のものを保持（同一バス停は複数路線で出現しうる）
           if (!map[name]) map[name] = { lat, lon, operator: opIdOf(p) };
+          // 🔴 v2.58.30 (#121): 近傍検索向けの付加情報を蓄積する。
+          //   poles=同名停留所のポール数（道路を挟んだ複数乗り場の目安）、
+          //   patterns=停車系統数（odpt:busroutePattern のユニーク件数）、
+          //   titleEn=ODPT 公式英語名（無い停留所は空文字のまま）。
+          map[name].poles = (map[name].poles || 0) + 1;
+          const pats = patternsByStop.get(name) || new Set();
+          for (const r of (p['odpt:busroutePattern'] || [])) {
+            if (r) pats.add(String(r));
+          }
+          patternsByStop.set(name, pats);
+          if (map[name].titleEn === undefined) {
+            const en = (p['title'] && typeof p['title'] === 'object') ? p['title'].en : '';
+            map[name].titleEn = typeof en === 'string' ? en : '';
+            //   kana=公式の読み（odpt:kana）。英語名が無い停留所は
+            //   「読みだけを取り、ローマ字化は自前で行う」（§6e の正規手順）ための素材。
+            const kana = p['odpt:kana'];
+            map[name].kana = typeof kana === 'string' ? kana : '';
+          }
         }
       }
       odptBreaker.onSuccess();
@@ -478,6 +500,10 @@ export async function fetchBusStopGeo(signal) {
       odptBreaker.onFailure(res.reason || new Error('BusstopPole fetch failed'));
     }
   });
+  // 🔴 v2.58.30 (#121): 集計した系統数を停留所マップへ反映する（0 のままも保持し、未集計と区別）
+  for (const [name, pats] of patternsByStop) {
+    if (map[name]) map[name].patterns = pats.size;
+  }
   // 🔴 全滅時は空mapを返すがキャッシュはしない（TTL中の縮退固定化を防ぐ）
   if (!results.every(r => r.status === 'rejected')) {
     cache.set(cache.busStopGeo.key, map, cache.busStopGeo.ttl);

@@ -82,6 +82,14 @@ export function buildErrorResponse(errorType, errorMessage, details = {}) {
         en: ["The transit API server is unavailable. Please try again later."],
         zh: ["交通API服务器发生故障，请稍后重试。"] },
       suggestionKey: "API_SERVER" },
+    // 🔴 v2.58.30 (#121): データソース全体が取得不能（空データと区別する「提供不能」）。
+    //   find_nearby_stops のバス停縮退で使用。空の検索結果（NO_DATA）とは意味が異なる。
+    DATA_UNAVAILABLE: { httpCode: 503, retryable: true,
+      suggestions: {
+        ja: ["データ提供元への通信ができず、この種別のデータは現在取得できません。しばらく待ってから再試行してください。"],
+        en: ["The upstream data source is unreachable; this data is currently unavailable. Please retry later."],
+        zh: ["无法连接上游数据源，该类数据当前无法获取。请稍后重试。"] },
+      suggestionKey: "DATA_UNAVAILABLE" },
     UNKNOWN_ERROR: { httpCode: 500, retryable: false,
       suggestions: {
         ja: ["予期しないエラーが発生しました。", "もう一度お試しいただくか、管理者にお問い合わせください。"],

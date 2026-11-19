@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { server } from '../src/index.mjs';
 
-// 期待する全13ツール（#103 で列挙）
+// 期待する全14ツール（#103 で列挙、#121 で find_nearby_stops を追加）
 const EXPECTED_TOOLS = [
   'search_route',
   'get_station_info',
@@ -20,6 +20,7 @@ const EXPECTED_TOOLS = [
   'get_timetable',
   'search_bus',
   'get_running_status',
+  'find_nearby_stops',
 ];
 
 const ANNOTATION_KEYS = ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint'];
@@ -52,12 +53,12 @@ async function main() {
   const { tools } = await client.listTools();
   console.log(`listTools() が返したツール数: ${tools.length}`);
 
-  // 1) 全13ツールが列挙される
+  // 1) 全14ツールが列挙される
   const listedNames = tools.map(t => t.name);
   const missing = EXPECTED_TOOLS.filter(n => !listedNames.includes(n));
   const extra = listedNames.filter(n => !EXPECTED_TOOLS.includes(n));
   if (missing.length === 0 && extra.length === 0) {
-    ok(`全13ツールが列挙されている（重複・欠落なし）`);
+    ok(`全${EXPECTED_TOOLS.length}ツールが列挙されている（重複・欠落なし）`);
   } else {
     if (missing.length) fail(`列挙されていないツール: ${missing.join(', ')}`);
     if (extra.length) fail(`想定外のツール: ${extra.join(', ')}`);
@@ -157,6 +158,20 @@ async function main() {
   const lonMaxOk = ul && ul.properties && ul.properties.lon && ul.properties.lon.maximum === 180;
   if (latMinOk && lonMaxOk) ok('search_route.user_location に lat/lon 範囲制約が付与');
   else fail(`search_route.user_location の範囲制約が不正: ${JSON.stringify(ul)}`);
+
+  // find_nearby_stops (#121): lat/lon が必須・範囲制約付き、type が enum
+  const fns = byName['find_nearby_stops'];
+  const fnsReqOk = Array.isArray(fns.required) && fns.required.includes('lat') && fns.required.includes('lon');
+  if (fnsReqOk) ok('find_nearby_stops の required に lat/lon が付与');
+  else fail(`find_nearby_stops の required が不正: ${JSON.stringify(fns.required)}`);
+  const fnsLatOk = fns.properties && fns.properties.lat && fns.properties.lat.minimum === -90
+    && fns.properties.lon && fns.properties.lon.maximum === 180;
+  if (fnsLatOk) ok('find_nearby_stops に lat/lon の範囲制約が付与');
+  else fail(`find_nearby_stops の lat/lon 範囲制約が不正: ${JSON.stringify(fns.properties)}`);
+  const fnsTypeEnum = fns.properties && fns.properties.type && fns.properties.type.enum
+    && JSON.stringify(fns.properties.type.enum) === JSON.stringify(['station', 'busstop', 'all']);
+  if (fnsTypeEnum) ok('find_nearby_stops.type が enum（station/busstop/all）');
+  else fail(`find_nearby_stops.type の enum が不正: ${JSON.stringify(fns.properties && fns.properties.type)}`);
 
   await client.close();
   await server.close();

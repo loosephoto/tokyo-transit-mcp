@@ -33,7 +33,7 @@
 
 ### 📝 更新履歴
 
-各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.29](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.29)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
+各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.30](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.30)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -175,7 +175,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 
 ## 🛠 使用可能ツール
 
-本MCPサーバーは**13種類のツール**を提供します。概要は早見表、詳細は各セクションを参照してください。
+本MCPサーバーは**14種類のツール**を提供します。概要は早見表、詳細は各セクションを参照してください。
 
 | # | ツール | 機能 | 主な引数 |
 |:--|:--|:--|:--|
@@ -192,6 +192,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 | 11 | `search_ferry` | 港間の航路・時刻表検索 | `from_port`, `to_port` |
 | 12 | `list_community_buses` | 東京都コミュニティバス一覧（41自治体） | `language` |
 | 13 | `get_running_status` | 交通事業者別のリアルタイム運行状況 | `operator`, `language` |
+| 14 | `find_nearby_stops` | 位置情報（緯度経度）から最寄りの駅・バス停を距離順で検索 | `lat`, `lon` |
 
 ### 1. `search_route` — 乗換ルート検索（メイン機能）
 
@@ -322,15 +323,15 @@ search_bus(from: "浅草", to: "上野", vehicle: "bus")
 
 ```bash
 npm run build       # node --check src/index.mjs
-npm test            # tools/list検証 + 代表ツールテスト + 全26ケースの日英中回帰
-npm run test:tools  # MCP tools/list検証（13ツールのannotations）＋代表ツール正常系・エラー系
+npm test            # tools/list検証 + 代表ツールテスト + 全33ケースの日英中回帰
+npm run test:tools  # MCP tools/list検証（14ツールのannotations）＋代表ツール正常系・エラー系
 npm run test:walk   # 近接異名駅（徒歩連絡）・同名別駅・路線データ整合性の回帰
 npm run test:bus    # バス乗り継ぎ実APIプローブ（API状況により長時間化）
 npm run test:vehicle # vehicle優先の決定的モック回帰
 ```
 
 `tests/` 配下の決定的テスト（`tests/tools-list.test.mjs`・`tests/handlers-basic.test.mjs`）は、
-外部スキャナーが認識できる通常のテストファイルとして、全13ツールの列挙・annotations・
+外部スキャナーが認識できる通常のテストファイルとして、全14ツールの列挙・annotations・
 代表的な正常系/入力エラー系/多言語系・エラー応答の `isError: true`（#101）を検証します。
 `scripts/` の実データプローブは補助検証として維持しています。
 
@@ -421,6 +422,24 @@ get_running_status(operator: "all", language: "en")
 
 レスポンスには事業者ごとの `available`、公式 `url`、更新時刻、路線別の `status` / `status_text` / `detail` を含みます。
 
+### 14. `find_nearby_stops` — 最寄り駅・バス停検索
+
+緯度経度（携帯電話のGPSなど位置情報）から、一番近い駅・バス停を距離順（徒歩換算つき）で返します。各項目には名称・距離・徒歩換算・乗り入れ路線（駅）・事業者と系統数（バス停）・Google Maps リンクを含みます。半径内に0件のときは 1km → 2km → 5km に自動拡大し、その旨を明示します。ODPT 障害時も駅は内蔵座標で縮退応答します（バス停は「現在取得できません」と明示）。入力座標は保存・記録されません。
+
+```text
+find_nearby_stops(lat: 35.731, lon: 139.8148)                       # 駅＋バス停（既定）
+find_nearby_stops(lat: 35.731, lon: 139.8148, type: "busstop")      # バス停のみ
+find_nearby_stops(lat: 35.731, lon: 139.8148, type: "station", language: "en")
+```
+
+- `lat` / `lon` (number, 必須) — 緯度 / 経度。
+- `type` (string, 任意) — `station` / `busstop` / `all`（既定 `all`）。
+- `radius_m` (number, 任意) — 検索半径（メートル・既定 1000）。
+- `limit` (number, 任意) — 種別ごとの最大件数（既定 5）。
+- `language` (string, 任意) — 応答言語 `ja` / `en` / `zh`（座標だけの入力では日本語になるため、英語/中国語で答えるときは必ず指定）。
+
+バス停は都営・西武・横浜市営バスの3事業者が対象です（他社バスの運行エリアでは「対応事業者のバス停が見つかりません」と注記します）。
+
 
 
 ---
@@ -502,7 +521,7 @@ MCPクライアントからのコンテキストリクエストを受け取り�
 │  get_station_info  get_operator_routes │
 │  list_transit_operators  list_ferry_ports │
 │  search_ferry   list_community_buses   │
-│  get_running_status                     │
+│  get_running_status   find_nearby_stops │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │
@@ -640,7 +659,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 📝 Update History
 
-Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.29](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.29)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
+Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.30](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.30)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
 
 ### 🤖 AI Intelligent Advice
 
@@ -746,7 +765,7 @@ Do not share or commit `.env`; it contains secrets.
 
 ## 🛠 Available Tools
 
-This MCP server provides **13 tools**. See the quick-reference table for an overview and the sections below for details.
+This MCP server provides **14 tools**. See the quick-reference table for an overview and the sections below for details.
 
 | # | Tool | Function | Main params |
 |:--|:--|:--|:--|
@@ -763,6 +782,7 @@ This MCP server provides **13 tools**. See the quick-reference table for an over
 | 11 | `search_ferry` | Ferry / water bus route search | `from_port`, `to_port` |
 | 12 | `list_community_buses` | Tokyo community buses (41 municipalities) | `language` |
 | 13 | `get_running_status` | Real-time service status by operator | `operator`, `language` |
+| 14 | `find_nearby_stops` | Nearest stations / bus stops by coordinates | `lat`, `lon` |
 
 ### 1. `search_route` — Route Search (Main Feature)
 
@@ -892,7 +912,7 @@ After code changes, run the syntax check and multilingual regression probes. `np
 
 ```bash
 npm run build        # node --check src/index.mjs
-npm test             # 26 Japanese / English / Chinese regression cases
+npm test             # 33 Japanese / English / Chinese regression cases
 npm run test:bus     # live bus-transfer probe; may take a long time depending on the API
 npm run test:vehicle # deterministic vehicle-preference mock regression
 ```
@@ -984,6 +1004,24 @@ get_running_status(operator: "all", language: "en")
 
 The response includes each operators `available` flag, official `url`, update time, and line-level `status`, `status_text`, and `detail`.
 
+### 14. `find_nearby_stops` — Nearest Stations & Bus Stops
+
+Given latitude/longitude (e.g. from a phone's GPS), returns the nearest stations and bus stops in distance order with walking-time estimates. Each item includes the name, distance, walking time, serving lines (stations), operator and route count (bus stops), and a Google Maps link. If nothing is found within the radius, the search expands automatically (1 km → 2 km → 5 km) and says so. Even during an ODPT outage, stations are answered from the built-in coordinate dictionary (bus stops report "currently unavailable"). Input coordinates are never stored or logged.
+
+```text
+find_nearby_stops(lat: 35.731, lon: 139.8148)                       # stations + bus stops (default)
+find_nearby_stops(lat: 35.731, lon: 139.8148, type: "busstop")      # bus stops only
+find_nearby_stops(lat: 35.731, lon: 139.8148, type: "station", language: "en")
+```
+
+- `lat` / `lon` (number, required) — Latitude / longitude.
+- `type` (string, optional) — `station` / `busstop` / `all` (default `all`).
+- `radius_m` (number, optional) — Search radius in meters (default 1000).
+- `limit` (number, optional) — Max results per type (default 5).
+- `language` (string, optional) — Response language `ja` / `en` / `zh`. Coordinates alone resolve to Japanese, so specify it when answering in English or Chinese.
+
+Bus stops cover Toei, Seibu, and Yokohama City Bus (other operators' service areas are noted as not covered).
+
 
 
 ---
@@ -1065,7 +1103,7 @@ Architecture overview showing context requests from MCP clients routed to open A
 │  get_station_info  get_operator_routes │
 │  list_transit_operators  list_ferry_ports │
 │  search_ferry   list_community_buses   │
-│  get_running_status                     │
+│  get_running_status   find_nearby_stops │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │
@@ -1203,7 +1241,7 @@ MIT License
 
 ### 📝 更新历史
 
-各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.29](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.29)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
+各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.30](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.30)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
 
 ### 🤖 AI 智能建议
 
@@ -1309,7 +1347,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 
 ## 🛠 可用工具
 
-本 MCP 服务器共提供 **13 个工具**。概览请参考速查表，详细说明请参考各小节。
+本 MCP 服务器共提供 **14 个工具**。概览请参考速查表，详细说明请参考各小节。
 
 | # | 工具 | 功能 | 主要参数 |
 |:--|:--|:--|:--|
@@ -1326,6 +1364,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 | 11 | `search_ferry` | 港口间航线与时刻表查询 | `from_port`, `to_port` |
 | 12 | `list_community_buses` | 东京都社区公交一览（41 个自治体） | `language` |
 | 13 | `get_running_status` | 按运营商查询实时运行状况 | `operator`, `language` |
+| 14 | `find_nearby_stops` | 按坐标查询最近的车站/公交站 | `lat`, `lon` |
 
 ### 1. `search_route` — 换乘路线搜索（核心功能）
 
@@ -1454,7 +1493,7 @@ search_bus(from: "浅草", to: "上野", vehicle: "bus")
 
 ```bash
 npm run build        # node --check src/index.mjs
-npm test             # 26 个日文/英文/中文回归用例
+npm test             # 33 个日文/英文/中文回归用例
 npm run test:bus     # 公交换乘实时 API 探针，可能因 API 状况耗时较长
 npm run test:vehicle # 乘车工具优先的确定性 mock 回归
 ```
@@ -1546,6 +1585,24 @@ get_running_status(operator: "all", language: "zh")
 
 响应包含各运营商的 `available`、官网 `url`、更新时间，以及按线路列出的 `status`、`status_text` 和 `detail`。
 
+### 14. `find_nearby_stops` — 最近车站/公交站查询
+
+根据纬度/经度（例如手机的 GPS 定位），按距离顺序返回最近的车站和公交站，并附带步行时间估算。每项包含名称、距离、步行时间、途经线路（车站）、运营商与线路数（公交站）以及 Google 地图链接。半径内没有结果时会自动扩大搜索范围（1km → 2km → 5km）并明确说明。即使 ODPT 故障，车站也会使用内建坐标数据正常应答（公交站则明确提示"当前无法获取"）。输入的坐标不会被保存或记录。
+
+```text
+find_nearby_stops(lat: 35.731, lon: 139.8148)                       # 车站＋公交站（默认）
+find_nearby_stops(lat: 35.731, lon: 139.8148, type: "busstop")      # 仅公交站
+find_nearby_stops(lat: 35.731, lon: 139.8148, type: "station", language: "zh")
+```
+
+- `lat` / `lon`（数字，必填）— 纬度 / 经度。
+- `type`（字符串，可选）— `station` / `busstop` / `all`（默认 `all`）。
+- `radius_m`（数字，可选）— 搜索半径（米・默认 1000）。
+- `limit`（数字，可选）— 每类结果的上限（默认 5）。
+- `language`（字符串，可选）— 响应语言 `ja` / `en` / `zh`（仅输入坐标时默认日语，用中文回答时请务必指定）。
+
+公交站覆盖都营、西武、横滨市营公交三家运营商（其他公司运营区域会注明未覆盖）。
+
 
 
 ---
@@ -1627,7 +1684,7 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 │  get_station_info  get_operator_routes │
 │  list_transit_operators  list_ferry_ports │
 │  search_ferry   list_community_buses   │
-│  get_running_status                     │
+│  get_running_status   find_nearby_stops │
 │────────────────────────────────────────┤
 │  🛡 Circuit Breaker  📦 Cache Layer   │
 │  🌐 Multilingual       🚲 GBFS Client │

@@ -64,7 +64,7 @@ console.log('-- CI 定義 --');
   if (!fs.existsSync(p)) fail(`${p} が無い`);
   else {
     const y = fs.readFileSync(p, 'utf8');
-    for (const s of ['npm ci', 'npm run build', 'check-railway-integrity', 'check-line-geometry', 'tests/v25810-regression.test.mjs', 'tests/v25812-regression.test.mjs', 'tests/v25814-regression.test.mjs', 'tests/v25815-regression.test.mjs', 'tests/v25816-regression.test.mjs', 'tests/v25818-regression.test.mjs', 'tests/v25819-regression.test.mjs', 'tests/v25820-regression.test.mjs', 'tests/v25821-regression.test.mjs', 'tests/v25824-regression.test.mjs']) {
+    for (const s of ['npm ci', 'npm run build', 'check-railway-integrity', 'check-line-geometry', 'tests/v25810-regression.test.mjs', 'tests/v25812-regression.test.mjs', 'tests/v25814-regression.test.mjs', 'tests/v25815-regression.test.mjs', 'tests/v25816-regression.test.mjs', 'tests/v25818-regression.test.mjs', 'tests/v25819-regression.test.mjs', 'tests/v25820-regression.test.mjs', 'tests/v25821-regression.test.mjs', 'tests/v25824-regression.test.mjs', 'tests/nearby-stops.test.mjs']) {
       if (y.includes(s)) ok(`CI が ${s} を実行する`);
       else fail(`CI に ${s} がない`);
     }
@@ -74,7 +74,8 @@ console.log('-- CI 定義 --');
 console.log('-- outputSchema (M-1) --');
 {
   const tools = await requestToolsList();
-  eq(tools.length, 13, 'ツール数は 13');
+  // 🔴 v2.58.30 (#121): find_nearby_stops 追加で 13 → 14
+  eq(tools.length, 14, 'ツール数は 14');
   const missing = tools.filter((t) => !t.outputSchema).map((t) => t.name);
   eq(missing.length, 0, `outputSchema が全ツールにある（欠落 ${missing.join(',') || 'なし'}）`);
   const bad = tools.filter((t) => {
@@ -83,7 +84,8 @@ console.log('-- outputSchema (M-1) --');
   }).map((t) => t.name);
   eq(bad.length, 0, `outputSchema が status を必須にしている（違反 ${bad.join(',') || 'なし'}）`);
   const perm = tools.filter((t) => t.outputSchema?.additionalProperties === true).length;
-  eq(perm, 13, 'outputSchema は追加キーを許容する（additionalProperties: true）');
+  // 🔴 v2.58.30 (#121): find_nearby_stops 追加で 13 → 14
+  eq(perm, 14, 'outputSchema は追加キーを許容する（additionalProperties: true）');
 }
 
 console.log('');

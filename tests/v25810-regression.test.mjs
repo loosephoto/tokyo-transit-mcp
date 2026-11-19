@@ -175,7 +175,8 @@ console.log('-- tools/list の enum と実装の一致 (S-1 / S-2) --');
     if (tf.includes(v)) ok(`type_filter に '${v}' がある`);
     else fail(`type_filter に '${v}' が無い`);
   }
-  eq(tools.length, 13, 'ツール数は 13');
+  // 🔴 v2.58.30 (#121): find_nearby_stops 追加で 13 → 14
+  eq(tools.length, 14, 'ツール数は 14');
 }
 
 console.log('');

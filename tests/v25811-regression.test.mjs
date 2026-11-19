@@ -68,7 +68,11 @@ if (NET_OK) {
 
     const ferry = await searchFerry({ from_port: '浅草', to_port: '大島', language: 'en' });
     const fc = ferry.structuredContent || {};
-    if (fc.status === 'NO_DATA') ok('search_ferry の航路なしは NO_DATA');
+    // 🔴 v2.58.30: 大島（伊豆諸島）に実測で強風・高波が出ている日は安全優先で
+    //   SEVERE_WEATHER_ADVISORY が正しい応答になる（実測: 2026-11-19 波4m）。
+    //   この検査の目的は語彙統一（ERROR/NOT_FOUND を返さない）なので、
+    //   probe-all-lang の __expectedStatuses と同じ2値を許容する。
+    if (fc.status === 'NO_DATA' || fc.status === 'SEVERE_WEATHER_ADVISORY') ok(`search_ferry の航路なしは NO_DATA（警報時は SEVERE_WEATHER_ADVISORY）: ${fc.status}`);
     else fail(`search_ferry の航路なしが ${fc.status}（NO_DATA でない）`);
   }
 

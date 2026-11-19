@@ -1,4 +1,4 @@
-// 全13ツール × ja/en/zh 一括検証プローブ（最終確認版）
+// 全14ツール × ja/en/zh 一括検証プローブ（最終確認版）
 // 各ツールのレスポンスに「検索言語と不一致の文字」が残っていないか機械チェック
 // en: 漢字・かなが残ると NG / zh: かな（ひらがな・カタカナ）が残ると NG
 import fs from 'fs';
@@ -20,7 +20,7 @@ loadEnv();
 import { withRateLimitRetry } from '../src/lib/probe-retry.mjs';
 
 const { searchRoute, searchFare, getWeather, getTimetable, searchBus, getStationInfo,
-  listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, searchFlight, getRunningStatus } =
+  listTransitOperators, listCommunityBuses, getOperatorRoutes, listFerryPorts, searchFerry, searchFlight, getRunningStatus, findNearbyStops } =
   await import('../src/index.mjs');
 
 // ※ U+30FB（・ 中黒 / KATAKANA MIDDLE DOT）は「かな」ではなく区切り記号。
@@ -115,6 +115,34 @@ await run('search_flight', 'zh', { airport: '羽田机场', direction: 'arrival'
 await run('get_running_status', 'ja', { operator: 'seibu', language: 'ja' }, getRunningStatus);
 await run('get_running_status', 'en', { operator: 'seibu', language: 'en' }, getRunningStatus);
 await run('get_running_status', 'zh', { operator: 'seibu', language: 'zh' }, getRunningStatus);
+// 🔴 #121: 位置情報からの最寄り検索（白鬚橋付近の実証座標）
+await run('find_nearby_stops', 'ja', { lat: 35.731, lon: 139.8148, language: 'ja' }, findNearbyStops);
+await run('find_nearby_stops', 'en', { lat: 35.731, lon: 139.8148, language: 'en' }, findNearbyStops);
+await run('find_nearby_stops', 'zh', { lat: 35.731, lon: 139.8148, language: 'zh' }, findNearbyStops);
+
+// 🔴 #121 実データ最寄り検証: 白鬚橋付近（35.731, 139.8148）の最寄りバス停は「水神前」
+//   （決定的な回帰は tests/nearby-stops.test.mjs の fixture で担保。ここは ODPT 生データで同じ結論を確認する）
+{
+  const t0 = Date.now();
+  try {
+    const { data } = await withRateLimitRetry(
+      async () => {
+        const res = await findNearbyStops({ lat: 35.731, lon: 139.8148, type: 'busstop', language: 'ja' }, {});
+        return res.structuredContent;
+      },
+      { retries: 2, waits: [5000, 15000], log: (m) => console.log(`   ↻ [ja] find_nearby_stops(nearest): ${m}`) }
+    );
+    const nearest = data.bus_stops && data.bus_stops[0];
+    const nearestOk = data.status === 'SUCCESS' && nearest && nearest.name === '水神前' && nearest.distance_m <= 120;
+    results.push({ name: 'find_nearby_stops(nearest)', lang: 'ja', ok: nearestOk, ms: Date.now() - t0,
+      detail: nearestOk ? [] : [JSON.stringify(nearest || data).slice(0, 80)] });
+    console.log(`${nearestOk ? '✅' : '❌'} [ja] find_nearby_stops(nearest) (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+      + `${nearestOk ? '' : ' | ' + JSON.stringify(nearest || data.status).slice(0, 120)}`);
+  } catch (e) {
+    results.push({ name: 'find_nearby_stops(nearest)', lang: 'ja', ok: false, ms: Date.now() - t0, detail: [e.message?.slice(0, 80) || String(e)] });
+    console.log(`⚠️  [ja] find_nearby_stops(nearest) ERROR: ${e.message?.slice(0, 80)}`);
+  }
+}
 
 console.log('\n===== サマリー =====');
 const fails = results.filter(r => !r.ok);

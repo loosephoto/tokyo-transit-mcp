@@ -31,7 +31,7 @@ category: transportation
 - NAVITIME乗換検索API
 - Google Transit API
 
-## ツール一覧（13種）
+## ツール一覧（14種）
 
 | ツール | 説明 |
 |-------|------|
@@ -48,6 +48,7 @@ category: transportation
 | `search_ferry` | 港間の航路・時刻表検索 |
 | `list_community_buses` | 東京都コミュニティバス一覧（41自治体） |
 | `get_running_status` | 交通事業者別のリアルタイム運行状況 |
+| `find_nearby_stops` | 緯度経度から最寄りの駅・バス停を距離順（徒歩換算・Maps リンクつき）で検索。0件時は 1km→2km→5km に自動拡大 |
 
 ## 使い方
 
@@ -211,6 +212,15 @@ odpt:Railway:TokyoMetro.{路線名}
 - Issue本文を修正しただけではクローズせず、実装と受け入れ条件が検証済みの課題だけをクローズする。
 
 ## 更新履歴
+
+### v2.58.30（2026-11-19）— 位置情報から最寄りの駅・バス停を検索する `find_nearby_stops` を追加（#121）
+
+- 新ツール `find_nearby_stops`（14個目）: 緯度経度から半径内の駅・バス停を距離順で返す。要約行（件数）・距離・徒歩換算（80m/分）・乗り入れ路線（駅）・事業者と系統数（バス停）・Google Maps リンクを各項目に付ける。
+- 0件時は 1km→2km→5km に段階的に自動拡大し、拡大した旨を応答に明示する（海上・対応エリア外は NO_DATA）。
+- ODPT 障害時: 駅は内蔵座標辞書（STATION_COORDS + EXTRA・1,487駅）で縮退応答し `station_source: internal` で明示。バス停は `DATA_UNAVAILABLE`（type=busstop）または注記付き（type=all）で「現在取得できません」を明示。
+- `fetchBusStopGeo` に停留所ごとのポール数・系統数（odpt:busroutePattern のユニーク数）・公式英語名（title.en）・読み（odpt:kana）を追加（既存消費者は lat/lon/operator のみ読むため後方互換）。英語名の長音記号は NFD で ASCII へ折りたたみ、title.en が無い停留所は読みを自前ローマ字化（kana-romaji）。
+- プライバシー: 入力座標はリクエスト処理以外に使わない。キャッシュ書き込み・ログ出力なし（回帰テストでキャッシュキー不変を検証）。
+- 検証: `tests/nearby-stops.test.mjs`（58アサーション・注入 fixture で完全決定的）+ `scripts/probe-all-lang.mjs` に4ケース追加（白鬚橋付近 35.731,139.8148 の実データで最寄りバス停が水神前になることを確認）。
 
 ### v2.58.29（2026-11-14）— 残りを人手キュレーション用 CSV に切り出し（404 → 408 件 / 81.9%）
 
