@@ -33,7 +33,7 @@
 
 ### 📝 更新履歴
 
-各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.30](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.30)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
+各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.31](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.31)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -192,7 +192,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 | 11 | `search_ferry` | 港間の航路・時刻表検索 | `from_port`, `to_port` |
 | 12 | `list_community_buses` | 東京都コミュニティバス一覧（41自治体） | `language` |
 | 13 | `get_running_status` | 交通事業者別のリアルタイム運行状況 | `operator`, `language` |
-| 14 | `find_nearby_stops` | 位置情報（緯度経度）から最寄りの駅・バス停を距離順で検索 | `lat`, `lon` |
+| 14 | `find_nearby_stops` | 位置情報（緯度経度）から最寄りの駅・バス停・シェアサイクル・水上バス/フェリー港を距離順で検索 | `lat`, `lon` |
 
 ### 1. `search_route` — 乗換ルート検索（メイン機能）
 
@@ -323,7 +323,7 @@ search_bus(from: "浅草", to: "上野", vehicle: "bus")
 
 ```bash
 npm run build       # node --check src/index.mjs
-npm test            # tools/list検証 + 代表ツールテスト + 全33ケースの日英中回帰
+npm test            # tools/list検証 + 代表ツールテスト + 全35ケースの日英中回帰
 npm run test:tools  # MCP tools/list検証（14ツールのannotations）＋代表ツール正常系・エラー系
 npm run test:walk   # 近接異名駅（徒歩連絡）・同名別駅・路線データ整合性の回帰
 npm run test:bus    # バス乗り継ぎ実APIプローブ（API状況により長時間化）
@@ -424,7 +424,7 @@ get_running_status(operator: "all", language: "en")
 
 ### 14. `find_nearby_stops` — 最寄り駅・バス停検索
 
-緯度経度（携帯電話のGPSなど位置情報）から、一番近い駅・バス停を距離順（徒歩換算つき）で返します。各項目には名称・距離・徒歩換算・乗り入れ路線（駅）・事業者と系統数（バス停）・Google Maps リンクを含みます。半径内に0件のときは 1km → 2km → 5km に自動拡大し、その旨を明示します。ODPT 障害時も駅は内蔵座標で縮退応答します（バス停は「現在取得できません」と明示）。入力座標は保存・記録されません。
+緯度経度（携帯電話のGPSなど位置情報）から、一番近い駅・バス停・シェアサイクルポート・水上バス/フェリー乗り場を距離順（徒歩換算つき）で返します。各項目には名称・距離・徒歩換算・乗り入れ路線（駅）・事業者と系統数（バス停）・貸出可能台数（シェアサイクル）・Google Maps リンクを含みます。半径内に0件のときは 1km → 2km → 5km に自動拡大し、その旨を明示します。ODPT 障害時も駅は内蔵座標で縮退応答します（バス停・シェアサイクル・港は「現在取得できません」と明示）。入力座標は保存・記録されません。
 
 ```text
 find_nearby_stops(lat: 35.731, lon: 139.8148)                       # 駅＋バス停（既定）
@@ -433,12 +433,12 @@ find_nearby_stops(lat: 35.731, lon: 139.8148, type: "station", language: "en")
 ```
 
 - `lat` / `lon` (number, 必須) — 緯度 / 経度。
-- `type` (string, 任意) — `station` / `busstop` / `all`（既定 `all`）。
+- `type` (string, 任意) — `station` / `busstop` / `bike` / `ferry` / `all`（既定 `all`＝全部。`ferry` は水上バスとフェリー港の両方）。
 - `radius_m` (number, 任意) — 検索半径（メートル・既定 1000）。
 - `limit` (number, 任意) — 種別ごとの最大件数（既定 5）。
 - `language` (string, 任意) — 応答言語 `ja` / `en` / `zh`（座標だけの入力では日本語になるため、英語/中国語で答えるときは必ず指定）。
 
-バス停は都営・西武・横浜市営バスの3事業者が対象です（他社バスの運行エリアでは「対応事業者のバス停が見つかりません」と注記します）。
+バス停は都営・西武・横浜市営バスの3事業者、シェアサイクルは docomoバイクシェアと HELLO CYCLING（貸出可能なポートのみ表示）、水上バス/フェリーは東京クルーズ（浅草・浜離宮・日の出桟橋・お台場海浜公園・豊洲・竹芝）と東海汽船の乗り場が対象です。他社の運行エリアでは該当種別が「見つかりません」と注記します。
 
 
 
@@ -659,7 +659,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 📝 Update History
 
-Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.30](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.30)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
+Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.31](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.31)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
 
 ### 🤖 AI Intelligent Advice
 
@@ -782,7 +782,7 @@ This MCP server provides **14 tools**. See the quick-reference table for an over
 | 11 | `search_ferry` | Ferry / water bus route search | `from_port`, `to_port` |
 | 12 | `list_community_buses` | Tokyo community buses (41 municipalities) | `language` |
 | 13 | `get_running_status` | Real-time service status by operator | `operator`, `language` |
-| 14 | `find_nearby_stops` | Nearest stations / bus stops by coordinates | `lat`, `lon` |
+| 14 | `find_nearby_stops` | Nearest stations / bus / bike share / water bus by coordinates | `lat`, `lon` |
 
 ### 1. `search_route` — Route Search (Main Feature)
 
@@ -912,7 +912,7 @@ After code changes, run the syntax check and multilingual regression probes. `np
 
 ```bash
 npm run build        # node --check src/index.mjs
-npm test             # 33 Japanese / English / Chinese regression cases
+npm test             # 35 Japanese / English / Chinese regression cases
 npm run test:bus     # live bus-transfer probe; may take a long time depending on the API
 npm run test:vehicle # deterministic vehicle-preference mock regression
 ```
@@ -1006,7 +1006,7 @@ The response includes each operators `available` flag, official `url`, update ti
 
 ### 14. `find_nearby_stops` — Nearest Stations & Bus Stops
 
-Given latitude/longitude (e.g. from a phone's GPS), returns the nearest stations and bus stops in distance order with walking-time estimates. Each item includes the name, distance, walking time, serving lines (stations), operator and route count (bus stops), and a Google Maps link. If nothing is found within the radius, the search expands automatically (1 km → 2 km → 5 km) and says so. Even during an ODPT outage, stations are answered from the built-in coordinate dictionary (bus stops report "currently unavailable"). Input coordinates are never stored or logged.
+Given latitude/longitude (e.g. from a phone's GPS), returns the nearest stations, bus stops, bike share ports, and water bus / ferry piers in distance order with walking-time estimates. Each item includes the name, distance, walking time, serving lines (stations), operator and route count (bus stops), rentable bike count (bike share), and a Google Maps link. If nothing is found within the radius, the search expands automatically (1 km → 2 km → 5 km) and says so. Even during an ODPT outage, stations are answered from the built-in coordinate dictionary (bus stops / bike share / piers report "currently unavailable"). Input coordinates are never stored or logged.
 
 ```text
 find_nearby_stops(lat: 35.731, lon: 139.8148)                       # stations + bus stops (default)
@@ -1015,12 +1015,12 @@ find_nearby_stops(lat: 35.731, lon: 139.8148, type: "station", language: "en")
 ```
 
 - `lat` / `lon` (number, required) — Latitude / longitude.
-- `type` (string, optional) — `station` / `busstop` / `all` (default `all`).
+- `type` (string, optional) — `station` / `busstop` / `bike` / `ferry` / `all` (default `all` = everything; `ferry` covers both water bus piers and ferry terminals).
 - `radius_m` (number, optional) — Search radius in meters (default 1000).
 - `limit` (number, optional) — Max results per type (default 5).
 - `language` (string, optional) — Response language `ja` / `en` / `zh`. Coordinates alone resolve to Japanese, so specify it when answering in English or Chinese.
 
-Bus stops cover Toei, Seibu, and Yokohama City Bus (other operators' service areas are noted as not covered).
+Bus stops cover Toei, Seibu, and Yokohama City Bus; bike share covers docomo bike share and HELLO CYCLING (rentable ports only); water bus / ferry covers Tokyo Cruise (Asakusa, Hamarikyu, Hinode Pier, Odaiba, Toyosu, Takeshiba) and Tokai Kisen piers. Uncovered kinds are noted as such.
 
 
 
@@ -1241,7 +1241,7 @@ MIT License
 
 ### 📝 更新历史
 
-各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.30](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.30)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
+各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.31](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.31)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
 
 ### 🤖 AI 智能建议
 
@@ -1364,7 +1364,7 @@ FLIGHT_API_KEY=your_flight_api_key_here
 | 11 | `search_ferry` | 港口间航线与时刻表查询 | `from_port`, `to_port` |
 | 12 | `list_community_buses` | 东京都社区公交一览（41 个自治体） | `language` |
 | 13 | `get_running_status` | 按运营商查询实时运行状况 | `operator`, `language` |
-| 14 | `find_nearby_stops` | 按坐标查询最近的车站/公交站 | `lat`, `lon` |
+| 14 | `find_nearby_stops` | 按坐标查询最近的车站/公交站/共享单车/水上巴士 | `lat`, `lon` |
 
 ### 1. `search_route` — 换乘路线搜索（核心功能）
 
@@ -1493,7 +1493,7 @@ search_bus(from: "浅草", to: "上野", vehicle: "bus")
 
 ```bash
 npm run build        # node --check src/index.mjs
-npm test             # 33 个日文/英文/中文回归用例
+npm test             # 35 个日文/英文/中文回归用例
 npm run test:bus     # 公交换乘实时 API 探针，可能因 API 状况耗时较长
 npm run test:vehicle # 乘车工具优先的确定性 mock 回归
 ```
@@ -1587,7 +1587,7 @@ get_running_status(operator: "all", language: "zh")
 
 ### 14. `find_nearby_stops` — 最近车站/公交站查询
 
-根据纬度/经度（例如手机的 GPS 定位），按距离顺序返回最近的车站和公交站，并附带步行时间估算。每项包含名称、距离、步行时间、途经线路（车站）、运营商与线路数（公交站）以及 Google 地图链接。半径内没有结果时会自动扩大搜索范围（1km → 2km → 5km）并明确说明。即使 ODPT 故障，车站也会使用内建坐标数据正常应答（公交站则明确提示"当前无法获取"）。输入的坐标不会被保存或记录。
+根据纬度/经度（例如手机的 GPS 定位），按距离顺序返回最近的车站、公交站、共享单车停靠点和水上巴士/轮渡乘船处，并附带步行时间估算。每项包含名称、距离、步行时间、途经线路（车站）、运营商与线路数（公交站）、可借车辆数（共享单车）以及 Google 地图链接。半径内没有结果时会自动扩大搜索范围（1km → 2km → 5km）并明确说明。即使 ODPT 故障，车站也会使用内建坐标数据正常应答（公交站/共享单车/乘船处则明确提示"当前无法获取"）。输入的坐标不会被保存或记录。
 
 ```text
 find_nearby_stops(lat: 35.731, lon: 139.8148)                       # 车站＋公交站（默认）
@@ -1596,12 +1596,12 @@ find_nearby_stops(lat: 35.731, lon: 139.8148, type: "station", language: "zh")
 ```
 
 - `lat` / `lon`（数字，必填）— 纬度 / 经度。
-- `type`（字符串，可选）— `station` / `busstop` / `all`（默认 `all`）。
+- `type`（字符串，可选）— `station` / `busstop` / `bike` / `ferry` / `all`（默认 `all`＝全部。`ferry` 同时包含水上巴士与轮渡港口）。
 - `radius_m`（数字，可选）— 搜索半径（米・默认 1000）。
 - `limit`（数字，可选）— 每类结果的上限（默认 5）。
 - `language`（字符串，可选）— 响应语言 `ja` / `en` / `zh`（仅输入坐标时默认日语，用中文回答时请务必指定）。
 
-公交站覆盖都营、西武、横滨市营公交三家运营商（其他公司运营区域会注明未覆盖）。
+公交站覆盖都营、西武、横滨市营公交三家运营商；共享单车覆盖 docomo共享单车与 HELLO CYCLING（仅显示可租借的停靠点）；水上巴士/轮渡覆盖东京游览船（浅草、滨离宫、日出码头、台场、丰洲、竹芝）与东海汽船的乘船处。未覆盖的种类会明确注明。
 
 
 

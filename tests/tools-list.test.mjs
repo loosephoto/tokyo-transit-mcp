@@ -169,8 +169,8 @@ async function main() {
   if (fnsLatOk) ok('find_nearby_stops に lat/lon の範囲制約が付与');
   else fail(`find_nearby_stops の lat/lon 範囲制約が不正: ${JSON.stringify(fns.properties)}`);
   const fnsTypeEnum = fns.properties && fns.properties.type && fns.properties.type.enum
-    && JSON.stringify(fns.properties.type.enum) === JSON.stringify(['station', 'busstop', 'all']);
-  if (fnsTypeEnum) ok('find_nearby_stops.type が enum（station/busstop/all）');
+    && JSON.stringify(fns.properties.type.enum) === JSON.stringify(['station', 'busstop', 'bike', 'ferry', 'all']);
+  if (fnsTypeEnum) ok('find_nearby_stops.type が enum（station/busstop/bike/ferry/all）');
   else fail(`find_nearby_stops.type の enum が不正: ${JSON.stringify(fns.properties && fns.properties.type)}`);
 
   await client.close();

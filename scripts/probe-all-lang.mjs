@@ -144,6 +144,52 @@ await run('find_nearby_stops', 'zh', { lat: 35.731, lon: 139.8148, language: 'zh
   }
 }
 
+// 🔴 v2.58.31: 実データ最寄り検証（bike / ferry）
+//   渋谷 = docomo バイクシェアの密集地（最寄りポートが数百m圏）。
+{
+  const t0 = Date.now();
+  try {
+    const { data } = await withRateLimitRetry(
+      async () => {
+        const res = await findNearbyStops({ lat: 35.6580, lon: 139.7016, type: 'bike', language: 'ja' }, {});
+        return res.structuredContent;
+      },
+      { retries: 2, waits: [5000, 15000], log: (m) => console.log(`   ↻ [ja] find_nearby_stops(bike): ${m}`) }
+    );
+    const nearest = data.bike_ports && data.bike_ports[0];
+    const bikeOk = data.status === 'SUCCESS' && nearest && nearest.distance_m <= 500 && nearest.bikes_available > 0;
+    results.push({ name: 'find_nearby_stops(bike)', lang: 'ja', ok: bikeOk, ms: Date.now() - t0,
+      detail: bikeOk ? [] : [JSON.stringify(nearest || data.status).slice(0, 80)] });
+    console.log(`${bikeOk ? '✅' : '❌'} [ja] find_nearby_stops(bike) (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+      + `${bikeOk ? ` | ${nearest.name} ${nearest.distance_m}m` : ' | ' + JSON.stringify(nearest || data.status).slice(0, 120)}`);
+  } catch (e) {
+    results.push({ name: 'find_nearby_stops(bike)', lang: 'ja', ok: false, ms: Date.now() - t0, detail: [e.message?.slice(0, 80) || String(e)] });
+    console.log(`⚠️  [ja] find_nearby_stops(bike) ERROR: ${e.message?.slice(0, 80)}`);
+  }
+}
+//   浅草 = 水上バス浅草乗り場（実測で数百m圏）。
+{
+  const t0 = Date.now();
+  try {
+    const { data } = await withRateLimitRetry(
+      async () => {
+        const res = await findNearbyStops({ lat: 35.7116, lon: 139.7967, type: 'ferry', language: 'ja' }, {});
+        return res.structuredContent;
+      },
+      { retries: 2, waits: [5000, 15000], log: (m) => console.log(`   ↻ [ja] find_nearby_stops(ferry): ${m}`) }
+    );
+    const nearest = data.water_bus_piers && data.water_bus_piers[0];
+    const ferryOk = data.status === 'SUCCESS' && nearest && nearest.name === '浅草' && nearest.distance_m <= 500;
+    results.push({ name: 'find_nearby_stops(ferry)', lang: 'ja', ok: ferryOk, ms: Date.now() - t0,
+      detail: ferryOk ? [] : [JSON.stringify(nearest || data.status).slice(0, 80)] });
+    console.log(`${ferryOk ? '✅' : '❌'} [ja] find_nearby_stops(ferry) (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+      + `${ferryOk ? ` | 浅草 ${nearest.distance_m}m` : ' | ' + JSON.stringify(nearest || data.status).slice(0, 120)}`);
+  } catch (e) {
+    results.push({ name: 'find_nearby_stops(ferry)', lang: 'ja', ok: false, ms: Date.now() - t0, detail: [e.message?.slice(0, 80) || String(e)] });
+    console.log(`⚠️  [ja] find_nearby_stops(ferry) ERROR: ${e.message?.slice(0, 80)}`);
+  }
+}
+
 console.log('\n===== サマリー =====');
 const fails = results.filter(r => !r.ok);
 console.log(`総ケース: ${results.length} / PASS: ${results.length - fails.length} / FAIL: ${fails.length}`);

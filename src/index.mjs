@@ -1,5 +1,5 @@
 /**
- * Tokyo Transit MCP Server v2.58.30 (Production Ready)
+ * Tokyo Transit MCP Server v2.58.31 (Production Ready)
  * 公共交通オープンデータセンター（ODPT） API および 気象庁 JMA API を利用した東京乗り換えMCP
  *
  * モジュール構成（v2.39.0 モノリス分割・依存方向: handlers → advice/data/lib → config）:
@@ -39,7 +39,7 @@ import { getTimetable } from './handlers/timetable.mjs';
 // 各ツールは registerTool で登録し、ListTools / CallTool の手動ハンドラと switch を廃止した。
 // SDK が zod スキーマから tools/list の JSON Schema を自動生成する（additionalProperties:false 等も自動付与）。
 const server = new McpServer(
-  { name: 'tokyo-transit-mcp', version: '2.58.30' },
+  { name: 'tokyo-transit-mcp', version: '2.58.31' },
   { capabilities: { tools: {}, logging: {} } }
 );
 
@@ -350,11 +350,11 @@ server.registerTool('get_running_status', {
 // find_nearby_stops（#121）
 server.registerTool('find_nearby_stops', {
   title: 'Find Nearby Stops',
-  description: '📍 最寄り駅・バス停検索 - 緯度経度（携帯電話のGPSなど位置情報）から一番近い駅・バス停を距離順で返す。各項目に距離・徒歩換算・乗り入れ路線（駅）・事業者と系統数（バス停）・Google Maps リンクを付ける。半径内に0件のときは 1km→2km→5km に自動拡大して明示する。駅はODPT障害時も内蔵座標で縮退応答。バス停は都営・西武・横浜市営バスが対象。language（ja/en/zh）指定で応答言語を強制可能（座標だけの入力では日本語になるため、英語/中国語で答えるときは必ず指定）。',
+  description: '📍 最寄り駅・バス停検索 - 緯度経度（携帯電話のGPSなど位置情報）から一番近い駅・バス停・シェアサイクルポート・水上バス/フェリー乗り場を距離順で返す。各項目に距離・徒歩換算・乗り入れ路線（駅）・事業者と系統数（バス停）・貸出可能台数（シェアサイクル）・Google Maps リンクを付ける。半径内に0件のときは 1km→2km→5km に自動拡大して明示する。駅はODPT障害時も内蔵座標で縮退応答。バス停は都営・西武・横浜市営バス、シェアサイクルは docomoバイクシェア・HELLO CYCLING、水上バス/フェリーは東京クルーズ・東海汽船の乗り場が対象。language（ja/en/zh）指定で応答言語を強制可能（座標だけの入力では日本語になるため、英語/中国語で答えるときは必ず指定）。',
   inputSchema: {
     lat: z.number().min(-90).max(90).describe('緯度（例: 35.731）'),
     lon: z.number().min(-180).max(180).describe('経度（例: 139.8148）'),
-    type: z.enum(['station', 'busstop', 'all']).optional().describe('検索対象（省略時は all = 駅＋バス停）'),
+    type: z.enum(['station', 'busstop', 'bike', 'ferry', 'all']).optional().describe('検索対象（省略時は all = 駅＋バス停＋シェアサイクル＋水上バス/フェリー。ferry は水上バスとフェリー港の両方）'),
     radius_m: z.number().min(50).max(50000).optional().describe('検索半径（メートル・省略時 1000）。0件のとき 2km→5km に自動拡大'),
     limit: z.number().min(1).max(20).optional().describe('種別ごとの最大件数（省略時 5）'),
     language: z.enum(['ja', 'en', 'zh']).optional().describe('応答言語の強制指定（省略時は日本語）')

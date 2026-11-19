@@ -66,7 +66,7 @@ claude mcp list   # 確認
 | `search_ferry` | 港間の航路・時刻表検索 |
 | `list_community_buses` | 東京都コミュニティバス一覧（41自治体） |
 | `get_running_status` | 交通事業者別のリアルタイム運行状況 |
-| `find_nearby_stops` | 緯度経度から最寄りの駅・バス停を距離順で検索（徒歩換算・Maps リンクつき・0件時は半径自動拡大） |
+| `find_nearby_stops` | 緯度経度から最寄りの駅・バス停・シェアサイクル・水上バス/フェリー港を距離順で検索（徒歩換算・Mapsリンクつき・0件時は半径自動拡大） |
 
 ## 利用パターン
 
