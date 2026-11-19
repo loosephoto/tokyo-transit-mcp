@@ -282,10 +282,14 @@ export function resolveStation(rawName) {
       const lineRefs = AMBIGUOUS_STATION_LINES[stationPart] || AMBIGUOUS_STATION_LINES[normalizeStationName(stationPart)] || [];
       const matched = ambBase.filter((cand, i) => {
         const refLine = (lineRefs[i] || '').toLowerCase();
-        // 路線名ヒントが候補の所属路線名に部分一致（含む/含まれる）すれば解決候補
+        // 路線名ヒントが候補の所属路線名に部分一致（含む/含まれる）すれば解決候補。
+        // 🔴 v2.58.32: 「東京メトロ」は normalizeLineHint で空文字列になり、
+        //   X.includes('') が常に真になるため全候補が誤マッチしていた（実測: 霞ヶ関 東京メトロ）。
+        //   正規化後が空の比較は行わない。
+        const normRef = normalizeLineHint(refLine);
+        const normHint = normalizeLineHint(lineHint);
         return refLine && (refLine.includes(lineHint) || lineHint.includes(refLine) ||
-          normalizeLineHint(refLine).includes(normalizeLineHint(lineHint)) ||
-          normalizeLineHint(lineHint).includes(normalizeLineHint(refLine)));
+          (normRef && normHint && (normRef.includes(normHint) || normHint.includes(normRef))));
       });
       if (matched.length === 1) {
         return { station: matched[0], candidates: [matched[0]], ambiguous: false, exact: true, landmark: null };
@@ -304,6 +308,41 @@ export function resolveStation(rawName) {
     return { station: null, candidates: AMBIGUOUS_STATION_NAMES[key], ambiguous: true, exact: false, landmark: null };
   }
   if (STATION_TO_LINES[key]) return { station: key, candidates: [key], ambiguous: false, exact: true, landmark: null };
+
+  // 🔴 v2.58.32: 曖昧駅の候補表示ラベル「駅名（路線名）」をそのまま再入力可能にする。
+  // 候補メッセージは基本名側の候補を「両国（JR総武線）」のように所属路線名付きで表示するが、
+  // この表記はグラフの実キーではなく、従来は STATION_NOT_FOUND になり、案内された表記での
+  // 再入力が不可能だった（両国 → 候補提示 → 両国（JR総武線） → NOT_FOUND の袋小路。
+  // 実測: 7曖昧駅15候補ラベルのうち7ラベルが再入力不能）。
+  // 実キー（両国（大江戸線）など括弧付き正式キー）は直前の完全一致で解決済みのため、
+  // ここに来るのは「実キーでない括弧付き表記」だけ。括弧内を路線ヒントとして解決する
+  // （#64 のスペース形式「両国 JR総武線」と同じ照合。全角・半角括弧両方を受け付ける）。
+  const parenParts = key.match(/^(.+?)[（(]([^（()（）]+)[）)]$/);
+  if (parenParts) {
+    const stationPartRaw = parenParts[1].trim();
+    const lineHintRaw = parenParts[2].trim();
+    // 曖昧駅の基本名は表記揺れ（霞ケ関/霞ヶ関）を持つため、ケ/ヶ 入れ替えも試す
+    const stationVariants = [stationPartRaw, normalizeStationName(stationPartRaw),
+      stationPartRaw.replace(/ケ/g, 'ヶ'), stationPartRaw.replace(/ヶ/g, 'ケ')]
+      .filter((v, i, a) => v && a.indexOf(v) === i);
+    const ambBase = stationVariants.map((v) => AMBIGUOUS_STATION_NAMES[v]).find(Boolean);
+    if (ambBase) {
+      const lineRefs = stationVariants.map((v) => AMBIGUOUS_STATION_LINES[v]).find(Boolean) || [];
+      const lineHint = lineHintRaw.toLowerCase();
+      const matched = ambBase.filter((cand, i) => {
+        const refLine = (lineRefs[i] || '').toLowerCase();
+        // 路線名ヒントが候補の所属路線名に部分一致（含む/含まれる）すれば解決候補。
+        // 正規化後が空の比較は行わない（空ヒントが全候補に誤マッチするため。上のスペース形式と同じ）。
+        const normRef = normalizeLineHint(refLine);
+        const normHint = normalizeLineHint(lineHint);
+        return refLine && (refLine.includes(lineHint) || lineHint.includes(refLine) ||
+          (normRef && normHint && (normRef.includes(normHint) || normHint.includes(normRef))));
+      });
+      if (matched.length === 1) {
+        return { station: matched[0], candidates: [matched[0]], ambiguous: false, exact: true, landmark: null };
+      }
+    }
+  }
 
   // ランドマーク完全一致を駅名エイリアス正規化より先に評価する。
   // 例: Yomiuriland は「読売ランド前」ではなく「京王よみうりランド」を優先。
