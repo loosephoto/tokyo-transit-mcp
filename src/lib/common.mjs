@@ -5,6 +5,8 @@
  */
 
 import { API_KEY } from '../config.mjs';
+// v2.58.33: content の Markdown 化（JSON は 2 ブロック目と structuredContent に残す）
+import { toMarkdown } from './markdown.mjs';
 
 export function buildErrorResponse(errorType, errorMessage, details = {}) {
   // 🔴 v2.58.14: CIRCUIT_BREAKER_OPEN は provider と言語から文言を確定する
@@ -158,24 +160,30 @@ export function jsonResponse(data, options = {}) {
       ...(isError ? { isError: true } : {})
     };
   }
-  // ai_transit_advice が含まれる場合、それを独立したテキストブロックとして最初に配置。
-  // LLM が長い JSON を要約する際に後半を省略してしまうのを防ぐため。
-  if (data && typeof data === 'object' && typeof data.ai_transit_advice === 'string' && data.ai_transit_advice) {
+  // ✅ v2.58.33: content を「そのまま読める Markdown」＋「機械向け JSON」の 2 ブロックにする。
+  //   従来は 12 ツールが整形なしの JSON 文字列を返しており、LLM・人間が長い JSON を読み直す必要があった。
+  //   - 1 ブロック目: Markdown（表・箇条書き）。ai_transit_advice は原文のままここに置く（#94 / #122）。
+  //   - 2 ブロック目: JSON（従来どおり ai_transit_advice を除く）。text を JSON として読む既存クライアント・
+  //     プローブ（texts.find(t => t.trim().startsWith('{'))）を壊さないための後方互換ブロック。
+  //   - structuredContent: 完全な payload（ai_transit_advice を含む）。
+  //   TOKYO_TRANSIT_TEXT_FORMAT=markdown|json|both（既定 both）でブロックを絞れる。
+  const textFormat = options.textFormat || process.env.TOKYO_TRANSIT_TEXT_FORMAT || 'both';
+  const hasAdvice = data && typeof data === 'object' && typeof data.ai_transit_advice === 'string' && data.ai_transit_advice;
+  let machineData = data;
+  if (hasAdvice) {
     const { ai_transit_advice, ...rest } = data;
-    return {
-      content: [
-        { type: 'text', text: ai_transit_advice },
-        { type: 'text', text: JSON.stringify(rest, null, 2) }
-      ],
-      // 🔴 #94: structuredContent には ai_transit_advice も含めて公開する。
-      // MCPクライアントが structuredContent のみを参照する実装でも
-      // AIインテリジェントアドバイスが失われないようにする（従来は除外されていた）。
-      structuredContent: data,
-      ...(isError ? { isError: true } : {})
-    };
+    machineData = rest;
+  }
+  const content = [];
+  if (textFormat !== 'json') {
+    const md = toMarkdown(data);
+    if (md && md.trim()) content.push({ type: 'text', text: md });
+  }
+  if (textFormat !== 'markdown' || content.length === 0) {
+    content.push({ type: 'text', text: JSON.stringify(machineData, null, 2) });
   }
   return {
-    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+    content,
     structuredContent: data,
     ...(isError ? { isError: true } : {})
   };

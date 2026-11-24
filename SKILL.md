@@ -213,6 +213,27 @@ odpt:Railway:TokyoMetro.{路線名}
 
 ## 更新履歴
 
+### v2.58.33（2026-11-24）— 応答本文を Markdown 化し、JSON は 2 ブロック目／`structuredContent` に維持
+
+- 14 ツールのうち 12 ツールは `content` に整形なしの JSON 文字列だけを返していた（`search_route` と
+  `find_nearby_stops` のみ `displayText` の整形テキストあり）。LLM・人間が長い JSON を読み直す必要があり、
+  表構造（事業者一覧・駅一覧・運賃）が読み取りづらかった。
+- `src/lib/markdown.mjs`（汎用レンダラ）を追加し、`jsonResponse` の `content` を
+  **1 ブロック目 = Markdown / 2 ブロック目 = JSON** の 2 段構成にした（`TOKYO_TRANSIT_TEXT_FORMAT`
+  で `both`（既定）/ `markdown` / `json` を切替）。
+  - 平坦なオブジェクト配列 → 表、入れ子を含む配列 → 小見出し＋表、入れ子オブジェクト → 小見出し。
+  - 表は必ず行頭に出す（リスト内インデントだと Markdown としてレンダリングされない）。
+  - URL は `<url>`、欠損は `—`、長い配列は 100 行で打ち切って件数を明示（全件は `structuredContent`）。
+- `ai_transit_advice` は Markdown ブロックに**原文のまま**置き、JSON ブロックからは従来どおり除外する
+  （#94 / #122 の安全要件とプローブ互換を維持）。`displayText` 指定ツールは従来どおり単一テキストのまま。
+- 実測（v2.58.33, 2026-11-24）: `list_transit_operators`（ferry 2件）Markdown 439 / JSON 609 文字、
+  `get_operator_routes`（ゆりかもめ16駅）Markdown 571 / JSON 1,432、
+  `search_fare`（東京→新宿）Markdown 320 / JSON 385、`get_station_info`（新宿11件）Markdown 1,164。
+- 検証: `tests/v25833-regression.test.mjs`（26 アサーション）を追加 — 表の非インデント・値の完全一致
+  （JSON ブロック = payload）・`ai_transit_advice` の扱い・`isError` 維持・行数上限と `structuredContent` の全件保持・
+  `TOKYO_TRANSIT_TEXT_FORMAT` の3値・実ツール（`list_transit_operators`）の2ブロック出力。
+  offline 回帰 24 本すべて exit=0、`scripts/probe-all-lang.mjs` 35/35 PASS。
+
 ### v2.58.32（2026-11-19）— 曖昧駅の候補表示ラベルをそのまま再入力可能に修正
 
 - 路線健全性チェック（126路線×隣接1区間）で発見: search_route が同名別駅（両国・小川町・霞ヶ関ほか7駅）で

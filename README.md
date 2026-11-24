@@ -33,7 +33,7 @@
 
 ### 📝 更新履歴
 
-各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.32](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.32)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
+各バージョンの変更内容は **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** に記載しています（最新: [v2.58.33](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.33)）。README では履歴を二重管理しません（LLM 向けの要約は `SKILL.md` の「更新履歴」にあります）。
 
 ### 🤖 AI インテリジェントアドバイス
 
@@ -52,6 +52,8 @@
 - **デグレードモード** — API障害時も部分稼働を継続
 - **荒天時安全ロジック** — 台風・浸水時は自転車案内を自動非表示
 - **LLMフレンドリーJSON** — 全エラーを、AIが状況・再試行可否・次の選択肢を解釈しやすい構造化データで出力
+
+- **Markdown＋JSONの二段出力** — 応答本文はそのまま読める Markdown（表・箇条書き・リンク）で返し、機械向けの完全な JSON は 2 ブロック目と `structuredContent` に残す（`TOKYO_TRANSIT_TEXT_FORMAT=json|markdown|both` で切替、既定 both）
 
 > [!WARNING]
 > **地震時の交通モード別安全処理**
@@ -659,7 +661,7 @@ Beyond simple route search, this server integrates weather data and public trans
 
 ### 📝 Update History
 
-Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.32](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.32)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
+Release notes are published in **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)** (latest: [v2.58.33](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.33)). This README does not duplicate the history (an LLM-facing summary lives in `SKILL.md`).
 
 ### 🤖 AI Intelligent Advice
 
@@ -678,6 +680,8 @@ Generates concrete, useful advice for your trip based on weather and operational
 - **Degraded Mode** — keeps partial operation during API disruptions
 - **Severe Weather Logic** — automatically hides bike guidance during typhoons or flooding
 - **LLM-Friendly JSON** — errors are emitted as structured data so AI can interpret context, retryability, and next options
+
+- **Markdown + JSON output** — the response body is human/LLM-readable Markdown (tables, bullets, links), while the complete machine-readable JSON stays in the second content block and `structuredContent` (`TOKYO_TRANSIT_TEXT_FORMAT=json|markdown|both`, default both)
 
 > [!WARNING]
 > **Earthquake safety by transport mode**
@@ -1139,6 +1143,7 @@ Integrating with ODPT (Open Data Center for Public Transportation) requires the 
 |:---|---:|:---|
 | `ODPT_API_KEY` | ✅ | Required (obtained from [ODPT](https://developer.odpt.org/)) |
 | `FLIGHT_API_KEY` | ⚪ | For flight times ([AviationStack](https://aviationstack.com/)). Without it, only airport access routes are shown (graceful degradation) |
+| `TOKYO_TRANSIT_TEXT_FORMAT` | ⚪ | Response body format: `both` (default, Markdown + JSON) / `markdown` (slimmer) / `json` (previous behavior) |
 
 ---
 
@@ -1241,7 +1246,7 @@ MIT License
 
 ### 📝 更新历史
 
-各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.32](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.32)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
+各版本的变更内容发布在 **[GitHub Releases](https://github.com/loosephoto/tokyo-transit-mcp/releases)**（最新：[v2.58.33](https://github.com/loosephoto/tokyo-transit-mcp/releases/tag/v2.58.33)）。README 不再重复维护更新历史（面向 LLM 的摘要见 `SKILL.md` 的「更新履歴」）。
 
 ### 🤖 AI 智能建议
 
@@ -1260,6 +1265,8 @@ MIT License
 - **降级模式** — API 故障时保持部分功能运行
 - **恶劣天气安全逻辑** — 台风或洪水时自动隐藏自行车指引
 - **LLM 友好 JSON** — 以便 AI 理解当前状况、是否可重试和下一步选择的结构化数据输出所有错误
+
+- **Markdown ＋ JSON 双输出** — 响应正文为可直接阅读的 Markdown（表格・列表・链接），机器可用的完整 JSON 保留在第二块与 `structuredContent` 中（`TOKYO_TRANSIT_TEXT_FORMAT=json|markdown|both`，默认 both）
 
 > [!WARNING]
 > **按交通方式区分的地震安全处理**
@@ -1720,6 +1727,7 @@ MCP 客户端的请求通过 stdio 传递给服务器，服务器安全高效地
 |:---|---:|:---|
 | `ODPT_API_KEY` | ✅ | 必需（可从 [ODPT](https://developer.odpt.org/) 获取） |
 | `FLIGHT_API_KEY` | ⚪ | 航班时刻获取用（[AviationStack](https://aviationstack.com/)）。未配置时仅显示机场接驳路线（优雅降级） |
+| `TOKYO_TRANSIT_TEXT_FORMAT` | ⚪ | 响应正文格式：`both`（默认，Markdown＋JSON）/ `markdown`（更精简）/ `json`（沿用旧行为） |
 
 ---
 
